@@ -100,6 +100,13 @@ FORMAT_TO_SUBCOMPONENT = {
 # Number of days before unreferenced files are removed from by-hash.
 BY_HASH_STAY_OF_EXECUTION = 1
 
+# Pockets to set Valid-Until for
+VALID_UNTIL_POCKETS = [PackagePublishingPocket.SECURITY]
+# Time delta that Valid-Until must still be valid for
+VALID_UNTIL_REFRESH = timedelta(days=7)
+# Time delta to add to Valid-Until from current date
+VALID_UNTIL_ADD = timedelta(days=14)
+
 
 def reorder_components(components):
     """Return a list of the components provided.
@@ -447,6 +454,23 @@ class Publisher:
     def isDirty(self, distroseries, pocket):
         """True if a publication has happened in this release and pocket."""
         return distroseries.getSuite(pocket) in self.dirty_suites
+
+    def checkValidUntilNeedsRefresh(self, pocket, release_path):
+        """Check if this release file's Valid-Until has expired."""
+        if pocket not in VALID_UNTIL_POCKETS:
+            return False
+        try:
+            with open(release_path) as release_file:
+                release_data = Release(release_file)
+        except FileNotFoundError:
+            # Valid-Until is no reason to publish NEW Release files
+            return False
+        if "Valid-Until" not in release_data:
+            return True
+        expiry = datetime.strptime(
+            release_data["Valid-Until"], "%a, %d %b %Y %H:%M:%S UTC"
+        )
+        return expiry <= datetime.utcnow() + VALID_UNTIL_REFRESH
 
     def markSuiteDirty(self, distroseries, pocket):
         """Mark a suite dirty only if it's allowed."""
@@ -1242,9 +1266,22 @@ class Publisher:
                     if file_exists(release_path):
                         self.release_files_needed.add(suite)
 
+                needs_refresh = self.checkValidUntilNeedsRefresh(
+                    pocket, release_path
+                )
+                if needs_refresh:
+                    self.log.debug(
+                        "Valid-Until needs refresh in release files for %s/%s"
+                        % (distroseries.name, pocket.name)
+                    )
+                    self.release_files_needed.add(suite)
+
                 write_release = suite in self.release_files_needed
                 if not is_careful:
-                    if not self.isDirty(distroseries, pocket):
+                    if (
+                        not self.isDirty(distroseries, pocket)
+                        and not needs_refresh
+                    ):
                         self.log.debug(
                             "Skipping release files for %s/%s"
                             % (distroseries.name, pocket.name)
@@ -1837,9 +1874,13 @@ class Publisher:
             release_file["Snapshots"] = metadata_overrides["Snapshots"]
         release_file["Version"] = distroseries.version
         release_file["Codename"] = distroseries.name
-        release_file["Date"] = datetime.utcnow().strftime(
-            "%a, %d %b %Y %k:%M:%S UTC"
-        )
+
+        now = datetime.utcnow()
+        release_file["Date"] = now.strftime("%a, %d %b %Y %k:%M:%S UTC")
+        if pocket in VALID_UNTIL_POCKETS:
+            release_file["Valid-Until"] = (now + VALID_UNTIL_ADD).strftime(
+                "%a, %d %b %Y %k:%M:%S UTC"
+            )
         release_file["Architectures"] = " ".join(sorted(all_architectures))
         release_file["Components"] = " ".join(
             reorder_components(all_components)
