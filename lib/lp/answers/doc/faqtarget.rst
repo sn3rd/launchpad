@@ -172,7 +172,8 @@ common words and stop words.
     ...     no_priv,
     ...     "How to answer a question",
     ...     "Description on how to use the Answer Tracker can be found at: "
-    ...     "https://help.launchpad.net/AnswerTrackerDocumentation",
+    ...     "https://documentation.ubuntu.com/launchpad/user/explanation/"
+    ...     "answers/answer-tracker/",
     ... )
     >>> faq = target.newFAQ(
     ...     no_priv,
@@ -184,7 +185,8 @@ common words and stop words.
     ...     no_priv,
     ...     "How to use bug mail",
     ...     "The syntax of bug mail commands is described at: "
-    ...     "https://help.launchpad.net/BugTrackerEmailInterface",
+    ...     "https://documentation.ubuntu.com/launchpad/user/how-to/"
+    ...     "work-with-bugs/use-email-interface/",
     ... )
 
     >>> for faq in target.findSimilarFAQs("How do I use the Answer Tracker"):

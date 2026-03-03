@@ -327,8 +327,8 @@ class Question(StormBase, BugLinkTargetMixin):
     # Workflow methods
 
     # The lifecycle of a question is documented in
-    # https://help.launchpad.net/QuestionLifeCycle, so remember
-    # to update that document for any pertinent changes.
+    # https://documentation.ubuntu.com/launchpad/user/reference/question-life-cycle/,
+    # so remember to update that document for any pertinent changes.
     @notify_question_modified()
     def setStatus(self, user, new_status, comment, datecreated=None):
         """See `IQuestion`."""
