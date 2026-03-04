@@ -2271,7 +2271,8 @@ The first part is the error message, explaining what went wrong.
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://help.launchpad.net/EmailInterface
+    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-
+    email-interface/
     or send an email to help@launchpad.net
 
 The second part is the message that the user sent, which caused the
@@ -2428,8 +2429,8 @@ failure in an email.
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://help.launchpad.net/EmailInterface
-    or send an email to help@launchpad.net
+    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use
+    -email-interface/ or send an email to help@launchpad.net
 
 We send another email to the same bug, selecting the same bug task. The
 email has other two commands - 'security maybe', which is guaranteed to
@@ -2484,8 +2485,8 @@ And the sender receives an email to let them know about the failing
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://help.launchpad.net/EmailInterface
-    or send an email to help@launchpad.net
+    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-
+    email-interface/ or send an email to help@launchpad.net
 
 
 Terminating command input

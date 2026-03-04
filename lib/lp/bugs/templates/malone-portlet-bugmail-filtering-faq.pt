@@ -5,7 +5,7 @@
   class="portlet" id="portlet-help">
   <h2>Managing Launchpad Bugs email</h2>
     <p>Every email message sent by the Launchpad Bug Tracker includes one or
-      more <a href="https://help.launchpad.net/Bugs/Subscriptions"
+      more <a href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/subscribe-and-unsubscribe-to-bugs/"
     ><code>X-Launchpad-Bug:</code></a> headers. You can use tools such as
     <a href="http://www.procmail.org">procmail</a> to create custom filters
     based on this header.</p>

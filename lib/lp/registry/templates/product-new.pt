@@ -50,15 +50,15 @@
         </p>
 
         <ul class="bulleted">
-          <li><a href="https://help.launchpad.net/Teams">Register
+          <li><a href="https://documentation.ubuntu.com/launchpad/user/explanation/teams/">Register
             a team</a></li>
-          <li><a href="https://help.launchpad.net/Packaging/PPA">Activate
+          <li><a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/">Activate
             a PPA</a></li>
-          <li><a href="https://help.launchpad.net/Code/PersonalBranches">Access
+          <li><a href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/create-and-maintain-personal-branch/">Access
             your personal branches</a> (sandbox, repo)</li>
-          <li><a href="https://help.launchpad.net/Translations/YourProject">Translate
+          <li><a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/translation-best-practices/">Translate
             a project</a> that is already registered</li>
-          <li><a href="https://help.launchpad.net/ProjectGroups">Request a project group</a></li>
+          <li><a href="https://documentation.ubuntu.com/launchpad/user/reference/project-groups/">Request a project group</a></li>
         </ul>
       </div>
 

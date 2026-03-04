@@ -18,19 +18,22 @@ The user can see links about things that are often assumed to be related to
 project registration.
 
     >>> print(user_browser.getLink("Register a team").url)
-    https://help.launchpad.net/Teams
+    https://documentation.ubuntu.com/launchpad/user/explanation/teams/
 
     >>> print(user_browser.getLink("Activate a PPA").url)
-    https://help.launchpad.net/Packaging/PPA
+    https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/
+    ppa/
 
     >>> print(user_browser.getLink("Access your personal branches").url)
-    https://help.launchpad.net/Code/PersonalBranches
+    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-
+    hosted-on-launchpad/create-and-maintain-personal-branch/
 
     >>> print(user_browser.getLink("Translate a project").url)
-    https://help.launchpad.net/Translations/YourProject
+    https://documentation.ubuntu.com/launchpad/user/reference/translations/
+    translation-best-practices/
 
     >>> print(user_browser.getLink("Request a project group").url)
-    https://help.launchpad.net/ProjectGroups
+    https://documentation.ubuntu.com/launchpad/user/reference/project-groups/
 
 
 Project basics

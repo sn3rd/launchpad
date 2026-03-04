@@ -269,7 +269,7 @@
           &nbsp;&bull;&nbsp;
           <a tal:attributes="href string:${rooturl}+tour">Take the tour</a>
           &nbsp;&bull;&nbsp;
-          <a href="https://help.launchpad.net/">Read the guide</a>
+          <a href="https://documentation.ubuntu.com/launchpad/">Read the guide</a>
           &nbsp;
           <form id="globalsearch" method="get" accept-charset="UTF-8"
             tal:condition="view/macro:pagehas/globalsearch"

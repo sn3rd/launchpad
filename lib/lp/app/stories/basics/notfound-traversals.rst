@@ -35,7 +35,8 @@ HTTP status is returned.
     ...     print(response.getHeader("Location"))
 
     >>> check_redirect("/legal", status=301)
-    https://help.launchpad.net/Legal
+    https://documentation.ubuntu.com/launchpad/user/reference/launchpad-and-
+    community/legal/launchpad-policies/
     >>> check_redirect("/faq", status=301)
     https://answers.launchpad.net/launchpad-project/+faqs
     >>> check_redirect("/feedback", status=301)

@@ -83,7 +83,7 @@
                   <p>Easy for anyone to get your project's code using Git</p>
                 </div>
                 <div class="col-3 p-divider__block">
-                  <h4><a  href="https://help.launchpad.net/Code/Review">Code reviews</a></h4>
+                  <h4><a  href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/create-and-manage-a-merge-proposal/">Code reviews</a></h4>
                   <p>Full control of who can land code in your project remains with you</p>
                 </div>
                 <div class="col-3 p-divider__block">
@@ -97,7 +97,7 @@
                   <p>Build an open community to translate your software into almost any language</p>
                 </div>
                 <div class="col-3 p-divider__block">
-                  <h4><a href="https://help.launchpad.net/Teams/MailingLists">Mailing lists</a></h4>
+                  <h4><a href="https://documentation.ubuntu.com/launchpad/user/Teams/MailingLists">Mailing lists</a></h4>
                   <p>Find and work with the right people by building a social network of individuals and teams around projects</p>
                 </div>
                 <div class="col-3 p-divider__block">
@@ -121,7 +121,7 @@
             <div class="u-fixed-width u-clearfix">
               <span>
                 Learn more about Launchpad in the
-                <a href="https://help.launchpad.net/">user guide</a>.
+                <a href="https://documentation.ubuntu.com/launchpad/">user guide</a>.
               </span>
                 If you're ready, you can:
 

@@ -56,7 +56,7 @@ i18n:domain="malone"
 
       <a id="getting-started-help"
          class="sprite maybe"
-         href="https://help.launchpad.net/Bugs">
+         href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/">
         Getting started with bug tracking in Launchpad</a>.
 
       <p tal:condition="context/required:launchpad.Edit"
@@ -101,7 +101,7 @@ i18n:domain="malone"
             </p>
             <p id="getting-started-help">
               <a class="sprite maybe"
-                 href="https://help.launchpad.net/Bugs">Getting started
+                 href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/">Getting started
                 with bug tracking in Launchpad</a>.
             </p>
           </tal:no_bug_info>
