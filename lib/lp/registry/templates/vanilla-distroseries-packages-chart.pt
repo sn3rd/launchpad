@@ -1,0 +1,17 @@
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
+  <div id="packages-chart" class="packages-chart">
+    <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
+    <div role="tabpanel"
+         tal:attributes="id view/packages_chart_tabs/active_panel_id"
+         tal:condition="python:view.packages_chart_tabs.active == 'source'">
+      <p class="u-text--muted">Package chart source placeholder</p>
+    </div>
+    <div role="tabpanel"
+         tal:attributes="id view/packages_chart_tabs/active_panel_id"
+         tal:condition="python:view.packages_chart_tabs.active == 'binary'">
+      <p class="u-text--muted">Package chart binary placeholder</p>
+    </div>
+  </div>
+</tal:root>

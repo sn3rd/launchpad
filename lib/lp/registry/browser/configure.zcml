@@ -165,6 +165,14 @@
             name="+vanilla-distroseries-summary-links"
             template="../templates/vanilla-distroseries-summary-links.pt"
         />
+        <browser:page
+            name="+vanilla-distroseries-packages-chart"
+            template="../templates/vanilla-distroseries-packages-chart.pt"
+        />
+        <browser:page
+            name="+vanilla-distroseries-packages-list"
+            template="../templates/vanilla-distroseries-packages-list.pt"
+        />
     </browser:pages>
     <browser:page
         name="+packaging"

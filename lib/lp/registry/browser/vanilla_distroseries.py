@@ -8,8 +8,10 @@ __all__ = [
 ]
 
 
+import html as html_module
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from urllib.parse import parse_qs, urlencode
 
 from zope.component import getUtility
 
@@ -23,7 +25,7 @@ from lp.buildmaster.enums import BuildStatus
 from lp.layers import VanillaLayer, setAdditionalLayer
 from lp.registry.browser import MilestoneOverlayMixin
 from lp.registry.interfaces.series import SeriesStatus
-from lp.services.webapp.publisher import LaunchpadView
+from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
 
 
@@ -54,12 +56,142 @@ STATUS_CHIP_COLORS = {
 }
 
 
+class Tabs:
+    """Server-side helper for the Vanilla tabs pattern.
+
+    https://vanillaframework.io/docs/patterns/tabs
+
+    Renders the ``p-tabs`` navigation via :attr:`render` and yields
+    per-tab dicts (``label``, ``href``, ``swap_url``, ``active``,
+    ``panel_id``) for building ``role="tabpanel"`` elements in TAL.
+
+    TAL usage::
+
+        <tal:tabs tal:replace="structure view/my_tabs/render" />
+        <div role="tabpanel"
+             tal:attributes="id view/my_tabs/active_panel_id"
+             tal:condition="python:view.my_tabs.active == 'key'">
+          …panel content for 'key'…
+        </div>
+    """
+
+    def __init__(
+        self,
+        param,
+        default,
+        tabs,
+        request,
+        base_url,
+        swap_url,
+        aria_label,
+    ):
+        self._param = param
+        self._default = default
+        self._tabs = tabs
+        self._request = request
+        self._base_url = base_url
+        self._swap_url = swap_url
+        self.aria_label = aria_label
+
+    @property
+    def active(self):
+        """Return the key of the currently selected tab."""
+        return self._request.form.get(self._param, self._default)
+
+    @property
+    def active_panel_id(self):
+        """Return the panel ID for the currently selected tab."""
+        return "%s-%s-panel" % (self._param, self.active)
+
+    def _build_url(self, base_url, key):
+        """Build a URL, omitting the param for the default tab."""
+        params = parse_qs(
+            self._request.get("QUERY_STRING", ""), keep_blank_values=True
+        )
+        if key == self._default:
+            params.pop(self._param, None)
+        else:
+            params[self._param] = [key]
+        qs = urlencode(params, doseq=True)
+        return base_url + "?" + qs if qs else base_url
+
+    def __iter__(self):
+        selected = self.active
+        for key, label in self._tabs:
+            yield {
+                "label": label,
+                "href": self._build_url(self._base_url, key),
+                "swap_url": self._build_url(self._swap_url, key),
+                "active": "true" if selected == key else "false",
+                "panel_id": "%s-%s-panel" % (self._param, key),
+            }
+
+    @property
+    def render(self):
+        """Render the p-tabs navigation as an HTML string."""
+        esc = html_module.escape
+        items = []
+        for tab in self:
+            items.append(
+                '<div class="p-tabs__item">'
+                '<a class="p-tabs__link" role="tab"'
+                ' href="%s"'
+                ' aria-selected="%s"'
+                ' aria-controls="%s">%s</a>'
+                "</div>"
+                % (
+                    esc(tab["href"], quote=True),
+                    esc(tab["active"], quote=True),
+                    esc(tab["panel_id"], quote=True),
+                    esc(tab["label"]),
+                )
+            )
+        return (
+            '<div class="p-tabs">'
+            '<div class="p-tabs__list" role="tablist" data-js="tabs"'
+            ' aria-label="%s">%s</div>'
+            "</div>"
+            % (
+                esc(self.aria_label, quote=True),
+                "".join(items),
+            )
+        )
+
+
 class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     """View for the vanilla distroseries page."""
 
     def initialize(self):
         super().initialize()
         setAdditionalLayer(self.request, VanillaLayer)
+        base_url = canonical_url(self.context, view_name="+vanilla")
+        self.packages_chart_tabs = Tabs(
+            param="packages-chart",
+            aria_label="Package builds",
+            tabs=[("source", "Source"), ("binary", "Binary")],
+            default="source",
+            request=self.request,
+            base_url=base_url,
+            swap_url=canonical_url(
+                self.context,
+                view_name="+vanilla-distroseries-packages-chart",
+            ),
+        )
+        self.packages_list_tabs = Tabs(
+            param="packages-list",
+            aria_label="Package uploads",
+            tabs=[
+                ("latest", "Latest uploads"),
+                ("my-uploads", "My uploads"),
+            ],
+            default="latest",
+            request=self.request,
+            base_url=base_url,
+            swap_url=canonical_url(
+                self.context,
+                view_name="+vanilla-distroseries-packages-list",
+            ),
+        )
 
     @property
     def page_title(self):

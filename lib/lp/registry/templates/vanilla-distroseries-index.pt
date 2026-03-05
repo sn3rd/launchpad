@@ -2,6 +2,12 @@
   xmlns:tal="http://xml.zope.org/namespaces/tal"
   xmlns:metal="http://xml.zope.org/namespaces/metal"
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" metal:use-macro="view/macro:page/main_only" i18n:domain="launchpad">
+  <head>
+    <metal:block fill-slot="head_epilogue">
+      <link type="text/css" rel="stylesheet" tal:attributes="href string:${icingroot}/vanilla/pages/distroseries.css" />
+      <script tal:attributes="src string:${view/combo_url}/?lp/app/javascript/vanilla/tabs-min.js"></script>
+    </metal:block>
+  </head>
   <body>
     <tal:breadcrumbs metal:fill-slot="breadcrumbs">
       <div class="row">
@@ -19,7 +25,18 @@
     </tal:breadcrumbs>
     <section class="p-section" metal:fill-slot="main">
       <div tal:replace="structure context/@@+vanilla-distroseries-summary" />
-      <link type="text/css" rel="stylesheet" tal:attributes="href string:${icingroot}/vanilla/pages/distroseries.css" />
+      <section class="p-section">
+        <div class="grid-row">
+          <hr class="p-rule" />
+          <h3>Packages</h3>
+          <div class="grid-col-2 grid-col-medium-8">
+            <div tal:replace="structure context/@@+vanilla-distroseries-packages-chart" />
+          </div>
+          <div class="grid-col-6 grid-col-medium-8">
+            <div tal:replace="structure context/@@+vanilla-distroseries-packages-list" />
+          </div>
+        </div>
+      </section>
     </section>
   </body>
 </html>
