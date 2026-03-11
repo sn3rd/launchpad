@@ -27,7 +27,7 @@ If your project's licensing does not meet the guidelines, it will be
 marked "Proprietary".  Proprietary projects can only use Launchpad with
 prior approval from Canonical.
 
-https://help.launchpad.net/CommercialHosting
+https://documentation.ubuntu.com/launchpad/user/reference/consumer-hosting/
 
 Thanks,
 
