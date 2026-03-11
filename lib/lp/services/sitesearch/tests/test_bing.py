@@ -179,7 +179,8 @@ class TestBingSearchService(TestCase):
                 [
                     MatchesStructure.byEquality(
                         title="BugExpiry - Launchpad Help",
-                        url="https://help.launchpad.net/BugExpiry",
+                        url="https://documentation.ubuntu.com/launchpad/"
+                        "user/reference/bugs/bug-expiry/",
                     ),
                 ]
             ),

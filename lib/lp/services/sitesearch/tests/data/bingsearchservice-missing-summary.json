@@ -16,10 +16,10 @@
       {
         "id": "https://api.bing.microsoft.com/api/v7/#WebPages.2",
         "name": "BugExpiry - Launchpad Help",
-        "url": "https://help.launchpad.net/BugExpiry",
+        "url": "https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/",
         "urlPingSuffix": "DevEx,5110.1",
         "isFamilyFriendly": true,
-        "displayUrl": "https://help.launchpad.net/BugExpiry",
+        "displayUrl": "https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/",
         "snippet": "Want to know more about Bug Statuses? Check out our BugStatuses page. What is bug expiry? Today, projects and distributions have the option of allowing old ...",
         "dateLastCrawled": "2018-01-13T13:58:00.0000000Z",
         "fixedPosition": false
