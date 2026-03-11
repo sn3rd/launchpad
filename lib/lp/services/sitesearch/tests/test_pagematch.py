@@ -56,12 +56,16 @@ class TestPageMatchURLHandling(TestCase):
         help.launchpad.net is only run in one environment, so links to
         that site will be preserved.
         """
+        openid_url = (
+            "https://documentation.ubuntu.com"
+            "/launchpad/user/how-to/using-openid/"
+        )
         p = PageMatch(
             "OpenID",
-            "https://help.launchpad.net/OpenID",
+            openid_url,
             "Launchpad uses OpenID.",
         )
-        self.assertEqual("https://help.launchpad.net/OpenID", p.url)
+        self.assertEqual(openid_url, p.url)
 
     def test_rewrite_url_handles_invalid_data(self):
         # Given a bad url, pagematch can get a valid one.
