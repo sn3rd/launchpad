@@ -1086,11 +1086,13 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in unicode PPA name: "
             "áří, but uploaded version has different "
             "contents. See more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\n"
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/.\n"
             "File bar_1.0-1.diff.gz already exists in unicode PPA name: "
             "áří, but uploaded version has different contents. See more "
             "information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\n"
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/.\n"
             "Files specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1160,7 +1162,8 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in Primary Archive "
             "for Ubuntu Linux, but uploaded version has different "
             "contents. See more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\nFiles "
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/.\nFiles "
             "specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1175,7 +1178,8 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in Primary Archive for "
             "Ubuntu Linux, but uploaded version has different contents. See "
             "more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\nFiles "
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/.\nFiles "
             "specified in DSC are broken or missing, skipping package unpack "
             "verification.",
         )
