@@ -293,7 +293,7 @@ sudo apt update
       <p>You can upload packages to this PPA using:</p>
       <p><tt>dput <tal:ppa-ref replace="context/fmt:reference"
                     >ppa:cprov/ppa</tal:ppa-ref> &lt;source.changes&gt;</tt>
-            (<a href="https://help.launchpad.net/Packaging/PPA/Uploading"
+            (<a href="https://documentation.ubuntu.com/launchpad/user/how-to/packaging/ppa-package-upload/"
                >Read about uploading</a>)</p>
     </div>
   </metal:ppa-upload-hint-portlet>

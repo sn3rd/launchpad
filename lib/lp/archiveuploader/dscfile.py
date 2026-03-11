@@ -597,7 +597,7 @@ class DSCFile(SourceUploadFile, SignableTagFile):
                         "File %s already exists in %s, but uploaded version "
                         "has different contents. See more information about "
                         "this error in "
-                        "https://help.launchpad.net/Packaging/UploadErrors."
+                        "/Packaging/UploadErrors."
                         % (sub_dsc_file.filename, file_archive.displayname)
                     )
                     files_missing = True
