@@ -49,7 +49,8 @@ class SendDirectContactEmailTestCase(TestCaseWithFactory):
                     "Me (http://launchpad.test/~me)",
                     "test reason.",
                     "For more information see",
-                    "https://help.launchpad.net/YourAccount/ContactingPeople",
+                    "https://documentation.ubuntu.com/launchpad/user/"
+                    "explanation/collaborating-using-launchpad/",
                 ]
             ),
             notification.get_payload(),
