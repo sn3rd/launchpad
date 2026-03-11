@@ -126,8 +126,8 @@ Pending build records can be 'rescored', which will directly affect
 the time they will get started. A link to the corresponding help text
 about 'Build scores' is available.
 
-    >>> print(anon_browser.getLink("What's this").url)
-    https://help.launchpad.net/Packaging/BuildScores
+    >>> print(anon_browser.getLink("What's this").url)  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/user/.../build-scores/
 
 Administrators can rescore pending builds in a separate form.
 
