@@ -56,7 +56,7 @@
       </p>
       <p id="build-recipes" class="application-summary" style="padding-top: 0.25em;">
         Launchpad can build Ubuntu packages directly from branches using recipes.
-        (<a href="https://help.launchpad.net/Packaging/SourceBuilds">Learn more about recipes</a>)
+        (<a href="https://documentation.ubuntu.com/launchpad/user/explanation/packaging/packaging/#source-package-recipes">Learn more about recipes</a>)
       </p>
 
       <div id="project-cloud-preview">
