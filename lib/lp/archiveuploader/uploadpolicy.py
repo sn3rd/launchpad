@@ -102,6 +102,8 @@ class AbstractUploadPolicy:
 
         elif upload.binaryful:
             if self.accepted_type != ArchiveUploadType.BINARY_ONLY:
+                url = "https://documentation.ubuntu.com/launchpad/user/"
+                "reference/packaging/ppas/ppa/"
                 message = dedent(
                     """
                     Upload rejected because it contains binary packages.
@@ -112,9 +114,9 @@ class AbstractUploadPolicy:
 
                 if upload.is_ppa:
                     message += dedent(
+                        f"""
+                        See {url} for more information.
                         """
-                        See https://help.launchpad.net/Packaging/PPA for
-                        more information."""
                     )
                 upload.reject(message)
 

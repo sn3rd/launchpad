@@ -158,7 +158,7 @@ sudo apt update
       <p tal:condition="not: archive_active">
         This PPA does not contain any packages yet. Find more
         information about how to upload packages in the
-        <a href="https://help.launchpad.net/Packaging/PPA"
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/"
            target="help">PPA help page</a>.</p>
 
     </div> <!-- ppa-install -->

@@ -512,8 +512,8 @@ link to a repository that doesn't exist yet.
 
 It also contains a link to the 'PPA help page'.
 
-    >>> print(anon_browser.getLink("PPA help page").url)
-    https://help.launchpad.net/Packaging/PPA
+    >>> print(anon_browser.getLink("PPA help page").url)  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/.../ppa/
 
 The "sources list" widget isn't presented for empty PPAs either.
 

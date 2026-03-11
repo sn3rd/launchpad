@@ -19,7 +19,7 @@
          Ubuntu source packages to be built and published as an
          apt repository by Launchpad. You can find out more about
          PPAs and how to use them in our
-         <a href="https://help.launchpad.net/Packaging/PPA"
+         <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/"
           >help page</a>.</p>
 
       <form name="ppa_search" action="" method="GET"
