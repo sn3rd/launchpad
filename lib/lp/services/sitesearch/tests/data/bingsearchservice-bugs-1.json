@@ -170,10 +170,10 @@
       {
         "id": "https://api.bing.microsoft.com/api/v7/#WebPages.14",
         "name": "Code/BugAndBlueprintLinks - Launchpad Help",
-        "url": "https://help.launchpad.net/Code/BugAndBlueprintLinks",
+        "url": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/linking-code-to-bug-reports-and-blueprints/",
         "urlPingSuffix": "DevEx,5275.1",
         "isFamilyFriendly": true,
-        "displayUrl": "https://help.launchpad.net/Code/BugAndBlueprintLinks",
+        "displayUrl": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/linking-code-to-bug-reports-and-blueprints/",
         "snippet": "Linking code to bug reports and blueprints. Launchpad is much like a fancy china dinner service: you can get a great deal of use and contentment from just one or two ...",
         "dateLastCrawled": "2018-01-26T14:46:00.0000000Z",
         "fixedPosition": false
