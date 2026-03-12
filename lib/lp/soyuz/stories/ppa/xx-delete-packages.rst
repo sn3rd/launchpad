@@ -75,8 +75,8 @@ sources is presented,
 An informational message also directs the user to the PPA delete package help
 page via a link:
 
-    >>> admin_browser.getLink("deleting a package").url
-    'https://help.launchpad.net/Packaging/PPA/Deleting'
+    >>> admin_browser.getLink("deleting a package").url  # doctest: +ELLIPSIS
+    'https://documentation.ubuntu.com/launchpad/user/.../deleting-packages/'
 
 The user can update the form to only list published sources with name
 matching the given text.
