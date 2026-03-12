@@ -37,7 +37,7 @@
           <p>There are no translations for this release series.</p>
 
           <p tal:condition="context/product/required:launchpad.Edit">To
-            <a href="https://help.launchpad.net/Translations/YourProject">start
+            <a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/translation-best-practices/">start
               translating your project</a>,
             <tal:uses-translations condition="not:
               context/product/translations_usage/enumvalue:LAUNCHPAD">
