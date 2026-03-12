@@ -35,10 +35,13 @@ class LaunchpadWebServiceConfiguration(BaseWebServiceConfiguration):
     compensate_for_mod_compress_etag_modification = True
     enable_server_side_representation_cache = False
 
-    service_description = """The Launchpad web service allows automated
-        clients to access most of the functionality available on the
-        Launchpad web site. For help getting started, see
-        <a href="https://help.launchpad.net/API/">the help wiki.</a>"""
+    service_description = (
+        "The Launchpad web service allows automated"
+        " clients to access most of the functionality available on the"
+        " Launchpad web site. For help getting started, see"
+        ' <a href="https://documentation.ubuntu.com/launchpad/user/'
+        'how-to/launchpad-api/">the help wiki.</a>'
+    )
 
     version_descriptions = {
         "beta": """This is the first version of the web service ever
