@@ -40,5 +40,7 @@ documentation.
     ...     "http://translations.launchpad.test/evolution"
     ...     "/trunk/+pots/evolution-2.2"
     ... )
-    >>> browser.getLink(id="link-to-translations-help").url
-    'https://help.launchpad.net/Translations/StartingToTranslate'
+    >>> browser.getLink(
+    ...     id="link-to-translations-help"
+    ... ).url  # doctest: +ELLIPSIS
+    'https://documentation.ubuntu.com/launchpad/.../prepare-to-translate/'

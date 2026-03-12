@@ -9,7 +9,7 @@
 
 <div metal:fill-slot="main">
   <div class="translation-help-links">
-    <a href="https://help.launchpad.net/Translations/StartingToTranslate"
+    <a href="https://documentation.ubuntu.com/launchpad/user/explanation/translating-with-launchpad/prepare-to-translate/"
        id="link-to-translations-help"
        >Help for translations
     </a>
