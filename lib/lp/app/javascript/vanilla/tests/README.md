@@ -64,12 +64,6 @@ VanillaTest.suite("myModule", (T) => {
 });
 ```
 
-### 3. That's it
-
-No Python files, Makefile changes, or package installs required. The existing
-`lib/lp/app/tests/test_yuitests.py` walks `lp/app/` for `test_*.html` files
-and runs each one through Selenium automatically.
-
 ## How it works
 
 `runner.js` collects test results into a structure matching the format

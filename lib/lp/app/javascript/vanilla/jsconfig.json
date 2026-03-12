@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "checkJs": false,
     "lib": ["es2015", "dom"]
   },
   "include": ["*.js", "tests/*.js", "tests/*.d.ts"]

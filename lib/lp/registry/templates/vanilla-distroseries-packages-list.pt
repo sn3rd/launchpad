@@ -3,13 +3,11 @@
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
   <div id="packages-list">
     <tal:tabs tal:replace="structure view/packages_list_tabs/render" />
-    <div role="tabpanel"
-         tal:attributes="id view/packages_list_tabs/active_panel_id"
+    <div tal:attributes="id view/packages_list_tabs/active_panel_id"
          tal:condition="python:view.packages_list_tabs.active == 'latest'">
       <p class="u-text--muted">Package list latest placeholder</p>
     </div>
-    <div role="tabpanel"
-         tal:attributes="id view/packages_list_tabs/active_panel_id"
+    <div tal:attributes="id view/packages_list_tabs/active_panel_id"
          tal:condition="python:view.packages_list_tabs.active == 'my-uploads'">
       <p class="u-text--muted">Package list my uploads placeholder</p>
     </div>
