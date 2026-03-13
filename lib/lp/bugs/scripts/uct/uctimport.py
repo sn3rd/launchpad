@@ -31,7 +31,7 @@ from collections import defaultdict
 from datetime import timezone
 from itertools import chain
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import transaction
 from zope.component import getUtility
@@ -82,11 +82,13 @@ class UCTImporter(SVTImporter):
         ubuntu,
         information_type=InformationType.PUBLICSECURITY,
         dry_run=False,
+        cache_entities: Optional[Dict[str, Dict[Any, Any]]] = None,
     ):
         self.dry_run = dry_run
         self.bug_importer = getUtility(ILaunchpadCelebrities).bug_importer
         self.ubuntu = ubuntu
         self.information_type = information_type
+        self.cache_entities = cache_entities or CVE.new_cache()
 
     def import_cve_from_file(
         self, cve_path: Path
@@ -98,13 +100,17 @@ class UCTImporter(SVTImporter):
         """
         logger.info("Importing %s", cve_path)
         uct_record = UCTRecord.load(cve_path)
-        cve = CVE.make_from_uct_record(uct_record)
+        cve = CVE.make_from_uct_record(
+            uct_record, cache_entities=self.cache_entities
+        )
         return self.import_cve(cve)
 
     def from_record(
         self, record: UCTRecord, cve_sequence: str
     ) -> Optional[Tuple[BugModel, Vulnerability]]:
-        cve = CVE.make_from_uct_record(record)
+        cve = CVE.make_from_uct_record(
+            record, cache_entities=self.cache_entities
+        )
 
         if cve.sequence != cve_sequence:
             logger.error(
