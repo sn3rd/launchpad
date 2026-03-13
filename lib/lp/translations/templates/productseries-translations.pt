@@ -18,7 +18,7 @@
 
     <div metal:fill-slot="main">
       <div class="translation-help-links">
-        <a href="https://help.launchpad.net/Translations"
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/"
            id="link-to-translations-help"
            >Help for translations
         </a>
