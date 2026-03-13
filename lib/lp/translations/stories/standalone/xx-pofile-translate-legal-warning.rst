@@ -39,5 +39,5 @@ itself.
     >>> warning_link = find_tags_by_class(browser.contents, "legal-warning")[
     ...     0
     ... ]
-    >>> print(extract_link_from_tag(warning_link))
-    https://help.launchpad.net/Translations/ReusingPackagedTranslations
+    >>> print(extract_link_from_tag(warning_link))  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/.../reusing-packaged-translations/
