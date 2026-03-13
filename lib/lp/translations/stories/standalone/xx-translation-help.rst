@@ -1,8 +1,8 @@
 Translation help
 ================
 
-Links to Translation help on https://help.launchpad.net/ links are
-available on a number of translation pages in Launchpad.
+Links to Translation help on https://documentation.ubuntu.com/launchpad/user/
+links are available on a number of translation pages in Launchpad.
 
 The Translations start page provides a link to official documentation.
 
