@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
+from unittest.mock import Mock, patch
 
 from zope.component import getUtility
 
@@ -21,6 +22,8 @@ from lp.bugs.scripts.uct import (
     UCTImportError,
     UCTRecord,
 )
+from lp.registry.interfaces.distribution import IDistributionSet
+from lp.registry.interfaces.distroseries import IDistroSeriesSet
 from lp.registry.interfaces.series import SeriesStatus
 from lp.registry.model.sourcepackage import SourcePackage
 from lp.services.propertycache import clear_property_cache
@@ -574,6 +577,8 @@ class TestCVE(TestCaseWithFactory):
             ],
             global_tags={"cisa-kev"},
         )
+        self.distribution = ubuntu
+        self.distroseries = current_series
 
     def test_make_from_uct_record(self):
         cve = CVE.make_from_uct_record(self.uct_record)
@@ -594,6 +599,48 @@ class TestCVE(TestCaseWithFactory):
         )
         self.assertEqual(xenial, CVE.get_distro_series("esm-infra/xenial"))
         self.assertEqual(precise, CVE.get_distro_series("precise/esm"))
+
+    def _reset_cache(self):
+        # Auxiliary method to reset CVE._cache_entities and set them back to
+        # the previous values at the end of the test
+        previous_cache = CVE._cache_entities
+        CVE._cache_entities = {
+            "distribution": {},
+            "distroseries": {},
+            "product": {},
+        }
+        self.addCleanup(setattr, CVE, "_cache_entities", previous_cache)
+
+    def test_get_distro_series_uses_cache(self):
+        # Check that when calling `get_distro_series` for the same series, we
+        # get the cached value instead of calling `queryByName` which accesses
+        # the database
+        self._reset_cache()
+
+        distribution_set = Mock()
+        distribution_set.getByName.return_value = self.distribution
+        distro_series_set = Mock()
+        distro_series_set.queryByName.return_value = self.distroseries
+
+        def mock_getUtility(interface):
+            if interface is IDistributionSet:
+                return distribution_set
+            if interface is IDistroSeriesSet:
+                return distro_series_set
+            raise AssertionError(f"Unexpected utility requested: {interface}")
+
+        with patch("lp.bugs.scripts.uct.models.getUtility", mock_getUtility):
+            first_result = CVE.get_distro_series("jammy")
+            second_result = CVE.get_distro_series("jammy")
+
+        self.assertIs(first_result, self.distroseries)
+        self.assertIs(second_result, self.distroseries)
+        self.assertEqual(1, distro_series_set.queryByName.call_count)
+        distro_series_set.queryByName.assert_called_once_with(
+            self.distribution, "jammy"
+        )
+        self.assertEqual(1, distribution_set.getByName.call_count)
+        distribution_set.getByName.assert_called_once_with("ubuntu")
 
     def test_get_patches(self):
         spn = self.factory.makeSourcePackageName()
