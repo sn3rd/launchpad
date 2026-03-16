@@ -49,6 +49,9 @@ class Browser:
         firefox_profile.set_preference("dom.disable_open_during_load", False)
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.headless = True
+        # Results are polled via window.test_results, not page
+        # load events, so there is no need to wait for page load.
+        firefox_options.set_capability("pageLoadStrategy", "none")
         self.driver = webdriver.Firefox(
             options=firefox_options, firefox_profile=firefox_profile
         )
