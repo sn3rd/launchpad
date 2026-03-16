@@ -1087,12 +1087,12 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "áří, but uploaded version has different "
             "contents. See more information about this error in "
             "https://documentation.ubuntu.com/launchpad/user/explanation/"
-            "packaging/package-upload-errors/.\n"
+            "packaging/package-upload-errors/\n"
             "File bar_1.0-1.diff.gz already exists in unicode PPA name: "
             "áří, but uploaded version has different contents. See more "
             "information about this error in "
             "https://documentation.ubuntu.com/launchpad/user/explanation/"
-            "packaging/package-upload-errors/.\n"
+            "packaging/package-upload-errors/\n"
             "Files specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1163,7 +1163,7 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "for Ubuntu Linux, but uploaded version has different "
             "contents. See more information about this error in "
             "https://documentation.ubuntu.com/launchpad/user/explanation/"
-            "packaging/package-upload-errors/.\nFiles "
+            "packaging/package-upload-errors/\nFiles "
             "specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1179,7 +1179,7 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "Ubuntu Linux, but uploaded version has different contents. See "
             "more information about this error in "
             "https://documentation.ubuntu.com/launchpad/user/explanation/"
-            "packaging/package-upload-errors/.\nFiles "
+            "packaging/package-upload-errors/\nFiles "
             "specified in DSC are broken or missing, skipping package unpack "
             "verification.",
         )
