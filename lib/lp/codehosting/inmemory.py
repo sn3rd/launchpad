@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 import operator
-from xmlrpc.client import Fault
+from xmlrpc.client import Fault  # nosec B411
 
 import six
 from breezy.urlutils import escape, unescape

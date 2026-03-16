@@ -63,7 +63,7 @@
       </tal:view>
     </head>
 
-    <body>
+    <body class="is-light">
       <a href="#main-content" class="p-link--skip">Jump to main content</a>
 
       <metal:navigation use-macro="context/@@+base-layout-vanilla-macros/vf-navigation" />
@@ -78,9 +78,7 @@
               <li class="p-breadcrumbs__item">
                 <a href="/projects">Projects</a>
               </li>
-              <li class="p-breadcrumbs__item">
-            Project 1
-              </li>
+              <li class="p-breadcrumbs__item">Project 1</li>
             </ol>
           </nav>
         </div>
@@ -124,5 +122,27 @@
 
     --&gt;" />
     </tal:template>
+
+    <script>
+      const darkPrefersScheme = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      );
+
+      /**
+       * Toggles the theme of the body element
+       * @param {boolean} isDark - Whether the theme is dark
+       * @returns {void}
+       */
+      const toggleTheme = (isDark) => {
+        document.body.classList.remove("is-light", "is-dark");
+        document.body.classList.add(isDark ? "is-dark" : "is-light");
+      };
+
+      darkPrefersScheme.addEventListener("change", (event) => {
+        toggleTheme(event.matches);
+      });
+
+      toggleTheme(darkPrefersScheme.matches);
+    </script>
   </html>
 </metal:page>

@@ -330,26 +330,36 @@ class BuilderWorker:
         """Helper to send the file at 'url' with 'sha1' to this builder."""
         if logger is not None:
             logger.info(
-                "Asking %s to ensure it has %s (%s%s)"
-                % (
+                "Asking %s to ensure it has %s (%s%s)",
+                self.url,
+                sha1,
+                url,
+                " with auth" if username or password else "",
+            )
+        try:
+            present, info = yield self.ensurepresent(
+                sha1, url, username, password
+            )
+        except Exception as e:
+            if logger is not None:
+                logger.exception(
+                    "Failed to ensure %s has %s (%s%s): %s",
                     self.url,
                     sha1,
                     url,
                     " with auth" if username or password else "",
+                    str(e),
                 )
-            )
-        present, info = yield self.ensurepresent(sha1, url, username, password)
+            raise CannotFetchFile(url, str(e)) from e
         if not present:
             if logger is not None:
                 logger.error(
-                    "Failed to fetch %s (%s%s) on %s: %s"
-                    % (
-                        sha1,
-                        url,
-                        " with auth" if username or password else "",
-                        self.url,
-                        info,
-                    )
+                    "Failed to fetch %s (%s%s) on %s: %s",
+                    sha1,
+                    url,
+                    " with auth" if username or password else "",
+                    self.url,
+                    info,
                 )
             raise CannotFetchFile(url, info)
 

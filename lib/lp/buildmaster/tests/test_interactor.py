@@ -60,6 +60,7 @@ from lp.buildmaster.tests.mock_workers import (
     WorkerTestHelpers,
 )
 from lp.services.config import config
+from lp.services.log.logger import BufferLogger
 from lp.services.twistedsupport.testing import TReqFixture
 from lp.services.twistedsupport.treq import check_status
 from lp.soyuz.enums import PackagePublishingStatus
@@ -660,20 +661,66 @@ class TestWorker(TestCase):
         response = yield worker.ensurepresent("blahblah", None, None, None)
         self.assertEqual([True, "No URL"], response)
 
+    @defer.inlineCallbacks
     def test_sendFileToWorker_not_there(self):
         self.worker_helper.getServerWorker()
         worker = self.worker_helper.getClientWorker()
-        d = worker.sendFileToWorker("blahblah", None, None, None)
-        return assert_fails_with(d, CannotFetchFile)
+
+        test_logger = BufferLogger()
+
+        d = worker.sendFileToWorker(
+            "blahblah", None, None, None, logger=test_logger
+        )
+
+        yield assert_fails_with(d, CannotFetchFile)
+
+        log_output = test_logger.getLogBuffer()
+        self.assertIn("Failed to fetch", log_output)
+        self.assertIn("blahblah", log_output)
 
     @defer.inlineCallbacks
     def test_sendFileToWorker_actually_there(self):
         tachandler = self.worker_helper.getServerWorker()
         worker = self.worker_helper.getClientWorker()
+
+        test_logger = BufferLogger()
+
         self.worker_helper.makeCacheFile(tachandler, "blahblah")
-        yield worker.sendFileToWorker("blahblah", None, None, None)
+        yield worker.sendFileToWorker(
+            "blahblah", None, None, None, logger=test_logger
+        )
         response = yield worker.ensurepresent("blahblah", None, None, None)
         self.assertEqual([True, "No URL"], response)
+
+        log_output = test_logger.getLogBuffer()
+        self.assertIn("ensure it has", log_output)
+        self.assertIn("blahblah", log_output)
+
+    @defer.inlineCallbacks
+    def test_sendFileToWorker_ensurepresent_raises(self):
+        # When ensurepresent raises an exception, sendFileToWorker should
+        # log it and raise CannotFetchFile.
+        self.worker_helper.getServerWorker()
+        worker = self.worker_helper.getClientWorker()
+
+        test_logger = BufferLogger()
+
+        # Mock ensurepresent to raise an exception
+        test_error = RuntimeError("Test connection error")
+        worker.ensurepresent = FakeMethod(failure=test_error)
+
+        # sendFileToWorker should catch the exception and raise CannotFetchFile
+        d = worker.sendFileToWorker(
+            "blahblah", None, None, None, logger=test_logger
+        )
+
+        yield assert_fails_with(d, CannotFetchFile)
+
+        # Verify that logging occurred - check for exception logging
+        log_output = test_logger.getLogBuffer()
+        self.assertIn("Failed to ensure", log_output)
+        self.assertIn("blahblah", log_output)
+        self.assertIn("Test connection error", log_output)
 
     @defer.inlineCallbacks
     def test_resumeHost_success(self):

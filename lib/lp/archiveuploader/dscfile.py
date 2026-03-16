@@ -20,6 +20,7 @@ import glob
 import io
 import os
 import shutil
+import subprocess
 import tempfile
 import warnings
 
@@ -94,9 +95,9 @@ def cleanup_unpacked_dir(unpacked_dir):
     try:
         shutil.rmtree(unpacked_dir)
     except PermissionError:
-        result = os.system("chmod -R u+rwx " + unpacked_dir)
-        if result != 0:
-            raise UploadError("chmod failed with %s" % result)
+        result = subprocess.run(["chmod", "-R", "u+rwx", unpacked_dir])
+        if result.returncode != 0:
+            raise UploadError("chmod failed with %s" % result.returncode)
         shutil.rmtree(unpacked_dir)
     except OSError as error:
         raise UploadError(

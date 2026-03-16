@@ -13,3 +13,8 @@ options:
     default: 11371
     description: |
       Override the GPG keyserver port.
+  gpghandler_http_proxy:
+    type: string
+    default: ""
+    description: |
+      Proxy to be used for GPG keyserver requests.

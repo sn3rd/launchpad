@@ -21,7 +21,7 @@ import socket
 import sys
 from contextlib import contextmanager
 from threading import Lock, Thread
-from xmlrpc.client import Transport
+from xmlrpc.client import Transport  # nosec B411
 
 from requests import HTTPError, Session
 from requests.adapters import DEFAULT_POOLBLOCK, HTTPAdapter

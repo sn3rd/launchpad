@@ -310,8 +310,7 @@ class TestOCIRegistryUploadJob(
         self.assertIsNone(job.errors)
         self.assertEqual([], pop_notifications())
         self.assertWebhookDeliveries(ocibuild, ["Pending", "Uploaded"], logger)
-        self.assertEqual(4, self.stats_client.incr.call_count)
-        calls = [x[0][0] for x in self.stats_client.incr.call_args_list]
+        calls = self.filterStatsdCallsByName("job")
         self.assertThat(
             calls,
             MatchesListwise(
@@ -371,7 +370,7 @@ class TestOCIRegistryUploadJob(
             ],
             client.uploadManifestList.calls,
         )
-        calls = [x[0][0] for x in self.stats_client.incr.call_args_list]
+        calls = self.filterStatsdCallsByName("job")
         self.assertThat(
             calls,
             MatchesListwise(

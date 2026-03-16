@@ -204,6 +204,7 @@ css_combine: jsbuild_widget_css
 	# XXX 2020-06-12 twom This should have `--style=compressed`. Removed for debugging purposes
 	$(YARN) run sass --load-path $(WD)/$(ICING) $(WD)/$(ICING)/combo.scss $(WD)/$(ICING)/combo.css
 	$(YARN) run sass --load-path $(WD)/$(ICING) $(WD)/$(ICING)/vanilla/styles.scss $(WD)/$(ICING)/vanilla/styles.css --style=compressed
+	$(YARN) run sass $(WD)/$(ICING)/vanilla/pages/:$(WD)/$(ICING)/vanilla/pages/ --style=compressed
 
 .PHONY: css_watch
 css_watch: jsbuild_widget_css

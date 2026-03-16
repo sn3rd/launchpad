@@ -9,7 +9,7 @@ __all__ = [
     "SelfTest",
 ]
 
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 
 from zope.component import getUtility
 from zope.interface import Interface, implementer

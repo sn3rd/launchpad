@@ -4974,6 +4974,66 @@ class TestPublisherDirtyPockets(TestPublisherBase):
         # because the SPR is still published in UPDATES.
         self.assertNotIn("breezy-autotest", self.publisher.dirty_suites)
 
+    def test_mark_dirty_if_spr_published_in_different_ppa(self):
+        ppa_one = self.factory.makeArchive(
+            purpose=ArchivePurpose.PPA, distribution=self.ubuntutest
+        )
+        ppa_two = self.factory.makeArchive(
+            purpose=ArchivePurpose.PPA, distribution=self.ubuntutest
+        )
+
+        spph_published = self.getPubSource(
+            archive=ppa_one,
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        spr = spph_published.sourcepackagerelease
+
+        self.factory.makeSourcePackagePublishingHistory(
+            sourcepackagerelease=spr,
+            distroseries=self.breezy_autotest,
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.DELETED,
+            archive=ppa_two,
+        )
+
+        ppa_publisher = getPublisher(ppa_two, self.allowed_suites, self.logger)
+        ppa_publisher.A2_markPocketsWithDeletionsDirty()
+
+        # breezy-autotest should be dirty, since the published SPR is
+        # only in a different PPA archive.
+        self.assertIn("breezy-autotest", ppa_publisher.dirty_suites)
+
+    def test_mark_dirty_if_bpr_published_in_different_ppa(self):
+        ppa_one = self.factory.makeArchive(
+            purpose=ArchivePurpose.PPA, distribution=self.ubuntutest
+        )
+        ppa_two = self.factory.makeArchive(
+            purpose=ArchivePurpose.PPA, distribution=self.ubuntutest
+        )
+
+        bpph_published = self.getPubBinaries(
+            archive=ppa_one,
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.PUBLISHED,
+        )[0]
+        bpr = bpph_published.binarypackagerelease
+
+        self.factory.makeBinaryPackagePublishingHistory(
+            binarypackagerelease=bpr,
+            distroarchseries=self.breezy_autotest_i386,
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.DELETED,
+            archive=ppa_two,
+        )
+
+        ppa_publisher = getPublisher(ppa_two, self.allowed_suites, self.logger)
+        ppa_publisher.A2_markPocketsWithDeletionsDirty()
+
+        # breezy-autotest should be dirty, since the published BPR is
+        # only in a different PPA archive.
+        self.assertIn("breezy-autotest", ppa_publisher.dirty_suites)
+
     def test_exclude_spph_if_binary_published(self):
         # Exclude SPPHs where the corresponding
         # binary packages are still published.

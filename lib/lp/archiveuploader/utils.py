@@ -26,6 +26,9 @@ __all__ = [
     "re_changes_file_name",
     "re_extract_src_version",
     "rfc822_encode_address",
+    "SafeTarExtractError",
+    "safe_extract_tar",
+    "safe_extract_zip",
     "UploadError",
     "UploadWarning",
 ]
@@ -35,6 +38,7 @@ import os
 import re
 import signal
 import subprocess
+import tarfile
 from collections import defaultdict
 
 import six
@@ -45,6 +49,10 @@ from lp.soyuz.enums import BinaryPackageFileType
 
 class UploadError(Exception):
     """All upload errors are returned in this form."""
+
+
+class SafeTarExtractError(UploadError):
+    """Raised when a tar member is rejected by safe extraction."""
 
 
 class UploadWarning(Warning):
@@ -62,6 +70,177 @@ class DpkgSourceError(Exception):
         self.output = output
         self.result = result
         self.command = command
+
+
+def _tarfile_supports_filter():
+    """Return True if TarFile.extractall accepts a filter argument."""
+    try:
+        sig = tarfile.TarFile.extractall.__code__.co_varnames
+        return "filter" in sig
+    except Exception:
+        return False
+
+
+def _resolve_extract_path(name, dest_path, error_name=None):
+    """Resolve a member name to a path under dest_path.
+
+    Returns the resolved path.  Raises SafeTarExtractError for absolute
+    paths, path traversal, or empty/'.'/'..' names.
+    """
+    if error_name is None:
+        error_name = name
+    # Reject absolute paths before normalizing
+    if name.startswith(("/", os.sep)) or os.path.isabs(name):
+        raise SafeTarExtractError("%r has an absolute path" % (error_name,))
+    # Normalize: strip leading slashes (tar/zip use /)
+    name = name.replace("\\", "/").lstrip("/").lstrip(os.sep).rstrip("/")
+    if not name or name in (".", ".."):
+        raise SafeTarExtractError(
+            "%r is empty or a bare dot and would not extract safely"
+            % (error_name,)
+        )
+    if name.startswith("/") or os.path.isabs(name):
+        raise SafeTarExtractError("%r has an absolute path" % (error_name,))
+    candidate = os.path.abspath(os.path.join(dest_path, name))
+    if os.path.commonpath([candidate, dest_path]) != dest_path:
+        raise SafeTarExtractError(
+            "%r would be extracted outside the destination" % (error_name,)
+        )
+    return candidate
+
+
+def _verify_tar_member(member, dest_path):
+    """Verify a single tar member before extraction.
+
+    Mirrors the logic in CustomUpload._verifyMember: allow only regular
+    files, directories, and symlinks; ensure the member path and any
+    symlink target resolve under dest_path (using realpath so existing
+    symlinks on disk are honoured and the TOCTOU gap is closed).
+    Then sanitise mode/ownership (PEP 706) for the actual extraction.
+    """
+    dest_path = os.path.realpath(dest_path)
+    dest_with_sep = dest_path + os.sep
+
+    # Same as CustomUpload: allow only regular file, symlink, or directory.
+    if not (member.isreg() or member.issym() or member.isdir()):
+        raise SafeTarExtractError(
+            "Tar member %r is not a regular file, directory, or symlink"
+            % (member.name,)
+        )
+
+    # Where will this member be written? realpath() uses current filesystem
+    # state so any symlinks already extracted are followed (TOCTOU fix).
+    member_path = os.path.join(dest_path, member.name)
+    member_realpath = os.path.realpath(member_path)
+    if member_realpath != dest_path and not member_realpath.startswith(
+        dest_with_sep
+    ):
+        raise SafeTarExtractError(
+            "%r would be extracted outside the destination" % (member.name,)
+        )
+
+    # Symlinks: same as CustomUpload — resolve target relative to link’s
+    # directory and ensure it stays under dest_path.
+    if member.issym():
+        rel_link_file_location = os.path.dirname(member.name)
+        abs_link_file_location = os.path.join(
+            dest_path, rel_link_file_location
+        )
+        target_path = os.path.join(abs_link_file_location, member.linkname)
+        target_realpath = os.path.realpath(target_path)
+        if target_realpath != dest_path and not target_realpath.startswith(
+            dest_with_sep
+        ):
+            raise SafeTarExtractError(
+                "Tar member %r would link outside the destination"
+                % (member.name,)
+            )
+
+    # Sanitise mode/ownership for extraction (PEP 706); not in CustomUpload.
+    if member.isdir():
+        member.mode = 0o755
+    else:
+        member.mode = 0o644
+    member.uid = member.gid = 0
+    member.uname = member.gname = ""
+
+
+def safe_extract_tar(tar, dest_path):
+    """Extract a tar file to dest_path with path-traversal and link safety.
+
+    Uses the stdlib filter when available (Python 3.12+ / backports);
+    otherwise verifies and extracts one member at a time with realpath
+    checks so symlinks already on disk cannot cause later members to
+    escape (TOCTOU). Applies PEP 706 mode/ownership sanitization.
+    """
+    dest_path = os.path.realpath(dest_path)
+    os.makedirs(dest_path, mode=0o700, exist_ok=True)
+    if _tarfile_supports_filter():
+        # Python 3.12+ "data" filter already rejects symlinks and device
+        # files and applies PEP 706 semantics. We still rely on the kernel
+        # to enforce permissions, but there is no additional application-
+        # level TOCTOU here.
+        tar.extractall(path=dest_path, filter="data")
+        return
+
+    # Older Pythons: verify and extract one member at a time, recalculating
+    # realpaths so that previously-extracted symlinks cannot later be used
+    # to escape dest_path.
+    tar.ignore_zeros = True
+    for member in tar:
+        _verify_tar_member(member, dest_path)
+        tar.extract(member, dest_path)
+
+
+# Maximum bytes to extract from a single zip member.
+_MAX_EXTRACT_FILE_SIZE = 1000 * 1024 * 1024  # 1 GiB
+
+
+def safe_extract_zip(zip_file, dest_path, members=None):
+    """Extract a ZIP file to dest_path with path-traversal safety.
+
+    Only regular files and directories are extracted. Member names are
+    validated so nothing is written outside dest_path. Single-file size
+    is capped to avoid zip-bomb style exhaustion.
+    """
+    dest_path = os.path.realpath(dest_path)
+    os.makedirs(dest_path, mode=0o700, exist_ok=True)
+
+    infolist = zip_file.infolist()
+    if members is not None:
+        names_set = set(members)
+        infolist = [info for info in infolist if info.filename in names_set]
+
+    for info in infolist:
+        target_path = _resolve_extract_path(
+            info.filename, dest_path, error_name=info.filename
+        )
+
+        if info.is_dir():
+            os.makedirs(target_path, mode=0o700, exist_ok=True)
+        else:
+            parent = os.path.dirname(target_path)
+            if parent:
+                os.makedirs(parent, mode=0o700, exist_ok=True)
+            with zip_file.open(info) as src:
+                with open(target_path, "wb") as dst:
+                    written = 0
+                    while True:
+                        chunk = src.read(65536)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > _MAX_EXTRACT_FILE_SIZE:
+                            raise SafeTarExtractError(
+                                "Member %r exceeds maximum extract size"
+                                " (%d bytes)"
+                                % (info.filename, _MAX_EXTRACT_FILE_SIZE)
+                            )
+                        dst.write(chunk)
+            try:
+                os.chmod(target_path, 0o600)
+            except OSError:
+                pass
 
 
 re_taint_free = re.compile(r"^[-+~/\.\w]+$")

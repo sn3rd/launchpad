@@ -22,7 +22,7 @@ from copy import copy
 from datetime import datetime, timedelta, timezone
 from itertools import chain, islice
 from typing import List
-from xmlrpc.client import ProtocolError
+from xmlrpc.client import ProtocolError  # nosec B411
 
 from twisted.internet import reactor
 from twisted.internet.defer import DeferredList

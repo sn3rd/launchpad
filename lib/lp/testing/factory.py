@@ -643,6 +643,7 @@ class LaunchpadObjectFactory(ObjectFactory):
         selfgenerated_bugnotifications=False,
         member_of=(),
         karma=None,
+        creation_rationale=PersonCreationRationale.UNKNOWN,
     ):
         """Create and return a new, arbitrary Person.
 
@@ -680,7 +681,7 @@ class LaunchpadObjectFactory(ObjectFactory):
             email_address_status = EmailAddressStatus.NEW
         person, email = getUtility(IPersonSet).createPersonAndEmail(
             email,
-            rationale=PersonCreationRationale.UNKNOWN,
+            rationale=creation_rationale,
             name=name,
             displayname=displayname,
             hide_email_addresses=hide_email_addresses,
@@ -3282,7 +3283,8 @@ class LaunchpadObjectFactory(ObjectFactory):
             parent=parent,
             datecreated=datecreated,
         )
-        MessageChunk(message=message, sequence=1, content=content)
+        if content is not None:
+            MessageChunk(message=message, sequence=1, content=content)
         return message
 
     def makeLanguage(

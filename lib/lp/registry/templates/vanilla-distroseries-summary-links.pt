@@ -1,0 +1,22 @@
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="" define="overview_menu context/menu:overview">
+  <ul class="p-list">
+    <li class="p-list__item" tal:condition="overview_menu/edit/enabled">
+      <a tal:attributes="href overview_menu/edit/url"> Edit details </a>
+    </li>
+    <li class="p-list__item" tal:condition="overview_menu/admin/enabled">
+      <a tal:attributes="href overview_menu/admin/url">Admin</a>
+    </li>
+    <li class="p-list__item" tal:condition="overview_menu/initseries/enabled|nothing">
+      <a tal:attributes="href overview_menu/initseries/url">Init series</a>
+    </li>
+  </ul>
+  <div tal:replace="structure context/@@+get-involved-vanilla" />
+  <ul class="p-list">
+    <li class="p-list__item" tal:condition="overview_menu/subscribe_to_bug_mail/enabled|overview_menu/subscribe/enabled|nothing">
+      <a tal:condition="overview_menu/subscribe_to_bug_mail/enabled|nothing" tal:attributes="href overview_menu/subscribe_to_bug_mail/url">Subscribe to bug mail</a>
+      <a tal:condition="overview_menu/subscribe/enabled|nothing" tal:attributes="href overview_menu/subscribe/url">Subscribe to this series</a>
+    </li>
+  </ul>
+</tal:root>

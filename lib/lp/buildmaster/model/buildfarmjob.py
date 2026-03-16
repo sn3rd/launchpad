@@ -50,6 +50,7 @@ VALID_STATUS_TRANSITIONS = {
         BuildStatus.FULLYBUILT,
         BuildStatus.FAILEDTOUPLOAD,
         BuildStatus.SUPERSEDED,
+        BuildStatus.CANCELLED,
     ),
     BuildStatus.CANCELLING: (BuildStatus.CANCELLED,),
     BuildStatus.CANCELLED: (BuildStatus.NEEDSBUILD,),
@@ -379,6 +380,12 @@ class BuildFarmJobMixin:
         # CANCELLED, or go through CANCELLING to let buildd-manager clean up
         # the builder.
         self.buildqueue_record.cancel()
+
+    def cancelUpload(self):
+        """See `IBuildFarmJob`."""
+        if self.status != BuildStatus.UPLOADING:
+            return
+        self.updateStatus(BuildStatus.CANCELLED)
 
 
 class SpecificBuildFarmJobSourceMixin:

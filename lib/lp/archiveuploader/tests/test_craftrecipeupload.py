@@ -195,6 +195,35 @@ class TestCraftRecipeUploads(TestUploadProcessorBase):
         stored_file = files[0][1]
         self.assertEqual(archive_name, stored_file.filename)
 
+    def test_rejects_path_traversal_in_archive(self):
+        """Unsafe tar members (path traversal) are rejected (CVE-2007-4559)."""
+        upload_dir = os.path.join(
+            self.incoming_folder, "test", str(self.build.id)
+        )
+        os.makedirs(upload_dir, exist_ok=True)
+        archive_path = os.path.join(upload_dir, "malicious.tar.xz")
+        with tarfile.open(archive_path, "w:xz") as tar:
+            # Add a benign file so the archive is valid
+            with tempfile.NamedTemporaryFile(
+                mode="wb", delete=False, suffix=".yaml"
+            ) as tmp:
+                tmp.write(b"name: x\nversion: 1.0\n")
+                tmp.flush()
+                tar.add(tmp.name, arcname="metadata.yaml")
+            # Add a member that would escape the extraction dir
+            info = tarfile.TarInfo(name="../../../etc/escape")
+            info.size = 0
+            tar.addfile(info)
+
+        handler = UploadHandler.forProcessor(
+            self.uploadprocessor, self.incoming_folder, "test", self.build
+        )
+        result = handler.processCraftRecipe(self.log)
+
+        self.assertEqual(UploadStatusEnum.REJECTED, result)
+        self.assertIn("Unsafe archive content", self.log.getLogBuffer())
+        self.assertIn("outside the destination", self.log.getLogBuffer())
+
     def test_requires_craft(self):
         """Test that the upload fails if no .tar.xz files are found."""
         upload_dir = os.path.join(

@@ -9,9 +9,47 @@
   margin: 0;
   padding: 0;
   position: relative;
-  vertical-align: calc(.5px + .3465em - .5rem);
+  vertical-align: calc(0.5px + 0.3465em - 0.5rem);
 }
 
 .sprite.person {
   background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 1a4 4 0 014 4v.5a3.987 3.987 0 01-1.139 2.795 6 6 0 014.135 5.48L15 14H1a6.003 6.003 0 014.14-5.706A3.98 3.98 0 014 5.5V5a4 4 0 014-4zm1 8.5H7a4.502 4.502 0 00-4.203 2.888l-.04.112h10.486l-.03-.084a4.504 4.504 0 00-4-2.911L9 9.5zm-1-7a2.5 2.5 0 00-2.495 2.336L5.5 5v.5a2.5 2.5 0 004.995.164L10.5 5.5V5A2.5 2.5 0 008 2.5z' fill='%23666' fill-rule='nonzero'/%3E%3C/svg%3E");
+}
+
+*[class^="p-icon--"] {
+  --icon-size: 1rem;
+  content: "";
+  display: block;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  background-color: var(--color-icon-default);
+  mask-image: var(--icon-svg);
+  mask-size: var(--icon-size);
+  mask-position: center;
+  mask-repeat: no-repeat;
+
+  &.is-negative {
+    background-color: var(--color-icon-negative);
+  }
+
+  &.is-positive {
+    background-color: var(--color-icon-positive);
+  }
+
+  &.is-information {
+    background-color: var(--color-icon-information);
+  }
+
+  &.is-caution {
+    background-color: var(--color-icon-caution);
+  }
+}
+
+.p-icon--edit {
+  --icon-svg: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 13.25v1.5H2v-1.5h12zM11.907 1.676l.58.58a2 2 0 010 2.829l-5.133 5.133c-.038.038-.079.073-.122.104l.01.008a3.77 3.77 0 01-1.718.983l-3.52.914.863-3.583c.138-.57.41-1.099.795-1.54l.17-.183.01.01c.03-.043.065-.084.103-.122l5.133-5.133a2 2 0 012.829 0zm-3.309 2.6L5.036 7.84l-.593.82 1.062 1.063.814-.591 3.567-3.568-1.288-1.288zm1.61-1.597l-.07.057-.479.48 1.288 1.288.48-.48a.5.5 0 00.057-.638l-.057-.069-.581-.58a.5.5 0 00-.638-.058z' fill='%23000'  fill-rule='nonzero'/%3E%3C/svg%3E");
+}
+
+.p-icon--circle {
+  --icon-size: 0.5rem;
+  --icon-svg: url("data:image/svg+xml,%3Csvg width='14' height='14' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='7' cy='7' r='7' fill='%23000' fill-rule='nonzero'/%3E%3C/svg%3E");
 }

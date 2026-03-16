@@ -8,7 +8,7 @@ __all__ = [
 ]
 
 import re
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 
 from six import ensure_text
 from zope.component import getUtility

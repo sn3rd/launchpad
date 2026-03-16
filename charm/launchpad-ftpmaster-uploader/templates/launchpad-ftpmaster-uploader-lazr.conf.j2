@@ -6,6 +6,12 @@
 # Values are strings, except for numbers that look like ints.  The tokens
 # true, false, and none are treated as True, False, and None.
 
+{% from "macros.j2" import opt -%}
+
 [meta]
 extends: ../launchpad-db-lazr.conf
 
+[gpghandler]
+{{- opt("host", gpghandler_host) }}
+{{- opt("port", gpghandler_port) }}
+{{- opt("http_proxy", gpghandler_http_proxy) }}

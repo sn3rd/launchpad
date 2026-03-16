@@ -409,8 +409,8 @@ class TestCVEUpdater(TestCase):
 
         self.assertRaisesWithContent(
             LaunchpadScriptFailure,
-            "Failed to extract ZIP files: \"There is no item named 'cves.zip' "
-            'in the archive"',
+            "Failed to extract ZIP files: There is no item named 'cves.zip' "
+            "in the archive",
             updater.extract_github_zip,
             buffer.getvalue(),
         )

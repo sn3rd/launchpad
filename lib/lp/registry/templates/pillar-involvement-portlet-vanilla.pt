@@ -1,0 +1,20 @@
+<div xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" tal:condition="view/has_involvement" class="involvement">
+  <tal:comment condition="nothing">
+    This is based off pillar-involvement-portlet.pt, there are more sections
+    in the original template but are specific to edit pages which aren't used
+    by this template yet.
+  </tal:comment>
+  <h2 class="p-heading--5">Get Involved</h2>
+
+  <ul class="p-list u-no-margin">
+    <li class="p-list__item" tal:repeat="link view/enabled_links">
+      <a tal:attributes="href link/url" tal:content="link/text">link/text</a>
+    </li>
+    <tal:disabled repeat="link view/visible_disabled_links">
+      <li class="list__item is-crossed" tal:attributes="title string:Launchpad needs to know where the user can ${link/text/lower}" class="disabled">
+        <span tal:content="link/text">link/text</span>
+      </li>
+    </tal:disabled>
+  </ul>
+</div>

@@ -134,7 +134,7 @@ class LaunchpadCookieClientIdManager:
             time.time(),
             process_time(),
         )
-        digest = sha1(data.encode()).digest()
+        digest = sha1(data.encode()).digest()  # nosec B324
         s = encode_digest(digest)
         # we store a HMAC of the random value together with it, which makes
         # our session ids unforgeable.

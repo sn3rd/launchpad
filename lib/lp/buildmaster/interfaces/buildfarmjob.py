@@ -415,6 +415,21 @@ class IBuildFarmJobAdmin(Interface):
     def rescore(score):
         """Change the build's score."""
 
+    @export_write_operation()
+    @operation_for_version("devel")
+    def cancelUpload():
+        """Cancel a build in the UPLOADING state.
+
+        When a build transitions to UPLOADING its BuildQueue record is
+        destroyed, so the ordinary cancel() path cannot reach it. This
+        admin-only endpoint transitions the build directly to CANCELLED.
+
+        `BuildUploadHandler.process()` will take care of cleaning the build
+        directory in `incoming/` in case it exists.
+
+        If the build is not in UPLOADING state this method is a no-op.
+        """
+
 
 @exported_as_webservice_entry(as_of="beta")
 class IBuildFarmJob(IBuildFarmJobView, IBuildFarmJobEdit, IBuildFarmJobAdmin):

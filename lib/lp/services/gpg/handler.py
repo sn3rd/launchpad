@@ -595,7 +595,13 @@ class GPGHandler:
     def _grabPage(self, action, fingerprint):
         """Wrapper to collect KeyServer Pages."""
         url = self.getURLForKeyInServer(fingerprint, action)
-        with urlfetch(url) as response:
+        kwargs = {}
+        if config.gpghandler.http_proxy:
+            kwargs["proxies"] = {
+                "http": config.gpghandler.http_proxy,
+                "https": config.gpghandler.http_proxy,
+            }
+        with urlfetch(url, **kwargs) as response:
             return response.content
 
 

@@ -770,7 +770,8 @@ class Question(StormBase, BugLinkTargetMixin):
                 subject=subject,
                 datecreated=datecreated,
             )
-            MessageChunk(message=msg, content=content, sequence=1)
+            if content is not None:
+                MessageChunk(message=msg, content=content, sequence=1)
 
         tktmsg = QuestionMessage(self, msg, action, new_status, owner)
         notify(ObjectCreatedEvent(tktmsg, user=tktmsg.owner))

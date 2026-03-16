@@ -23,6 +23,7 @@ from zope.event import notify
 from zope.interface import implementer
 from zope.lifecycleevent import ObjectModifiedEvent
 
+from lp.archiveuploader.utils import SafeTarExtractError, safe_extract_zip
 from lp.bugs.interfaces.cve import CveStatus, ICveSet
 from lp.services.config import config
 from lp.services.log.logger import LaunchpadLogger
@@ -376,7 +377,7 @@ class CVEUpdater(LaunchpadCronScript):
             with open(outer_zip_path, "wb") as f:
                 f.write(zip_content)
 
-            # extract the outer zip file
+            # extract the outer zip file (safe extraction: no path traversal)
             with zipfile.ZipFile(outer_zip_path) as outer_zf:
                 if delta:
                     target_dir = os.path.join(temp_dir, "deltaCves")
@@ -395,14 +396,19 @@ class CVEUpdater(LaunchpadCronScript):
                         for m in outer_zf.namelist()
                         if m.startswith("deltaCves/")
                     ]
-                    outer_zf.extractall(temp_dir, members=members)
+                    safe_extract_zip(outer_zf, temp_dir, members=members)
                 else:
                     # for baseline, handle nested zip structure
-                    outer_zf.extract("cves.zip", temp_dir)
+                    if "cves.zip" not in outer_zf.namelist():
+                        raise LaunchpadScriptFailure(
+                            "There is no item named 'cves.zip' in the archive"
+                        )
+
+                    safe_extract_zip(outer_zf, temp_dir, members=["cves.zip"])
                     inner_zip_path = os.path.join(temp_dir, "cves.zip")
 
                     with zipfile.ZipFile(inner_zip_path) as inner_zf:
-                        inner_zf.extractall(temp_dir)
+                        safe_extract_zip(inner_zf, temp_dir)
 
                     os.unlink(inner_zip_path)
                     target_dir = os.path.join(temp_dir, "cves")
@@ -416,6 +422,11 @@ class CVEUpdater(LaunchpadCronScript):
 
             return target_dir
 
+        except SafeTarExtractError as e:
+            shutil.rmtree(temp_dir)
+            raise LaunchpadScriptFailure(
+                f"Unsafe ZIP content (path traversal or absolute path): {e}"
+            )
         except Exception as e:
             # clean up on any error
             shutil.rmtree(temp_dir)

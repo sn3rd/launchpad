@@ -3,3 +3,18 @@ options:
     type: boolean
     default: true
     description: If true, enable jobs that may change the database.
+  gpghandler_host:
+    type: string
+    default: "keyserver.internal"
+    description: |
+      Override the GPG keyserver host.
+  gpghandler_port:
+    type: int
+    default: 11371
+    description: |
+      Override the GPG keyserver port.
+  gpghandler_http_proxy:
+    type: string
+    default: ""
+    description: |
+      Proxy to be used for GPG keyserver requests.

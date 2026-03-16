@@ -23,3 +23,14 @@ class StatsMixin:
         self.useFixture(
             MockPatchObject(statsd_client, "_client", self.stats_client)
         )
+
+    def filterStatsdCallsByName(self, call_name: str) -> list:
+        """
+        Filter for a specific type of call when testing.
+        Returns only calls that start with the given call_name.
+        """
+        return [
+            call[0][0]
+            for call in self.stats_client.incr.call_args_list
+            if call[0][0].startswith(call_name)
+        ]

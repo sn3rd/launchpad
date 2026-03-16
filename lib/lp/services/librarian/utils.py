@@ -39,7 +39,7 @@ def copy_and_close(from_file, to_file):
 def sha1_from_path(path):
     """Return the hexdigest SHA1 for the contents of the path."""
     with open(path, "rb") as the_file:
-        the_hash = hashlib.sha1()
+        the_hash = hashlib.sha1()  # nosec B324
         for chunk in filechunks(the_file):
             the_hash.update(chunk)
 

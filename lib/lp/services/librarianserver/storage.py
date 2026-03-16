@@ -217,8 +217,8 @@ class LibraryFileUpload:
         tmpfile, tmpfilepath = tempfile.mkstemp(dir=self.storage.incoming)
         self.tmpfile = os.fdopen(tmpfile, "wb")
         self.tmpfilepath = tmpfilepath
-        self.md5_digester = hashlib.md5()
-        self.sha1_digester = hashlib.sha1()
+        self.md5_digester = hashlib.md5()  # nosec B324
+        self.sha1_digester = hashlib.sha1()  # nosec B324
         self.sha256_digester = hashlib.sha256()
 
     def append(self, data):

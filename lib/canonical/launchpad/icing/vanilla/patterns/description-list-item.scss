@@ -1,0 +1,17 @@
+.description-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dimension-spacing-block-xxs);
+
+  dt,
+  dd {
+    margin: 0;
+    padding: 0;
+  }
+
+  dt {
+    font: var(--typography-paragraph-default);
+    color: var(--color-text-muted);
+  }
+
+}

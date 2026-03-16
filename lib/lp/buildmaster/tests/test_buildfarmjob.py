@@ -142,6 +142,20 @@ class TestBuildFarmJobMixin(TestCaseWithFactory):
         self.assertEqual(BuildStatus.NEEDSBUILD, self.build_farm_job.status)
         self.assertRaises(Unauthorized, getattr, self.build_farm_job, "retry")
 
+    def test_cancelUpload_permissions(self):
+        # Anonymous users cannot cancel uploads.
+        self.assertRaises(
+            Unauthorized,
+            getattr,
+            self.build_farm_job,
+            "cancelUpload",
+        )
+        # Admin users can cancel uploads.
+        removeSecurityProxy(self.build_farm_job).status = BuildStatus.UPLOADING
+        with admin_logged_in():
+            self.build_farm_job.cancelUpload()
+        self.assertEqual(BuildStatus.CANCELLED, self.build_farm_job.status)
+
     def test_edit_build_farm_job(self):
         # Users with edit access can update attributes.
         login("admin@canonical.com")

@@ -209,6 +209,21 @@ class TestBinaryPackageBuild(TestCaseWithFactory):
         self.assertEqual(BuildStatus.CANCELLING, build.status)
         self.assertEqual(bq, build.buildqueue_record)
 
+    def test_cancelUpload(self):
+        # A build stuck in UPLOADING (no BuildQueue record) goes straight
+        # to CANCELLED when the admin-only cancelUpload() is called.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        build = self.factory.makeBinaryPackageBuild(archive=ppa)
+        bq = build.queueBuild()
+        bq.markAsBuilding(self.factory.makeBuilder())
+        build.updateStatus(BuildStatus.UPLOADING)
+        bq.destroySelf()
+        self.assertIsNone(build.buildqueue_record)
+        self.assertFalse(build.can_be_cancelled)
+        build.cancelUpload()
+        self.assertEqual(BuildStatus.CANCELLED, build.status)
+        self.assertIsNone(build.buildqueue_record)
+
     def test_getLatestSourcePublication(self):
         distroseries = self.factory.makeDistroSeries()
         archive = self.factory.makeArchive(

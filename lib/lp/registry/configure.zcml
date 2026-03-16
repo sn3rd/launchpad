@@ -1731,6 +1731,12 @@
     <subscriber
         for="lp.registry.interfaces.teammembership.ITeamInvitationEvent"
         handler="lp.registry.mail.notification.notify_invitation_to_join_team"/>
+        
+    <!-- Send metrics -->
+    <subscriber
+        for="lp.registry.interfaces.person.IPerson
+        lazr.lifecycle.interfaces.IObjectCreatedEvent"
+        handler="lp.services.metrics.send_metrics_person_created"/>
 
     <!-- This is class ProductSeries -->
 

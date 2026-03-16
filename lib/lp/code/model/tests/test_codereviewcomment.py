@@ -11,7 +11,7 @@ from lp.code.enums import CodeReviewVote
 from lp.code.model.codereviewcomment import quote_text_as_email
 from lp.services.compat import message_as_bytes
 from lp.services.messages.model.message import MessageSet
-from lp.testing import TestCase, TestCaseWithFactory
+from lp.testing import TestCase, TestCaseWithFactory, person_logged_in
 from lp.testing.layers import DatabaseFunctionalLayer, LaunchpadFunctionalLayer
 
 
@@ -136,6 +136,16 @@ class TestCodeReviewComment(TestCaseWithFactory):
             original_email=None,
             _validate=False,
         )
+
+    def test_createComment_with_no_content_is_editable(self):
+        # A code review comment created without content
+        # should be editable.
+        comment = self.bmp.createComment(
+            self.submitter, "Subject", content=None
+        )
+        with person_logged_in(self.submitter):
+            comment.editContent("new content")
+        self.assertEqual("new content", comment.text_contents)
 
 
 class TestCodeReviewCommentGetAttachments(TestCaseWithFactory):

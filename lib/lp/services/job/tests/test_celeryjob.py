@@ -156,8 +156,13 @@ class TestRunMissingJobs(TestCaseWithFactory):
             # Due to FIFO ordering, this will only return after
             # run_missing_ready has finished.
             noop.apply_async(queue=job_queue_name).wait(70)
-        # But now the message has been consumed by "celery worker".
-        self.assertQueueSize(self.run_missing_ready.app, [job_queue_name], 0)
+            # Wait for queue to reach 0 while the worker is still alive.
+            # Killing the worker before the ack arrives would cause
+            # RabbitMQ to requeue the message. Asserting here ensures
+            # both tasks are fully acknowledged before the worker exits.
+            self.assertQueueSize(
+                self.run_missing_ready.app, [job_queue_name], 0
+            )
         # No result queue was created for the task.
         try:
             real_stdout = sys.stdout

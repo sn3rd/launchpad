@@ -67,7 +67,10 @@ class CannotFetchFile(BuildDaemonError):
     """The worker was unable to fetch the file."""
 
     def __init__(self, file_url, error_information):
-        super().__init__()
+        message = f"Cannot fetch {file_url}"
+        if error_information:
+            message = f"{message}: {error_information}"
+        super().__init__(message)
         self.file_url = file_url
         self.error_information = error_information
 

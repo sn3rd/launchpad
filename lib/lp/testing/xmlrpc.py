@@ -10,7 +10,7 @@ __all__ = [
 
 import http.client as http_client
 import io
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 
 from testtools.matchers import Equals, MatchesStructure
 from zope.security.management import endInteraction, queryInteraction

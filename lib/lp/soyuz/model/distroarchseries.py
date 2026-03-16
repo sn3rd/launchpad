@@ -238,10 +238,12 @@ class DistroArchSeries(StormBase):
         # with \r getting the last byte chopped off. To cope with this
         # on the server side we try to append \r if the SHA-1 doesn't
         # match.
-        content_sha1sum = hashlib.sha1(filecontent).hexdigest()
+        content_sha1sum = hashlib.sha1(filecontent).hexdigest()  # nosec B324
         if content_sha1sum != sha1sum:
             filecontent += b"\r"
-            content_sha1sum = hashlib.sha1(filecontent).hexdigest()
+            content_sha1sum = hashlib.sha1(
+                filecontent
+            ).hexdigest()  # nosec B324
         if content_sha1sum != sha1sum:
             raise InvalidChrootUploaded("Chroot upload checksums do not match")
 

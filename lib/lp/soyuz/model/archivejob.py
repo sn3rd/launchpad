@@ -306,7 +306,6 @@ class CIBuildUploadJob(ArchiveJobDerived):
         BinaryPackageFormat.WHL: BinaryPackageFileType.WHL,
         BinaryPackageFormat.CONDA_V1: BinaryPackageFileType.CONDA_V1,
         BinaryPackageFormat.CONDA_V2: BinaryPackageFileType.CONDA_V2,
-        BinaryPackageFormat.CRATE: BinaryPackageFileType.CRATE,
         BinaryPackageFormat.GENERIC: BinaryPackageFileType.GENERIC,
     }
 
@@ -330,12 +329,6 @@ class CIBuildUploadJob(ArchiveJobDerived):
             SourcePackageFileType.GO_MODULE_INFO,
             SourcePackageFileType.GO_MODULE_MOD,
             SourcePackageFileType.GO_MODULE_ZIP,
-        },
-        # XXX: ruinedyourlife 2024-12-06
-        # Remove the Rust format and it's scanner as we don't need it from
-        # CI builds. We only care about crates in craft recipe uploads.
-        ArchiveRepositoryFormat.RUST: {
-            BinaryPackageFormat.CRATE,
         },
         ArchiveRepositoryFormat.GENERIC: {
             SourcePackageFileType.GENERIC,
@@ -628,93 +621,6 @@ class CIBuildUploadJob(ArchiveJobDerived):
             )
         return all_metadata
 
-    def _scanRustArchive(
-        self, report: IRevisionStatusReport, paths: Iterable[Path]
-    ) -> Dict[str, ArtifactMetadata]:
-        """Scan a Rust build archive for .crate files.
-
-        The Rust build process produces a tar.xz archive possibly containing a
-        whole lot of files, which could contain a .crate file.
-        This scanner extracts that archive to get the .crate file within.
-
-        It also reads metadata.yaml to get the crate name and version.
-        """
-        all_metadata = {}
-        for path in paths:
-            if not path.name.endswith(".tar.xz"):
-                continue
-
-            logger.info("Found Rust build archive: %s", path.name)
-            try:
-                # Create a temporary directory for extraction
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    # Extract the tar.xz
-                    with tarfile.open(str(path), "r:xz") as tar:
-                        tar.extractall(path=tmpdir)
-
-                    # Read metadata.yaml for name and version
-                    metadata_path = Path(tmpdir) / "metadata.yaml"
-                    if not metadata_path.exists():
-                        logger.warning(
-                            "No metadata.yaml found in %s", path.name
-                        )
-                        continue
-
-                    with open(metadata_path) as f:
-                        try:
-                            import yaml
-
-                            metadata = yaml.safe_load(f)
-                            crate_name = metadata.get("name")
-                            crate_version = metadata.get("version")
-                            if not crate_name or not crate_version:
-                                logger.warning(
-                                    "metadata.yaml missing required fields: "
-                                    "name and/or version"
-                                )
-                                continue
-                        except Exception as e:
-                            logger.warning(
-                                "Failed to parse metadata.yaml from %s: %s",
-                                metadata_path.name,
-                                e,
-                            )
-                            continue
-
-                    # Look for .crate files in the extracted contents
-                    # XXX ruinedyourlife 2024-11-22: Python 3.12 adds
-                    # pathlib.Path.walk()
-                    for root, _, files in os.walk(tmpdir):
-                        for filename in files:
-                            if filename.endswith(".crate"):
-                                crate_path = Path(root) / filename
-
-                                # Create a new artifact for the .crate file
-                                with open(str(crate_path), "rb") as f:
-                                    # Add the .crate file as an artifact
-                                    report.attach(name=filename, data=f.read())
-
-                                logger.info("Found Rust crate: %s", filename)
-                                all_metadata[filename] = (
-                                    BinaryArtifactMetadata(
-                                        format=BinaryPackageFormat.CRATE,
-                                        name=crate_name,
-                                        version=crate_version,
-                                        summary="",
-                                        description="",
-                                        architecturespecific=False,
-                                        homepage="",
-                                    )
-                                )
-
-            except Exception as e:
-                logger.warning(
-                    "Failed to process Rust archive %s: %s", path.name, e
-                )
-                continue
-
-        return all_metadata
-
     def _scanGeneric(
         self, report: IRevisionStatusReport, paths: Iterable[Path]
     ) -> Dict[str, ArtifactMetadata]:
@@ -757,7 +663,6 @@ class CIBuildUploadJob(ArchiveJobDerived):
             self._scanCondaV1,
             self._scanCondaV2,
             self._scanGoMod,
-            self._scanRustArchive,
             self._scanGeneric,
         )
         paths = [directory / child for child in directory.iterdir()]

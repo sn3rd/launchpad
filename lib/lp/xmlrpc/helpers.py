@@ -7,7 +7,7 @@ __all__ = [
     "return_fault",
 ]
 
-from xmlrpc.client import Fault
+from xmlrpc.client import Fault  # nosec B411
 
 from twisted.python.util import mergeFunctionMetadata
 

@@ -101,7 +101,7 @@ def sha1_file(content_id):
     file = open_stream(content_id)
     chunks_iter = iter(lambda: file.read(STREAM_CHUNK_SIZE), b"")
     length = 0
-    hasher = hashlib.sha1()
+    hasher = hashlib.sha1()  # nosec B324
     for chunk in chunks_iter:
         hasher.update(chunk)
         length += len(chunk)

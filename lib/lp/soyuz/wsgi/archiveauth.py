@@ -13,12 +13,15 @@ __all__ = [
 import crypt
 import sys
 import time
-from xmlrpc.client import Fault, ServerProxy
+from xmlrpc.client import Fault, ServerProxy  # nosec B411
 
 import six
+from defusedxml.xmlrpc import monkey_patch as _defused_monkey_patch
 
 from lp.services.config import config
 from lp.services.memcache.client import memcache_client_factory
+
+_defused_monkey_patch()
 
 
 def _log(environ, message, *args):

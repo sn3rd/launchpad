@@ -1528,10 +1528,14 @@ class SpecificationTreeGraphView(LaunchpadView):
         # risk of getting an OSError, or an command line issue that we
         # represent as a ProblemRenderingGraph. We need python bindings
         # to make the PNG/cmapx.
+        # nosec B602 -- shell=True is needed for the pipe. format is
+        # asserted to "png" or "cmapx" above so the command string is
+        # static. The DOT graph text is fed via stdin (not the command
+        # string) so user-sourced data never reaches the shell.
         cmd = "unflatten -l 2 | dot -T%s" % format
         process = Popen(
             cmd,
-            shell=True,
+            shell=True,  # nosec B602
             stdin=PIPE,
             stdout=PIPE,
             stderr=PIPE,

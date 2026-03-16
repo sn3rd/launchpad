@@ -890,12 +890,17 @@ class GitRepositoryEditView(CodeEditOwnerMixin, GitRepositoryEditFormView):
         self.setFieldError(field_name, message)
 
     def validate(self, data):
-        if "name" in data and "owner" in data and "target" in data:
+        if "name" in data and "owner" in data:
             name = data["name"]
             owner = data["owner"]
-            target = data["target"]
-            if target is None:
-                target = owner
+            if "target" in data:
+                target = data["target"]
+                if target is None:
+                    target = owner
+            else:
+                # target is not in data (e.g., display-only for target_default
+                # repositories); use the current target for validation.
+                target = self.context.target
             if (
                 name != self.context.name
                 or owner != self.context.owner

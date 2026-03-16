@@ -594,15 +594,12 @@ class TestAsyncCharmRecipeBuildBehaviour(
         self.assertEqual(
             ("ensurepresent", lxd_lfa.http_url, "", ""), worker.call_log[0]
         )
-        self.assertEqual(1, self.stats_client.incr.call_count)
+        build_calls = self.filterStatsdCallsByName("build.")
+        self.assertEqual(1, len(build_calls))
         self.assertEqual(
-            self.stats_client.incr.call_args_list[0][0],
-            (
-                "build.count,builder_name={},env=test,"
-                "job_type=CHARMRECIPEBUILD,region={}".format(
-                    builder.name, builder.region
-                ),
-            ),
+            build_calls[0],
+            f"build.count,builder_name={builder.name},env=test,"
+            f"job_type=CHARMRECIPEBUILD,region={builder.region}",
         )
 
     @defer.inlineCallbacks

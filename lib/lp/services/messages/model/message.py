@@ -218,10 +218,11 @@ class Message(StormBase):
         used_seq_numbers = set()
         for chunk in self._chunks:
             if chunk.blob is None:
-                revision_chunk = MessageRevisionChunk(
-                    rev, chunk.sequence, chunk.content
-                )
-                store.add(revision_chunk)
+                if chunk.content is not None:
+                    revision_chunk = MessageRevisionChunk(
+                        rev, chunk.sequence, chunk.content
+                    )
+                    store.add(revision_chunk)
                 store.remove(chunk)
             else:
                 used_seq_numbers.add(chunk.sequence)
@@ -321,7 +322,8 @@ class MessageSet:
             datecreated=datecreated,
         )
         IStore(Message).add(message)
-        MessageChunk(message=message, sequence=1, content=content)
+        if content is not None:
+            MessageChunk(message=message, sequence=1, content=content)
         # XXX 2008-05-27 jamesh:
         # Ensure that BugMessages get flushed in same order as they
         # are created.

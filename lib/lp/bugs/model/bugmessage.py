@@ -90,7 +90,8 @@ class BugMessageSet:
             rfc822msgid=make_msgid("malone"),
             subject=subject,
         )
-        MessageChunk(message=msg, content=content, sequence=1)
+        if content is not None:
+            MessageChunk(message=msg, content=content, sequence=1)
         bugmsg = BugMessage(
             bug=bug, message=msg, index=bug.bug_messages.count()
         )

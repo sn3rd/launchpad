@@ -8,11 +8,7 @@
         <nav class="p-breadcrumbs" aria-label="Breadcrumbs">
           <ol class="p-breadcrumbs__items p-text--small-caps">
             <li class="p-breadcrumbs__item">
-              <a href="/">Home</a>
-            </li>
-            <li class="p-breadcrumbs__item">
-              <a tal:attributes="href view/context/distribution/fmt:url"
-                 tal:content="context/distribution/displayname">Distribution</a>
+              <a tal:attributes="href view/context/distribution/fmt:url" tal:content="context/distribution/displayname">Distribution</a>
             </li>
             <li class="p-breadcrumbs__item">
               <span tal:content="context/displayname">Series</span>
@@ -21,13 +17,9 @@
         </nav>
       </div>
     </tal:breadcrumbs>
-    <section class="is-paper p-section" metal:fill-slot="main">
-      <div class="p-suru"></div>
-
-      <div class="row">
-        <h1 tal:content="context/displayname">project 1.x series</h1>
-        <p>Vanilla layout for this distribution series.</p>
-      </div>
+    <section class="p-section" metal:fill-slot="main">
+      <div tal:replace="structure context/@@+vanilla-distroseries-summary" />
+      <link type="text/css" rel="stylesheet" tal:attributes="href string:${icingroot}/vanilla/pages/distroseries.css" />
     </section>
   </body>
 </html>

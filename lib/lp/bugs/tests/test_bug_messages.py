@@ -6,6 +6,7 @@
 from zope.component import getUtility
 
 from lp.app.enums import InformationType
+from lp.bugs.interfaces.bugmessage import IBugMessageSet
 from lp.bugs.interfaces.bugtask import BugTaskStatus, BugTaskStatusSearch
 from lp.registry.interfaces.accesspolicy import IAccessPolicySource
 from lp.testing import (
@@ -124,3 +125,30 @@ class TestBugLinkMessageSetsIncompleteStatus(TestCaseWithFactory):
         self.assertEqual(
             BugTaskStatusSearch.INCOMPLETE_WITH_RESPONSE, bugtask._status
         )
+
+
+class TestBugCommentEditing(TestCaseWithFactory):
+    """Tests for editing bug comments that have no text content."""
+
+    layer = DatabaseFunctionalLayer
+
+    def test_edit_bug_newmessage_with_no_content(self):
+        # A bug comment created without content should be editable.
+        owner = self.factory.makePerson()
+        bug = self.factory.makeBug()
+        with person_logged_in(owner):
+            msg = bug.newMessage(owner=owner, subject="Subject", content=None)
+        with person_logged_in(owner):
+            msg.editContent("new content")
+        self.assertEqual("new content", msg.text_contents)
+
+    def test_edit_bugmessageset_create_with_no_content(self):
+        # A bug comment created without content should be editable.
+        owner = self.factory.makePerson()
+        bug = self.factory.makeBug()
+        bugmsg = getUtility(IBugMessageSet).createMessage(
+            "Subject", bug, owner, content=None
+        )
+        with person_logged_in(owner):
+            bugmsg.editContent("new content")
+        self.assertEqual("new content", bugmsg.text_contents)

@@ -8,7 +8,7 @@ __all__ = [
     "PublicCodehostingAPI",
 ]
 
-from xmlrpc.client import Fault
+from xmlrpc.client import Fault  # nosec B411
 
 from breezy import urlutils
 from zope.component import getUtility

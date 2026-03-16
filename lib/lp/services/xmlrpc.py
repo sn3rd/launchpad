@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 import socket
-import xmlrpc.client
+import xmlrpc.client  # nosec B411 -- defusedxml monkey_patch() applied below
 
 from defusedxml.xmlrpc import monkey_patch
 

@@ -12,7 +12,7 @@ __all__ = [
 
 import re
 import xml.parsers.expat
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 from datetime import timezone
 from email.utils import parseaddr
 from http.client import BadStatusLine

@@ -11,7 +11,7 @@ __all__ = [
     "combine_url",
 ]
 
-import ftplib
+import ftplib  # nosec B402
 import os
 from urllib.parse import unquote_plus, urljoin, urlsplit
 
@@ -184,7 +184,7 @@ class FTPWalker(WalkerBase):
     def open(self):
         """Open the FTP connection."""
         self.log.info("Connecting to %s", self.host)
-        self.ftp = ftplib.FTP()
+        self.ftp = ftplib.FTP()  # nosec B321
         self.ftp.connect(self.host)
 
         if self.user is not None:

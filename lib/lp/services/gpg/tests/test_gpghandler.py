@@ -525,6 +525,30 @@ class TestGPGHandler(TestCase):
         self.assertEqual(1, signing_service_client.inject.call_count)
         self.assertEqual([], list(self.gpg_handler.localKeys()))
 
+    @mock.patch("lp.services.gpg.handler.urlfetch")
+    def test_grabPage_without_proxy(self, mock_urlfetch):
+        # When http_proxy is not set, _grabPage does not pass proxies to
+        # urlfetch.
+        removeSecurityProxy(self.gpg_handler)._grabPage(
+            "get", "somefingerprint"
+        )
+        _, kwargs = mock_urlfetch.call_args
+        self.assertNotIn("proxies", kwargs)
+
+    @mock.patch("lp.services.gpg.handler.urlfetch")
+    def test_grabPage_with_proxy(self, mock_urlfetch):
+        # When http_proxy is configured, _grabPage passes proxies for both
+        # http and https.
+        proxy_url = "http://proxy.example.com:8080"
+        self.pushConfig("gpghandler", http_proxy=proxy_url)
+        removeSecurityProxy(self.gpg_handler)._grabPage(
+            "get", "somefingerprint"
+        )
+        _, kwargs = mock_urlfetch.call_args
+        self.assertEqual(
+            {"http": proxy_url, "https": proxy_url}, kwargs["proxies"]
+        )
+
     def test_signContent_uses_sha512_digests(self):
         secret_keys = [
             ("ppa-sample@canonical.com.sec", ""),  # 1024R

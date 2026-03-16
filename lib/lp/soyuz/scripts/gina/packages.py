@@ -592,7 +592,7 @@ class BinaryPackageData(AbstractPackageData):
         if not os.path.exists(fullpath):
             raise PoolFileNotFound("%s not found" % fullpath)
 
-        call("dpkg -e %s" % fullpath)
+        call(["dpkg", "-e", fullpath])
         shlibfile = os.path.join("DEBIAN", "shlibs")
         if os.path.exists(shlibfile):
             with open(shlibfile) as f:

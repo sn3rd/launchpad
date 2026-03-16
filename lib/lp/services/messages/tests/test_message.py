@@ -318,6 +318,15 @@ class TestMessageEditing(MessageTypeScenariosMixin, TestCaseWithFactory):
             ),
         )
 
+    def test_edit_message_with_no_text_content(self):
+        # A message created with no text content should be editable.
+        owner = self.factory.makePerson()
+        msg = self.makeMessage(owner=owner, content=None)
+        with person_logged_in(owner):
+            msg.editContent("edit text")
+        self.assertEqual("edit text", msg.text_contents)
+        self.assertEqual(1, len(msg.revisions))
+
     def test_non_owner_cannot_delete_message(self):
         owner = self.factory.makePerson()
         msg = self.makeMessage(owner=owner, content="initial content")

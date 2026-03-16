@@ -121,7 +121,6 @@ class IBinaryPackageBuildView(IPackageBuildView):
         )
     )
 
-    distro_series = Attribute("Direct parent needed by CanonicalURL")
     arch_tag = exported(Text(title=_("Architecture tag"), required=False))
     distributionsourcepackagerelease = Attribute(
         "The page showing the "
@@ -478,6 +477,25 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         Optionally, for a given status and/or pocket, if omitted return all
         records. If name is passed return only the builds which the
         sourcepackagename matches (SQL LIKE).
+        """
+
+    def getCountsForDistro(context, date_finished_since=None):
+        """Count builds grouped by status for a Distribution/DS/DAS.
+
+        Returns a dict mapping `BuildStatus` values to their count.
+        Only statuses with at least one matching build are included.
+
+        Gina-generated builds (``FULLYBUILT`` with no ``date_finished``)
+        are excluded.  Gina is a legacy script that imports packages from
+        an external repository (see ``lp/soyuz/scripts/gina/README``);
+        the resulting build records have no ``date_finished``.
+
+        :param context: An `IDistribution`, `IDistroSeries`, or
+            `IDistroArchSeries`.
+        :param date_finished_since: Optional datetime; when given, only
+            builds with ``date_finished >= date_finished_since`` are
+            counted.
+        :return: ``dict`` of ``{BuildStatus: int}``.
         """
 
     def getBuildsBySourcePackageRelease(

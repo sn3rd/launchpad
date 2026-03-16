@@ -15,7 +15,11 @@ from pathlib import Path
 import yaml
 from zope.component import getUtility
 
-from lp.archiveuploader.utils import UploadError
+from lp.archiveuploader.utils import (
+    SafeTarExtractError,
+    UploadError,
+    safe_extract_tar,
+)
 from lp.buildmaster.enums import BuildStatus
 from lp.services.helpers import filenameToContentType
 from lp.services.librarian.interfaces import ILibraryFileAliasSet
@@ -75,11 +79,14 @@ class CraftRecipeUpload:
                 )
             build.addFile(libraryfile)
 
-        # Process tar.xz files
+        # Process tar.xz files (safe extraction: no path traversal or symlinks)
         for craft_path in sorted(craft_paths):
             with tempfile.TemporaryDirectory() as tmpdir:
-                with tarfile.open(craft_path, "r:xz") as tar:
-                    tar.extractall(path=tmpdir)
+                try:
+                    with tarfile.open(craft_path, "r:xz") as tar:
+                        safe_extract_tar(tar, tmpdir)
+                except SafeTarExtractError as e:
+                    raise UploadError("Unsafe archive content: %s" % e) from e
 
                 # Look for .crate files, .jar files, pom.xml, and metadata.yaml
                 crate_files = list(Path(tmpdir).rglob("*.crate"))

@@ -21,6 +21,7 @@ from zope.schema import Bool, Datetime, Dict, Int, TextLine
 
 from lp import _
 from lp.buildmaster.interfaces.buildfarmjob import (
+    IBuildFarmJobAdmin,
     IBuildFarmJobEdit,
     ISpecificBuildFarmJobSource,
 )
@@ -186,11 +187,8 @@ class IRockRecipeBuildEdit(IBuildFarmJobEdit):
         """
 
 
-class IRockRecipeBuildAdmin(Interface):
+class IRockRecipeBuildAdmin(IBuildFarmJobAdmin):
     """`IRockRecipeBuild` methods that require launchpad.Admin."""
-
-    def rescore(score):
-        """Change the build's score."""
 
 
 # XXX jugmac00 2024-09-16 see "beta" is a lie to get WADL generation working,

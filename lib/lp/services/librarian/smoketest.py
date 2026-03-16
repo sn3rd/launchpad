@@ -14,6 +14,7 @@ from urllib.request import urlopen
 import transaction
 from zope.component import getUtility
 
+from lp.app.validators.url import validate_url
 from lp.services.librarian.interfaces import ILibraryFileAliasSet
 
 FILE_SIZE = 1024
@@ -37,8 +38,11 @@ def store_file(client):
 
 
 def read_file(url):
+    # Validate URL scheme to prevent file:// and other unexpected schemes
+    if not validate_url(url, ["http", "https"]):
+        return None
     try:
-        data = urlopen(url).read()
+        data = urlopen(url).read()  # nosec B310 (scheme validated above)
     except MemoryError:
         # Re-raise catastrophic errors.
         raise

@@ -1,0 +1,128 @@
+:root {
+  --typography-weight-extra-thin: 180;
+  --typography-weight-thin: 200;
+  --typography-weight-light: 300;
+  --typography-weight-regular: 400;
+  --typography-weight-medium: 450;
+  --typography-weight-bold: 550;
+  --typography-letter-spacing-m: 0em;
+  --typography-letter-spacing-l: 0.05em;
+  --typography-letter-spacing-xl: 0.07em;
+  --typography-font-family-default:
+    "Ubuntu variable", Ubuntu, -apple-system, "Segoe UI", Roboto, Oxygen,
+    Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --typography-font-family-mono:
+    "Ubuntu Mono variable", "Ubuntu Mono", Consolas, Monaco, Courier, monospace;
+  --typography-font-size-xs: 0.75rem;
+  --typography-font-size-s: 0.875rem;
+  --typography-font-size-m: 1rem;
+  --typography-font-size-l: 1.125rem;
+  --typography-font-size-xl: 1.5rem;
+  --typography-font-size-xxl: 2rem;
+  --typography-line-height-xs: 1rem;
+  --typography-line-height-s: 1.25rem;
+  --typography-line-height-m: 1.5rem;
+  --typography-line-height-l: 1.5rem;
+  --typography-line-height-xl: 2rem;
+  --typography-line-height-xxl: 2.5rem;
+  --typography-paragraph-xs: var(--typography-weight-regular)
+    var(--typography-font-size-xs) / var(--typography-line-height-xs)
+    var(--typography-font-family-default);
+  --typography-paragraph-xs-strong: var(--typography-weight-bold)
+    var(--typography-font-size-xs) / var(--typography-line-height-xs)
+    var(--typography-font-family-default);
+  --typography-paragraph-s: var(--typography-weight-regular)
+    var(--typography-font-size-s) / var(--typography-line-height-s)
+    var(--typography-font-family-default);
+  --typography-paragraph-s-strong: var(--typography-weight-bold)
+    var(--typography-font-size-s) / var(--typography-line-height-s)
+    var(--typography-font-family-default);
+  --typography-paragraph-default: var(--typography-weight-regular)
+    var(--typography-font-size-m) / var(--typography-line-height-m)
+    var(--typography-font-family-default);
+  --typography-paragraph-default-strong: var(--typography-weight-bold)
+    var(--typography-font-size-m) / var(--typography-line-height-m)
+    var(--typography-font-family-default);
+  --typography-paragraph-default-small-caps: small-caps
+    var(--typography-weight-bold) var(--typography-font-size-m) /
+    var(--typography-line-height-m) var(--typography-font-family-default);
+  /** `letter-spacing` in CSS is not a constituent of `font` and as such it is skipped in the output of this composite token. Be sure to apply `lp.typography.letterSpacing.l` separately whenever design requires it. */
+  --typography-code-xs: var(--typography-weight-regular)
+    var(--typography-font-size-xs) / var(--typography-line-height-xs)
+    var(--typography-font-family-mono);
+  --typography-code-s: var(--typography-weight-regular)
+    var(--typography-font-size-s) / var(--typography-line-height-s)
+    var(--typography-font-family-mono);
+  --typography-code-default: var(--typography-weight-regular)
+    var(--typography-font-size-m) / var(--typography-line-height-m)
+    var(--typography-font-family-mono);
+  --typography-h1: var(--typography-weight-medium)
+    var(--typography-font-size-xxl) / var(--typography-line-height-xxl)
+    var(--typography-font-family-default);
+  --typography-h2: var(--typography-weight-extra-thin)
+    var(--typography-font-size-xxl) / var(--typography-line-height-xxl)
+    var(--typography-font-family-default);
+  --typography-h3: var(--typography-weight-medium)
+    var(--typography-font-size-xl) / var(--typography-line-height-xl)
+    var(--typography-font-family-default);
+  --typography-h4: var(--typography-weight-thin)
+    var(--typography-font-size-xl) / var(--typography-line-height-xl)
+    var(--typography-font-family-default);
+  --typography-h5: var(--typography-weight-medium)
+    var(--typography-font-size-l) / var(--typography-line-height-l)
+    var(--typography-font-family-default);
+  --typography-h6: var(--typography-weight-light)
+    var(--typography-font-size-l) / var(--typography-line-height-l)
+    var(--typography-font-family-default);
+}
+
+@media (min-width: 621px) {
+  :root {
+    --typography-font-size-xs: 0.75rem;
+    --typography-font-size-s: 0.875rem;
+    --typography-font-size-m: 1rem;
+    --typography-font-size-l: 1.125rem;
+    --typography-font-size-xl: 1.5rem;
+    --typography-font-size-xxl: 2rem;
+    --typography-line-height-xs: 1rem;
+    --typography-line-height-s: 1.25rem;
+    --typography-line-height-m: 1.5rem;
+    --typography-line-height-l: 1.5rem;
+    --typography-line-height-xl: 2rem;
+    --typography-line-height-xxl: 2.5rem;
+  }
+}
+
+@media (min-width: 1037px) {
+  :root {
+    --typography-font-size-xs: 0.75rem;
+    --typography-font-size-s: 0.875rem;
+    --typography-font-size-m: 1rem;
+    --typography-font-size-l: 1.125rem;
+    --typography-font-size-xl: 1.5rem;
+    --typography-font-size-xxl: 2rem;
+    --typography-line-height-xs: 1rem;
+    --typography-line-height-s: 1.25rem;
+    --typography-line-height-m: 1.5rem;
+    --typography-line-height-l: 1.5rem;
+    --typography-line-height-xl: 2rem;
+    --typography-line-height-xxl: 2.5rem;
+  }
+}
+
+@media (min-width: 1681px) {
+  :root {
+    --typography-font-size-xs: 0.875rem;
+    --typography-font-size-s: 1rem;
+    --typography-font-size-m: 1.125rem;
+    --typography-font-size-l: 1.5rem;
+    --typography-font-size-xl: 1.75rem;
+    --typography-font-size-xxl: 2rem;
+    --typography-line-height-xs: 1.25rem;
+    --typography-line-height-s: 1.5rem;
+    --typography-line-height-m: 1.6875rem;
+    --typography-line-height-l: 1.875rem;
+    --typography-line-height-xl: 2.375rem;
+    --typography-line-height-xxl: 2.8125rem;
+  }
+}

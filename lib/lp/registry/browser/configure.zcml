@@ -149,13 +149,23 @@
           template="../templates/distroseries-portlet-derivation.pt"
           />
     </browser:pages>
-    <browser:page
-        name="+vanilla"
+    <browser:pages
         for="lp.registry.interfaces.distroseries.IDistroSeries"
         class="lp.registry.browser.vanilla_distroseries.VanillaDistroSeriesView"
-        permission="zope.Public"
-        template="../templates/vanilla-distroseries-index.pt"
+        permission="zope.Public">
+        <browser:page
+            name="+vanilla"
+            template="../templates/vanilla-distroseries-index.pt"
+            />
+        <browser:page
+            name="+vanilla-distroseries-summary"
+            template="../templates/vanilla-distroseries-summary.pt"
         />
+        <browser:page
+            name="+vanilla-distroseries-summary-links"
+            template="../templates/vanilla-distroseries-summary-links.pt"
+        />
+    </browser:pages>
     <browser:page
         name="+packaging"
         for="lp.registry.interfaces.distroseries.IDistroSeries"
@@ -727,6 +737,13 @@
         class="lp.registry.browser.pillar.PillarInvolvementView"
         permission="zope.Public"
         template="../templates/pillar-involvement-portlet.pt"
+        />
+    <browser:page
+        name="+get-involved-vanilla"
+        for="*"
+        class="lp.registry.browser.pillar.PillarInvolvementView"
+        permission="zope.Public"
+        template="../templates/pillar-involvement-portlet-vanilla.pt"
         />
     <lp:url
         for="lp.registry.interfaces.karma.IKarmaAction"

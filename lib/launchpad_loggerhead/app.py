@@ -4,7 +4,7 @@
 import logging
 import os
 import threading
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 from urllib.parse import urlencode, urljoin, urlparse
 
 import oops_wsgi

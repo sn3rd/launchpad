@@ -108,3 +108,9 @@ repos:
             # Word truncated by stemming.
             |lib/lp/services/database/doc/textsearching\.rst
           )$
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+    -   id: bandit
+        args: [-c, pyproject.toml, --severity-level, high]
+        additional_dependencies: ['bandit[toml]']

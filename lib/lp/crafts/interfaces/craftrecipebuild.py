@@ -21,6 +21,7 @@ from zope.schema import Bool, Datetime, Dict, Int, TextLine
 
 from lp import _
 from lp.buildmaster.interfaces.buildfarmjob import (
+    IBuildFarmJobAdmin,
     IBuildFarmJobEdit,
     ISpecificBuildFarmJobSource,
 )
@@ -189,11 +190,8 @@ class ICraftRecipeBuildEdit(IBuildFarmJobEdit):
         """
 
 
-class ICraftRecipeBuildAdmin(Interface):
+class ICraftRecipeBuildAdmin(IBuildFarmJobAdmin):
     """ICraftRecipeBuild methods that require launchpad.Admin."""
-
-    def rescore(score):
-        """Change the build's score."""
 
 
 # XXX ruinedyourlife 2024-10-02

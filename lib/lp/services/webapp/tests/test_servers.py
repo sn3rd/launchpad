@@ -24,6 +24,7 @@ from testtools.matchers import ContainsDict, Equals
 from zope.component import getGlobalSiteManager, getUtility
 from zope.interface import Interface, implementer
 from zope.publisher.http import HTTPInputStream
+from zope.publisher.publish import publish
 from zope.security.interfaces import Unauthorized
 from zope.security.management import newInteraction
 from zope.security.proxy import removeSecurityProxy
@@ -379,16 +380,18 @@ class TestWebServiceRequest(WebServiceTestCase):
 
 
 class TestProtocolErrorPublication(TestCase):
+    layer = DatabaseFunctionalLayer
+
     def test_405_options_does_not_raise(self):
         """OPTIONS 405 errors should not raise."""
         publication = ProtocolErrorPublication(405, {"Allow": "GET, POST"})
 
         env = {"REQUEST_METHOD": "OPTIONS"}
         request = LaunchpadBrowserRequest(io.BytesIO(b""), env)
+        request.setPublication(publication)
+        request = publish(request, handle_errors=False)
 
-        result = publication.callObject(request, None)
-
-        self.assertEqual(result, "")
+        self.assertEqual(hasattr(request, "oops"), False)
         self.assertEqual(request.response.getStatus(), 405)
         self.assertEqual(request.response.getHeader("Allow"), "GET, POST")
 

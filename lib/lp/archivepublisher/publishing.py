@@ -687,8 +687,40 @@ class Publisher:
         published_sprs = Select(
             1,
             tables=[OtherSPPH],
+            # Previously, we had:
+            #     OtherSPPH.archive = self.archive
+            # However, the final query generated internally by storm was
+            # referencing the outer table "SourcePackagePublishingHistory"
+            # instead of the inner table "OtherSPPH".
+            #
+            # Earlier Storm generated the following query for the corresponding
+            # WHERE clause:
+            #
+            # SELECT 1 FROM
+            #   SourcePackagePublishingHistory AS "_5"
+            # WHERE
+            #  SourcePackagePublishingHistory.archive = <id>  -- incorrect, as
+            #  -- it refers to the outer table and causes xPPHS rows for other
+            #  -- archives to be included in the results, leading to
+            # https://answers.launchpad.net/launchpad/+question/823606
+            #
+            #  AND "_5".sourcepackagerelease =
+            #  SourcePackagePublishingHistory.sourcepackagerelease
+            #  AND "_5".status IN (1, 2)
+            #
+            # After switching to "_id", storm correctly de-referenced to
+            # the inner table.
+            #
+            # SELECT 1 FROM
+            #  SourcePackagePublishingHistory AS "_3"
+            # WHERE
+            #  "_3".archive = <id> -- correct reference to inner table and
+            #                      -- filters on the <id> archive
+            #  AND "_3".sourcepackagerelease =
+            #  SourcePackagePublishingHistory.sourcepackagerelease
+            #  AND "_3".status IN (1, 2)
             where=And(
-                OtherSPPH.archive == self.archive,
+                OtherSPPH.archive_id == self.archive.id,
                 OtherSPPH.sourcepackagerelease_id
                 == SourcePackagePublishingHistory.sourcepackagerelease_id,
                 OtherSPPH.status.is_in(active_publishing_status),
@@ -750,7 +782,7 @@ class Publisher:
             1,
             tables=[OtherBPPH],
             where=And(
-                OtherBPPH.archive == self.archive,
+                OtherBPPH.archive_id == self.archive.id,
                 OtherBPPH.binarypackagerelease_id
                 == BinaryPackagePublishingHistory.binarypackagerelease_id,
                 OtherBPPH.status.is_in(active_publishing_status),

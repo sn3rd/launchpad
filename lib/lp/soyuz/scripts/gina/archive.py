@@ -105,12 +105,13 @@ class ArchiveFilesystemInfo:
             if os.path.exists(prefix + suffix):
                 # Extract index.
                 fd, tagfile = tempfile.mkstemp()
-                if suffix == ".xz":
-                    call("xz -dc %s > %s" % (prefix + suffix, tagfile))
-                elif suffix == ".bz2":
-                    call("bzip2 -dc %s > %s" % (prefix + suffix, tagfile))
-                elif suffix == ".gz":
-                    call("gzip -dc %s > %s" % (prefix + suffix, tagfile))
+                if suffix in (".xz", ".bz2", ".gz"):
+                    tool = {".xz": "xz", ".bz2": "bzip2", ".gz": "gzip"}
+                    with open(tagfile, "wb") as out:
+                        call(
+                            [tool[suffix], "-dc", prefix + suffix],
+                            stdout_file=out,
+                        )
                 elif suffix == "":
                     shutil.copy(prefix + suffix, tagfile)
                 else:

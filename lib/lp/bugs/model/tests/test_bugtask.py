@@ -294,6 +294,62 @@ class TestBugTaskCreation(TestCaseWithFactory):
         )
         self.assertEqual(BugTaskStatus.INCOMPLETE, task.status)
 
+    def test_createtask_avoids_duplicate_nomination_targets(self):
+        """Test that re-adding a source package after removal works correctly.
+
+        Test for the bug #1893791:
+        1. Add a source package to a bug
+        2. Target a series for that source package (creates series task)
+        3. Remove the source package task
+        4. Try to re-add the source package - this used to fail because
+           addTask would see the approved nomination and try to create
+           the series task again, but it already exists, causing a unique
+           constraint violation.
+        """
+        # 1. Add a source package to a bug
+        sourcepackage = self.factory.makeSourcePackage()
+        distroseries = sourcepackage.distroseries
+        distribution = distroseries.distribution
+        dsp = distribution.getSourcePackage(sourcepackage.sourcepackagename)
+
+        bug = self.factory.makeBug(target=dsp)
+        dsp_task = bug.bugtasks[0]
+
+        # 2. Target series for that source package
+        # This creates a nomination and approves it, which creates a series
+        # task
+        with person_logged_in(distribution.owner):
+            nomination = self.factory.makeBugNomination(
+                bug=bug, target=sourcepackage
+            )
+            nomination.approve(distribution.owner)
+
+        # Now we have both distribution and series tasks
+        self.assertEqual(len(bug.bugtasks), 2)
+
+        # 3. Remove the source package (distribution) task
+        with person_logged_in(bug.owner):
+            dsp_task.delete()
+
+        # Now only the series task remains
+        self.assertEqual(len(bug.bugtasks), 1)
+        self.assertEqual(bug.bugtasks[0].target, sourcepackage)
+
+        # 4. Try adding the source package back
+        # Without the fix, this would fail with a unique constraint violation
+        # because addTask would try to create [dsp, sourcepackage], but
+        # sourcepackage already exists.
+        with person_logged_in(bug.owner):
+            # This should succeed without trying to create a duplicate series
+            # task
+            bug.addTask(bug.owner, dsp)
+
+        # Verify we now have both tasks again
+        self.assertEqual(len(bug.bugtasks), 2)
+        final_targets = {bt.target for bt in bug.bugtasks}
+        self.assertIn(dsp, final_targets)
+        self.assertIn(sourcepackage, final_targets)
+
 
 class TestBugTaskCreationPackageComponent(TestCaseWithFactory):
     """IBugTask contains a convenience method to look up archive component

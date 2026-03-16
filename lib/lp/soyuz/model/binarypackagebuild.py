@@ -18,7 +18,7 @@ from operator import attrgetter, itemgetter
 import apt_pkg
 import six
 from debian.deb822 import PkgRelation
-from storm.expr import And, Desc, Exists, Join, LeftJoin, Or, Select
+from storm.expr import And, Count, Desc, Exists, Join, LeftJoin, Or, Select
 from storm.locals import Bool, DateTime, Int, Reference, Unicode
 from storm.store import EmptyResultSet, Store
 from storm.zope import IResultSet
@@ -1247,6 +1247,39 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
         return self._decorate_with_prejoins(
             DecoratedResultSet(result_set, result_decorator=itemgetter(0))
         )
+
+    def getCountsForDistro(self, context, date_finished_since=None):
+        """See `IBinaryPackageBuildSet`."""
+        if IDistribution.providedBy(context):
+            col = BinaryPackageBuild.distribution_id
+        elif IDistroSeries.providedBy(context):
+            col = BinaryPackageBuild.distro_series_id
+        elif IDistroArchSeries.providedBy(context):
+            col = BinaryPackageBuild.distro_arch_series_id
+        else:
+            raise AssertionError("Unsupported context: %r" % context)
+        clauses = [
+            col == context.id,
+            BinaryPackageBuild.is_distro_archive,
+            # Exclude gina-generated builds.
+            Or(
+                BinaryPackageBuild.status != BuildStatus.FULLYBUILT,
+                BinaryPackageBuild.date_finished != None,
+            ),
+        ]
+        if date_finished_since is not None:
+            clauses.append(
+                BinaryPackageBuild.date_finished >= date_finished_since
+            )
+        rows = (
+            IStore(BinaryPackageBuild)
+            .find(
+                (BinaryPackageBuild.status, Count()),
+                *clauses,
+            )
+            .group_by(BinaryPackageBuild.status)
+        )
+        return dict(rows)
 
     def _decorate_with_prejoins(self, result_set):
         """Decorate build records with related data prefetch functionality."""

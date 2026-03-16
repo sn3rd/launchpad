@@ -2013,15 +2013,21 @@ class BugTaskSet:
         # tasks.
         targets = [target]
         key = bug_target_to_key(target)
+        existing_targets = {bugtask.target for bugtask in bug.bugtasks}
         if key["distribution"] is not None:
             for nomination in bug.getNominations(key["distribution"]):
                 if not nomination.isApproved():
                     continue
-                targets.append(
-                    nomination.distroseries.getSourcePackage(
-                        key["sourcepackagename"]
-                    )
+                nominated_target = nomination.distroseries.getSourcePackage(
+                    key["sourcepackagename"]
                 )
+                if nominated_target not in existing_targets:
+                    targets.append(nominated_target)
+                    # Note: addTask calls createTask with
+                    # validate_target=False, but when nominations are present,
+                    # we need to validate the nominated targets against
+                    # existing bug tasks to avoid creating duplicates.
+                    validate_target = True
 
         tasks = self.createManyTasks(
             bug,

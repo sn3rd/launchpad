@@ -48,7 +48,8 @@ class SpecificationMessageSet:
         msg = Message(
             owner=owner, rfc822msgid=make_msgid("blueprint"), subject=subject
         )
-        MessageChunk(message=msg, content=content, sequence=1)
+        if content is not None:
+            MessageChunk(message=msg, content=content, sequence=1)
         specmessage = SpecificationMessage(specification=spec, message=msg)
         IStore(SpecificationMessage).flush()
         return specmessage

@@ -15,10 +15,19 @@
   <publisher
       name="answers"
       factory="lp.answers.publisher.answers_request_publication_factory"/>
+
+  <!-- Send metrics -->
+  <subscriber
+      for="lp.answers.interfaces.question.IQuestion
+      lazr.lifecycle.interfaces.IObjectCreatedEvent"
+      handler="lp.services.metrics.send_metrics_question_created"
+    />
+
   <utility
       component="lp.answers.publisher.AnswersLayer"
       provides="zope.publisher.interfaces.browser.IDefaultBrowserLayer"
       name="answers" />
+
   <utility
       component="lp.answers.publisher.AnswersFacet"
       provides="lp.services.webapp.interfaces.IFacet"

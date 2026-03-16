@@ -10,7 +10,10 @@ __all__ = [
 
 from io import BytesIO
 from urllib.parse import urlparse, urlunparse
-from xmlrpc.client import ProtocolError, Transport
+from xmlrpc.client import (  # nosec B411 -- monkey_patch() applied below
+    ProtocolError,
+    Transport,
+)
 
 import requests
 import six

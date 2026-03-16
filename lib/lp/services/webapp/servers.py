@@ -5,7 +5,7 @@
 
 import tempfile
 import threading
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 from io import BytesIO
 from urllib.parse import parse_qs
 
@@ -1740,6 +1740,7 @@ class ProtocolErrorPublication(LaunchpadBrowserPublication):
         if self.status == 404:
             raise NotFound(self, "", request)
         if self.status == 405 and request.method == "OPTIONS":
+            self.startPublicationTiming(request, include_thread_time=False)
             request.response.setStatus(self.status)
             for header, value in self.headers.items():
                 request.response.setHeader(header, value)

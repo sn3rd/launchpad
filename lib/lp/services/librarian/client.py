@@ -26,6 +26,7 @@ import six
 from lazr.restful.utils import get_current_browser_request
 from zope.interface import implementer
 
+from lp.app.validators.url import validate_url
 from lp.services.config import config, dbconfig
 from lp.services.database.interfaces import IPrimaryStore, IStore
 from lp.services.database.postgresql import ConnectionString
@@ -210,8 +211,8 @@ class FileUploadClient:
             self._sendLine(b"", check_for_error_responses=(size > 0))
 
             # Prepare to the upload the file
-            md5_digester = hashlib.md5()
-            sha1_digester = hashlib.sha1()
+            md5_digester = hashlib.md5()  # nosec B324
+            sha1_digester = hashlib.sha1()  # nosec B324
             sha256_digester = hashlib.sha256()
             bytesWritten = 0
 
@@ -550,9 +551,16 @@ class FileDownloadClient:
 
     def _connect_read(self, url, try_until, aliasID):
         """Helper for getFileByAlias."""
+        # Validate URL scheme to prevent file:// and other unexpected schemes
+        if not validate_url(url, ["http", "https"]):
+            raise ValueError(
+                f"Only http and https schemes are allowed, got: {url}"
+            )
         while 1:
             try:
-                return _File(urlopen(url), url)
+                return _File(
+                    urlopen(url), url  # nosec B310 (scheme validated above)
+                )
             except URLError as error:
                 # 404 errors indicate a data inconsistency: more than one
                 # attempt to open the file is pointless.

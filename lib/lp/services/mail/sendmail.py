@@ -503,7 +503,9 @@ def sendmail(message, to_addrs=None, bulk=True):
     # helps security, but still exposes us to a replay attack; we consider the
     # risk low.
     del message["X-Launchpad-Hash"]
-    hash = hashlib.sha1(config.mailman.shared_secret.encode("UTF-8"))
+    hash = hashlib.sha1(
+        config.mailman.shared_secret.encode("UTF-8")
+    )  # nosec B324
     hash.update(six.ensure_binary(message["message-id"]))
     message["X-Launchpad-Hash"] = hash.hexdigest()
 

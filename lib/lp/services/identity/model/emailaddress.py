@@ -90,7 +90,9 @@ class EmailAddress(StormBase, HasOwnerMixin):
     def rdf_sha1(self):
         """See `IEmailAddress`."""
         return (
-            hashlib.sha1(("mailto:" + self.email).encode("UTF-8"))
+            hashlib.sha1(
+                ("mailto:" + self.email).encode("UTF-8")
+            )  # nosec B324
             .hexdigest()
             .upper()
         )

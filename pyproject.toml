@@ -189,3 +189,5 @@ ignore_missing_imports = true
 module = "zope.*"
 ignore_missing_imports = true
 
+[tool.bandit]
+exclude_dirs = [".tox", "env", "htmlcov", ".coverage", "tests", "testing"]

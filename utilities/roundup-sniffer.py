@@ -44,6 +44,7 @@ from time import sleep
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from lp.app.validators.url import validate_url
 from lp.services.beautifulsoup import BeautifulSoup
 
 
@@ -60,13 +61,20 @@ class RoundupSniffer:
 
     def fetch(self, url):
         """Fetch the URL, consulting the cache first."""
+        # Validate URL scheme to prevent file:// and other unexpected schemes
+        if not validate_url(url, ["http", "https"]):
+            raise ValueError(
+                f"Only http and https schemes are allowed, got: {url}"
+            )
         filename = join(
             self.cache_dir,
             urlsafe_b64encode(url.encode("UTF-8")).decode("ASCII"),
         )
         if not exists(filename):
             with open(filename, "wb") as f:
-                f.write(urlopen(url).read())
+                f.write(
+                    urlopen(url).read()  # nosec B310 (scheme validated above)
+                )
         return open(filename, "rb")
 
     def get_all_bugs(self):
@@ -187,8 +195,16 @@ def parse_args(args):
 
 
 if __name__ == "__main__":
+    # Safe mapping of allowed sniffer classes to avoid eval()
+    ALLOWED_SNIFFERS = {
+        "RoundupSniffer": RoundupSniffer,
+        "MplayerStatusSniffer": MplayerStatusSniffer,
+    }
+
     options = parse_args(sys.argv[1:])
-    sniffer = eval(options.sniffer_class)(options.base_url, options.cache_dir)
+    sniffer = ALLOWED_SNIFFERS[options.sniffer_class](
+        options.base_url, options.cache_dir
+    )
     mapping = {}
     for raw, text in gen_mapping(sniffer):
         mapping[raw] = text

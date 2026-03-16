@@ -8,7 +8,7 @@ __all__ = ["Trac", "TracLPPlugin"]
 import cgi
 import csv
 import time
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 from datetime import datetime, timezone
 from email.utils import parseaddr
 

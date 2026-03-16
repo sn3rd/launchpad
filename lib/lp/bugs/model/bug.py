@@ -1562,7 +1562,8 @@ class Bug(StormBase, InformationTypeMixin):
             subject=subject,
             rfc822msgid=make_msgid("malone"),
         )
-        MessageChunk(message=msg, content=content, sequence=1)
+        if content is not None:
+            MessageChunk(message=msg, content=content, sequence=1)
 
         bugmsg = self.linkMessage(
             msg, bugwatch, remote_comment_id=remote_comment_id

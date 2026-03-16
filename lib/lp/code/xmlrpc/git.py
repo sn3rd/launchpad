@@ -10,7 +10,7 @@ __all__ = [
 import logging
 import sys
 import uuid
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 from urllib.parse import quote
 
 import six

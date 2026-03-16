@@ -1519,7 +1519,8 @@ class BranchMergeProposal(StormBase, BugLinkTargetMixin):
             subject=subject,
             datecreated=_date_created,
         )
-        MessageChunk(message=message, content=content, sequence=1)
+        if content is not None:
+            MessageChunk(message=message, content=content, sequence=1)
         comment = self.createCommentFromMessage(
             message,
             vote,

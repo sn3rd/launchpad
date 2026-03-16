@@ -610,66 +610,6 @@ class TestCIBuildUploadJob(TestCaseWithFactory):
             ),
         )
 
-    def test_scanFiles_rust_archive(self):
-        """Test scanning a Rust build archive containing .crate files."""
-        self.useFixture(FakeLogger())
-        archive = self.factory.makeArchive(
-            repository_format=ArchiveRepositoryFormat.RUST
-        )
-        distroseries = self.factory.makeDistroSeries(
-            distribution=archive.distribution
-        )
-        build = self.makeCIBuild(archive.distribution)
-        report = self.factory.makeRevisionStatusReport(ci_build=build)
-        job = CIBuildUploadJob.create(
-            build,
-            build.git_repository.owner,
-            archive,
-            distroseries,
-            PackagePublishingPocket.RELEASE,
-            target_channel="edge",
-        )
-
-        tmpdir = Path(self.useFixture(TempDir()).path)
-
-        archive_contents = tmpdir / "archive_contents"
-        archive_contents.mkdir()
-
-        metadata = {"name": "test-crate", "version": "0.1.0"}
-        with open(archive_contents / "metadata.yaml", "w") as f:
-            import yaml
-
-            yaml.dump(metadata, f)
-
-        (archive_contents / "test-crate-0.1.0.crate").write_bytes(
-            b"dummy crate content"
-        )
-
-        archive_path = tmpdir / "rust-build.tar.xz"
-        import tarfile
-
-        with tarfile.open(str(archive_path), "w:xz") as tar:
-            tar.add(str(archive_contents), arcname=".")
-
-        all_metadata = job._scanFiles(report, tmpdir)
-
-        self.assertThat(
-            all_metadata,
-            MatchesDict(
-                {
-                    "test-crate-0.1.0.crate": MatchesStructure(
-                        format=Equals(BinaryPackageFormat.CRATE),
-                        name=Equals("test-crate"),
-                        version=Equals("0.1.0"),
-                        summary=Equals(""),
-                        description=Equals(""),
-                        architecturespecific=Is(False),
-                        homepage=Equals(""),
-                    )
-                }
-            ),
-        )
-
     def test__scanFiles_generic_source(self):
         self.useFixture(FakeLogger())
         archive = self.factory.makeArchive()

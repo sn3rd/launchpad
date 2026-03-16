@@ -9,7 +9,7 @@ __all__ = [
 
 import hashlib
 from urllib.parse import quote, unquote
-from xmlrpc.client import Fault
+from xmlrpc.client import Fault  # nosec B411
 
 from pymacaroons import Macaroon
 from storm.expr import SQL, Not

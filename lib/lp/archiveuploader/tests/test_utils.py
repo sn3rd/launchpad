@@ -3,17 +3,24 @@
 # Copyright 2009-2018 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
+import io
 import os
+import tarfile
+import tempfile
+import zipfile
 
 from lp.archiveuploader.tests import datadir
 from lp.archiveuploader.utils import (
     DpkgSourceError,
     ParseMaintError,
+    SafeTarExtractError,
     determine_binary_file_type,
     determine_source_file_type,
     extract_dpkg_source,
     re_isadeb,
     re_issource,
+    safe_extract_tar,
+    safe_extract_zip,
 )
 from lp.registry.interfaces.sourcepackage import SourcePackageFileType
 from lp.soyuz.enums import BinaryPackageFileType
@@ -383,3 +390,165 @@ class TestExtractDpkgSource(TestCase):
         )
         self.assertNotEqual(0, err.result)
         self.assertEqual("", err.output)
+
+
+class TestSafeExtractTar(TestCase):
+    """Tests for safe_extract_tar (PEP 706 / CVE-2007-4559 mitigation)."""
+
+    def test_extracts_regular_files_and_dirs(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                info = tarfile.TarInfo("subdir")
+                info.type = tarfile.DIRTYPE
+                tar.addfile(info)
+                data = tarfile.TarInfo("subdir/foo.txt")
+                data.size = 5
+                tar.addfile(data, io.BytesIO(b"\x00" * 5))
+        with tarfile.open(f.name, "r") as tar:
+            safe_extract_tar(tar, dest)
+        self.assertIn("subdir", os.listdir(dest))
+        with open(os.path.join(dest, "subdir", "foo.txt"), "rb") as fp:
+            self.assertEqual(fp.read(), b"\x00" * 5)
+
+    def test_rejects_path_traversal(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                info = tarfile.TarInfo("../../../etc/escape")
+                info.size = 0
+                tar.addfile(info, io.BytesIO(b""))
+        with tarfile.open(f.name, "r") as tar:
+            self.assertRaises(SafeTarExtractError, safe_extract_tar, tar, dest)
+
+    def test_rejects_absolute_path(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                info = tarfile.TarInfo("/absolute/path")
+                info.size = 0
+                tar.addfile(info, io.BytesIO(b""))
+        with tarfile.open(f.name, "r") as tar:
+            self.assertRaises(SafeTarExtractError, safe_extract_tar, tar, dest)
+
+    def test_rejects_symlink_to_absolute_path(self):
+        """Symlinks to absolute paths are rejected."""
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                info = tarfile.TarInfo("metadata.yaml")
+                info.size = 12
+                tar.addfile(info, io.BytesIO(b"name: x\nver: 1\n"))
+                sym = tarfile.TarInfo("link.yaml")
+                sym.type = tarfile.SYMTYPE
+                sym.linkname = "/etc/passwd"
+                tar.addfile(sym)
+        with tarfile.open(f.name, "r") as tar:
+            self.assertRaises(SafeTarExtractError, safe_extract_tar, tar, dest)
+
+    def test_allows_symlink_inside_tree(self):
+        """Symlinks whose target stays inside the tree are allowed."""
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                info = tarfile.TarInfo("metadata.yaml")
+                info.size = 12
+                tar.addfile(info, io.BytesIO(b"name: x\nver: 1\n"))
+                sym = tarfile.TarInfo("link.yaml")
+                sym.type = tarfile.SYMTYPE
+                sym.linkname = "metadata.yaml"
+                tar.addfile(sym)
+        with tarfile.open(f.name, "r") as tar:
+            safe_extract_tar(tar, dest)
+        self.assertTrue(os.path.isfile(os.path.join(dest, "metadata.yaml")))
+        self.assertTrue(os.path.islink(os.path.join(dest, "link.yaml")))
+        self.assertEqual(
+            os.path.realpath(os.path.join(dest, "link.yaml")),
+            os.path.realpath(os.path.join(dest, "metadata.yaml")),
+        )
+
+    def test_symlink_traversal_rejected_by_per_member_verification(self):
+        """A symlink-based escape is rejected by per-member checks.
+
+        This constructs a crafted archive where an early member affects path
+        resolution (via a symlink) and a later member would otherwise land
+        outside the extraction root. safe_extract_tar verifies each member
+        immediately before extraction using realpath(), so the escaping
+        member is rejected with SafeTarExtractError rather than relying on
+        kernel permissions.
+        """
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                sym = tarfile.TarInfo("a")
+                sym.type = tarfile.SYMTYPE
+                sym.linkname = "."
+                tar.addfile(sym)
+                evil = tarfile.TarInfo("a/a/a/a/../../../../etc/cron.d/evil")
+                evil.size = 4
+                tar.addfile(evil, io.BytesIO(b"evil"))
+        with tarfile.open(f.name, "r") as tar:
+            self.assertRaises(SafeTarExtractError, safe_extract_tar, tar, dest)
+
+    def test_symlink_traversal_rejected_writable_sibling(self):
+        """Escape into a writable sibling directory is rejected.
+
+        The archive is crafted so that, without per-member checks, a later
+        member would end up in a sibling directory alongside the extraction
+        root. We verify each member with realpath() before extracting, so
+        attempts to write outside the root raise SafeTarExtractError and do
+        not depend on filesystem permissions.
+        """
+        base = self.makeTemporaryDirectory()
+        dest = os.path.join(base, "dest")
+        outside = os.path.join(base, "outside")
+        os.mkdir(dest)
+        os.mkdir(outside)
+
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as f:
+            with tarfile.open(f.name, "w") as tar:
+                sym = tarfile.TarInfo("a")
+                sym.type = tarfile.SYMTYPE
+                sym.linkname = "."
+                tar.addfile(sym)
+                evil = tarfile.TarInfo("a/a/a/a/../../outside/evil")
+                payload = b"evil"
+                evil.size = len(payload)
+                tar.addfile(evil, io.BytesIO(payload))
+
+        with tarfile.open(f.name, "r") as tar:
+            self.assertRaises(SafeTarExtractError, safe_extract_tar, tar, dest)
+
+
+class TestSafeExtractZip(TestCase):
+    """Tests for safe_extract_zip (ZIP path traversal mitigation)."""
+
+    def test_extracts_regular_files_and_dirs(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+            with zipfile.ZipFile(f.name, "w") as zf:
+                zf.writestr("subdir/", b"")
+                zf.writestr("subdir/foo.txt", b"hello")
+        with zipfile.ZipFile(f.name, "r") as zf:
+            safe_extract_zip(zf, dest)
+        self.assertIn("subdir", os.listdir(dest))
+        with open(os.path.join(dest, "subdir", "foo.txt"), "rb") as fp:
+            self.assertEqual(fp.read(), b"hello")
+
+    def test_rejects_path_traversal(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+            with zipfile.ZipFile(f.name, "w") as zf:
+                zf.writestr("../../etc/escape", b"bad")
+        with zipfile.ZipFile(f.name, "r") as zf:
+            self.assertRaises(SafeTarExtractError, safe_extract_zip, zf, dest)
+
+    def test_rejects_absolute_path(self):
+        dest = self.makeTemporaryDirectory()
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+            with zipfile.ZipFile(f.name, "w") as zf:
+                info = zipfile.ZipInfo("/absolute/path")
+                info.file_size = len(b"bad")
+                zf.writestr(info, b"bad")
+        with zipfile.ZipFile(f.name, "r") as zf:
+            self.assertRaises(SafeTarExtractError, safe_extract_zip, zf, dest)

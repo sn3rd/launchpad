@@ -1,0 +1,290 @@
+<tal:root
+  xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+  omit-tag=""
+>
+  <section class="summary-layout u-fixed-width">
+    <div class="title">
+      <h3 tal:content="context/displayname">project 1.x series</h3>
+      <div
+        class="u-flex--row"
+        style="margin-bottom: var(--dimension-spacing-inline-m)"
+      >
+        <span
+          tal:attributes="class string:${view/status_chip_color} is-readonly is-inline"
+        >
+          <span class="p-chip__value">
+            <tal:status replace="context/status/title"> status </tal:status>
+          </span>
+        </span>
+        <a
+          tal:attributes="
+        href context/menu:overview/edit/url;
+        title context/menu:overview/edit/summary;"
+          tal:condition="context/menu:overview/edit/enabled"
+        >
+          <i class="p-icon--edit"></i>
+        </a>
+      </div>
+      <div>
+        <p>
+          Registered by
+          <a
+            tal:attributes="href context/registrant/fmt:url"
+            tal:content="context/registrant/displayname"
+            >Mark Shuttleworth</a
+          >
+          on
+          <tal:created
+            replace="structure context/date_created/fmt:displaydatetitle"
+          />
+          .
+        </p>
+        <p tal:content="structure context/summary/fmt:text-to-html">
+          The Ubuntu release that will be delivered in April 2026, designated
+          26.04.
+        </p>
+      </div>
+    </div>
+    <div class="links">
+      <div
+        tal:replace="structure context/@@+vanilla-distroseries-summary-links"
+      />
+    </div>
+    <div class="statistics">
+      <dl class="description-list">
+        <div class="description-list__item">
+          <dt>Distribution</dt>
+          <dd>
+            <div class="u-flex--row">
+              <img
+                tal:attributes="src context/distribution/image:logo_src"
+                alt="Distribution icon"
+                class="u-margin-right-xs u-inline-image"
+              />
+              <span tal:content="context/distribution/displayname">
+                Ubuntu
+              </span>
+            </div>
+          </dd>
+        </div>
+        <div class="description-list__item">
+          <dt>Series</dt>
+          <dd>
+            <span tal:content="context/displayname"> Resolute </span>
+            (
+            <span tal:content="context/version"> 26.04 </span>
+            )
+          </dd>
+        </div>
+        <div
+          class="description-list__item"
+          tal:define="all_child_series context/getDerivedSeries"
+        >
+          <dt>Derived series</dt>
+          <dd>
+            <span tal:condition="not: all_child_series">
+              No derived series
+            </span>
+            <ul
+              tal:repeat="child_series all_child_series"
+              class="p-list u-no-margin u-no-padding"
+            >
+              <li class="p-list__item">
+                <a
+                  tal:attributes="href child_series/fmt:url"
+                  tal:content="child_series/named_version"
+                >
+                  child series
+                </a>
+              </li>
+            </ul>
+          </dd>
+        </div>
+        <div class="description-list__item">
+          <dt>Drivers</dt>
+          <dd>
+            <ul
+              tal:repeat="driver context/drivers"
+              class="p-list u-no-margin u-no-padding"
+            >
+              <li class="p-list__item">
+                <a tal:attributes="href driver/fmt:url" class="u-flex--row">
+                  <img
+                    tal:attributes="src driver/image:logo_src"
+                    alt="Driver icon"
+                    class="u-inline-image"
+                  />
+                  <span tal:content="driver/displayname"> driver </span>
+                </a>
+              </li>
+            </ul>
+          </dd>
+        </div>
+        <div class="description-list__item">
+          <dt class="u-flex--row" aria-labelledby="release-manager-label">
+            <span id="release-manager-label">Release Manager</span>
+            <a
+              tal:attributes="href context/menu:overview/driver/url"
+              tal:condition="context/menu:overview/driver/enabled"
+              title="Appoint driver"
+            >
+              <i class="p-icon--edit"></i>
+            </a>
+          </dt>
+          <dd>
+            <span tal:condition="not: context/driver"> None </span>
+            <a
+              tal:condition="context/driver"
+              tal:attributes="href context/driver/fmt:url"
+            >
+              <span tal:content="context/driver/displayname">
+                release team
+              </span>
+            </a>
+          </dd>
+        </div>
+        <div
+          class="description-list__item"
+          tal:define="parents context/getParentSeries"
+        >
+          <dt>Derives from</dt>
+          <dd>
+            <span tal:condition="not: parents">
+              Not derived from any series
+            </span>
+            <ul
+              tal:repeat="parent parents"
+              class="p-list u-no-margin u-no-padding"
+            >
+              <li class="p-list__item">
+                <a
+                  tal:attributes="href parent/fmt:url"
+                  tal:content="parent/named_version"
+                >
+                  parent series
+                </a>
+              </li>
+            </ul>
+          </dd>
+        </div>
+      </dl>
+      <hr class="p-rule" />
+      <dl class="description-list is-stats">
+        <div class="description-list__stat">
+          <div class="description-list__item">
+            <dt>Open critical bugs</dt>
+            <dd class="u-flex--row">
+              <i class="p-icon--circle is-negative"></i>
+              <span
+                class="p-heading--3 u-no-margin u-no-padding"
+                tal:content="view/bugs_summary/critical_bugs_count/fmt:intcomma"
+              >
+                0
+              </span>
+            </dd>
+          </div>
+          <div class="description-list__item">
+            <dt>In progress</dt>
+            <dd
+              tal:content="view/bugs_summary/inprogress_bugs_count/fmt:intcomma"
+            >
+              0
+            </dd>
+          </div>
+          <div class="description-list__item">
+            <dt>Triaged</dt>
+            <dd tal:content="view/bugs_summary/triaged_bugs_count/fmt:intcomma">
+              0
+            </dd>
+          </div>
+        </div>
+
+        <div class="description-list__stat">
+          <div class="description-list__item">
+            <dt>Packages built (24h)</dt>
+            <dd>
+              <span
+                class="p-heading--3"
+                tal:content="string:${view/packages_summary_24h/built_packages_percentage} %"
+              >
+                0%
+              </span>
+            </dd>
+          </div>
+          <div class="description-list__item">
+            <dt>Failed to build</dt>
+            <dd
+              tal:content="view/packages_summary_24h/failed_to_build_packages_count/fmt:intcomma"
+            >
+              0
+            </dd>
+          </div>
+          <div class="description-list__item">
+            <dt>Failed to upload</dt>
+            <dd
+              tal:content="view/packages_summary_24h/failed_to_upload_packages_count/fmt:intcomma"
+            >
+              0
+            </dd>
+          </div>
+        </div>
+
+        <div class="description-list__stat">
+          <div class="description-list__item">
+            <dt>Source packages</dt>
+            <dd>
+              <span
+                class="p-heading--3"
+                tal:content="context/sourcecount/fmt:intcomma"
+              >
+                40,113
+              </span>
+            </dd>
+          </div>
+          <div class="description-list__item">
+            <dt>Binary packages</dt>
+            <dd tal:content="context/binarycount/fmt:intcomma">40,113</dd>
+          </div>
+        </div>
+
+        <div class="description-list__stat">
+          <div class="description-list__item">
+            <dt>Next milestone</dt>
+            <dd>
+              <span
+                class="p-heading--3"
+                tal:condition="view/next_milestone"
+                tal:content="view/next_milestone/displayname"
+              >
+                Next milestone
+              </span>
+              <span
+                class="p-heading--3 u-text--muted"
+                tal:condition="not: view/next_milestone"
+              >
+                No next milestone
+              </span>
+            </dd>
+          </div>
+          <div
+            class="description-list__item"
+            tal:condition="view/next_milestone"
+          >
+            <dt>Expected</dt>
+            <dd tal:content="view/next_milestone/dateexpected/fmt:displaydate">
+              Expected
+            </dd>
+          </div>
+        </div>
+      </dl>
+    </div>
+    <div class="links-mobile">
+      <hr class="p-rule" />
+      <div
+        tal:replace="structure context/@@+vanilla-distroseries-summary-links"
+      />
+    </div>
+  </section>
+</tal:root>

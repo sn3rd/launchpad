@@ -81,9 +81,9 @@ lib/canonical/launchpad/icing/css/modifiers.css
 lib/canonical/launchpad/icing/css/typography.css
 lib/canonical/launchpad/icing/css/typography.css.map
 lib/canonical/launchpad/icing/vanilla-framework
-lib/canonical/launchpad/icing/vanilla/*.css
+lib/canonical/launchpad/icing/vanilla/**/*.css
+lib/canonical/launchpad/icing/vanilla/**/*.css.map
 !lib/canonical/launchpad/icing/vanilla/vanilla_framework_version_4_44_0_min.css
-lib/canonical/launchpad/icing/vanilla/*.css.map
 lib/canonical/launchpad/icing/vanilla.css.map
 lib/canonical/launchpad/icing/vanilla.css
 

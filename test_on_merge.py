@@ -10,10 +10,11 @@ import _pythonpath  # noqa: F401
 import os
 import select
 import shlex
+import subprocess
 import sys
 import time
 from signal import SIGHUP, SIGINT, SIGKILL, SIGTERM
-from subprocess import PIPE, STDOUT, Popen
+from subprocess import DEVNULL, PIPE, STDOUT, Popen
 
 import psycopg2
 
@@ -93,7 +94,12 @@ def setup_test_database():
 
     # Build the template database. Tests duplicate this.
     schema_dir = os.path.join(HERE, "database", "schema")
-    if os.system("cd %s; make test > /dev/null" % (schema_dir)) != 0:
+    if (
+        subprocess.run(
+            ["make", "test"], cwd=schema_dir, stdout=DEVNULL
+        ).returncode
+        != 0
+    ):
         print("Failed to create database or load sampledata.")
         return 1
 

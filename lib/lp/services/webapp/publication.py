@@ -401,8 +401,7 @@ class LaunchpadBrowserPublication(
         It also sets the launchpad.pageid WSGI environment variable, and
         ensures that the userid and pageid are logged.
         """
-        request._publication_start = time.time()
-        request._publication_thread_start = _get_thread_time()
+        self.startPublicationTiming(request)
         if request.response.getStatus() in [301, 302, 303, 307]:
             return ""
 
@@ -444,6 +443,14 @@ class LaunchpadBrowserPublication(
             return ob(*request.getPositionalArguments())
 
         return mapply(ob, request.getPositionalArguments(), request)
+
+    def startPublicationTiming(self, request, include_thread_time=True):
+        """Initialize request timing fields expected by afterCall()."""
+        request._publication_start = time.time()
+        if include_thread_time:
+            request._publication_thread_start = _get_thread_time()
+        else:
+            request._publication_thread_start = None
 
     def afterCall(self, request, ob):
         """See `zope.publisher.interfaces.IPublication`.

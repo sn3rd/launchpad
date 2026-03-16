@@ -1,14 +1,42 @@
 @import "icons";
+@import "patterns/description-list";
+@import "patterns/description-list-item";
+@import "tokens/color";
+@import "tokens/dimension";
+@import "tokens/typography";
+@import "utilities";
 
 :root {
-  --font-monospace: "Ubuntu Mono variable", "Ubuntu Mono", Consolas, Monaco, Courier, monospace;
-  --font-family: "Ubuntu variable", Ubuntu, 'Bitstream Vera Sans', 'DejaVu Sans', Tahoma, sans-serif;
+  --font-monospace:
+    "Ubuntu Mono variable", "Ubuntu Mono", Consolas, Monaco, Courier, monospace;
+  --font-family:
+    "Ubuntu variable", Ubuntu, "Bitstream Vera Sans", "DejaVu Sans", Tahoma,
+    sans-serif;
   font-size: 14px;
-  --paper-bg: #f3f3f3;
 
   body {
-    &:has(*.is-paper) {
-      background-color: var(--paper-bg);
+    // overrides to vanilla framework
+    .u-fixed-width,
+    .p-navigation__row,
+    .row,
+    .grid-row--25-25-25-25,
+    .grid-row--25-25-50,
+    .grid-row--75-25-on-large,
+    .grid-row--75-25-on-medium,
+    .grid-row--75-25,
+    .grid-row--25-75-on-large,
+    .grid-row--50-50-on-large,
+    .grid-row--25-75-on-medium,
+    .grid-row--50-50-on-medium,
+    .grid-row--25-75,
+    .grid-row--50-50,
+    .grid-row,
+    .p-equal-height-row,
+    .p-equal-height-row--wrap,
+    .p-pricing-block,
+    .p-pricing-block--25-75,
+    .p-pricing-block--50-50 {
+      max-width: 100%;
     }
   }
 }

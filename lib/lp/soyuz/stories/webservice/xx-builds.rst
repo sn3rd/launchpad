@@ -65,6 +65,7 @@ of properties:
     date_first_dispatched: None
     dependencies: None
     distribution_link: 'http://.../beta/ubuntu'
+    distro_series_link: 'http://.../beta/ubuntu/breezy-autotest'
     log_url:
     'http://.../~cprov/+archive/ubuntu/ppa/+build/26/+files/netapplet-1.0.0.tar.gz'
     pocket: 'Release'
@@ -103,6 +104,7 @@ Whereas the 1.0 webservice for builds maintains the old property names
     datecreated: '2007-07-08T00:00:00+00:00'
     dependencies: None
     distribution_link: 'http://.../ubuntu'
+    distro_series_link: 'http://.../ubuntu/breezy-autotest'
     pocket: 'Release'
     resource_type_link: 'http://.../#build'
     score: None
@@ -138,6 +140,7 @@ devel webservice also contains build date_started and duration.
     datecreated: '2007-07-08T00:00:00+00:00'
     dependencies: None
     distribution_link: 'http://.../ubuntu'
+    distro_series_link: 'http://.../ubuntu/breezy-autotest'
     duration: '0:01:20'
     external_dependencies: None
     pocket: 'Release'

@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 import socket
-from xmlrpc.client import ProtocolError
+from xmlrpc.client import ProtocolError  # nosec B411
 
 from lp.bugs.externalbugtracker import (
     BugNotFound,

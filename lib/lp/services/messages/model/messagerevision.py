@@ -110,6 +110,11 @@ class MessageRevisionChunk(StormBase):
     content = Unicode(name="content", allow_none=False)
 
     def __init__(self, message_revision, sequence, content):
+        """Create a new MessageRevisionChunk.
+
+        The content must not be None. In the case of attachment only messages,
+        no MessageRevisionChunk should be created.
+        """
         self.message_revision = message_revision
         self.sequence = sequence
         self.content = content

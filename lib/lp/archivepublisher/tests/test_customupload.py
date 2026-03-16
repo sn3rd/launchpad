@@ -3,7 +3,6 @@
 
 """Tests for `CustomUploads`."""
 
-import io
 import os
 import shutil
 import tarfile
@@ -93,22 +92,18 @@ class TestCustomUpload(unittest.TestCase):
 class TestTarfileVerification(TestCase):
     def setUp(self):
         TestCase.setUp(self)
-        self.tarfile_path = "/tmp/_verify_extract"
+        self.tarfile_path = self.makeTemporaryDirectory()
         self.tarfile_name = os.path.join(self.tarfile_path, "test_tarfile.tar")
         self.custom_processor = CustomUpload()
-        self.custom_processor.tmpdir = self.makeTemporaryDirectory()
+        self.custom_processor.tmpdir = None
         self.custom_processor.tarfile_path = self.tarfile_name
 
     def createTarfile(self):
-        self.tar_fileobj = io.BytesIO()
-        tar_file = tarfile.open(name=None, mode="w", fileobj=self.tar_fileobj)
+        tar_file = tarfile.open(self.tarfile_name, mode="w")
         root_info = tarfile.TarInfo(name="./")
         root_info.type = tarfile.DIRTYPE
+        root_info.mode = 0o755
         tar_file.addfile(root_info)
-        # Ordering matters here, addCleanup pushes onto a stack which is
-        # popped in reverse order.
-        self.addCleanup(self.tar_fileobj.close)
-        self.addCleanup(tar_file.close)
         return tar_file
 
     def createSymlinkInfo(self, target, name="i_am_a_symlink"):
@@ -131,13 +126,17 @@ class TestTarfileVerification(TestCase):
         return tar_file
 
     def assertFails(self, exception, tar_file):
-        self.assertRaises(
-            exception, self.custom_processor.verifyBeforeExtracting, tar_file
-        )
+        # Close the tar so all data is flushed to disk before extract().
+        tar_file.close()
+        self.assertRaises(exception, self.custom_processor.extract)
+        if self.custom_processor.tmpdir is not None:
+            shutil.rmtree(self.custom_processor.tmpdir, True)
 
     def assertPasses(self, tar_file):
-        result = self.custom_processor.verifyBeforeExtracting(tar_file)
-        self.assertTrue(result)
+        # Close the tar so all data is flushed to disk before extract().
+        tar_file.close()
+        self.custom_processor.extract()
+        shutil.rmtree(self.custom_processor.tmpdir, True)
 
     def testFailsToExtractBadSymlink(self):
         """Fail if a symlink's target is outside the tmp tree."""
@@ -191,28 +190,17 @@ class TestTarfileVerification(TestCase):
         tar_file.addfile(info)
         self.assertPasses(tar_file)
 
-    def test_extract(self):
-        """Test that the extract method calls the verify function.
-
-        This test is different from the previous tests in that it actually
-        pokes a fake tar file on disk.  This is slower, so it's only done
-        once, here.
+    def testFailsToExtractSymlinkTraversalAttack(self):
         """
-        # Make a bad tarfile and poke it into the custom processor.
-        self.custom_processor.tmpdir = None
-        try:
-            os.makedirs(self.tarfile_path)
-            tar_file = tarfile.open(self.tarfile_name, mode="w")
-            info = tarfile.TarInfo("test_file")
-            info.type = tarfile.FIFOTYPE
-            tar_file.addfile(info)
-            tar_file.close()
-            self.assertRaises(
-                CustomUploadTarballInvalidFileType,
-                self.custom_processor.extract,
-            )
-        finally:
-            shutil.rmtree(self.tarfile_path)
+        Fail if a symlink causes a later file to escape the tmp tree.
+        """
+        tar_file = self.createTarfile()
+        symlink_info = self.createSymlinkInfo(target=".", name="a")
+        tar_file.addfile(symlink_info)
+        evil_info = tarfile.TarInfo(name="a/a/a/a/../../../../etc/cron.d/evil")
+        evil_info.type = tarfile.REGTYPE
+        tar_file.addfile(evil_info)
+        self.assertFails(CustomUploadTarballBadFile, tar_file)
 
 
 class TestSigning(TestCaseWithFactory, RunPartsMixin):

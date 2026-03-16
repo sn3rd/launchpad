@@ -40,6 +40,7 @@ from operator import attrgetter, itemgetter
 import six
 import transaction
 from lazr.delegates import delegate_to
+from lazr.lifecycle.event import ObjectCreatedEvent
 from lazr.restful.utils import get_current_browser_request, smartquote
 from requests import PreparedRequest
 from storm.databases.postgres import JSON
@@ -73,7 +74,6 @@ from zope.component import adapter, getUtility
 from zope.event import notify
 from zope.interface import alsoProvides, classImplements, implementer
 from zope.interface.interfaces import ComponentLookupError
-from zope.lifecycleevent import ObjectCreatedEvent
 from zope.publisher.interfaces import Unauthorized
 from zope.security.checker import canAccess, canWrite
 from zope.security.proxy import ProxyFactory, removeSecurityProxy
@@ -4334,6 +4334,9 @@ class PersonSet:
         store = IStore(Person)
         store.add(person)
         store.flush()
+
+        notify(ObjectCreatedEvent(person))
+
         return person
 
     def ensurePerson(

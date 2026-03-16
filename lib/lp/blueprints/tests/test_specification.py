@@ -29,6 +29,9 @@ from lp.blueprints.enums import (
 )
 from lp.blueprints.errors import TargetAlreadyHasSpecification
 from lp.blueprints.interfaces.specification import ISpecificationSet
+from lp.blueprints.interfaces.specificationmessage import (
+    ISpecificationMessageSet,
+)
 from lp.blueprints.model.specification import Specification
 from lp.blueprints.model.specificationsearch import (
     get_specification_privacy_filter,
@@ -1085,3 +1088,21 @@ class TestBugLinks(TestCaseWithFactory):
         self.assertContentEqual([bug1], spec2.bugs)
         self.assertContentEqual([spec2], bug1.specifications)
         self.assertContentEqual([], bug2.specifications)
+
+
+class TestSpecificationMessageEditing(TestCaseWithFactory):
+    """Tests for editing specification messages with no text content."""
+
+    layer = DatabaseFunctionalLayer
+
+    def test_edit_specification_message_with_no_content(self):
+        # A specification message created without content should
+        # be editable.
+        owner = self.factory.makePerson()
+        spec = self.factory.makeSpecification()
+        specmsg = getUtility(ISpecificationMessageSet).createMessage(
+            "Subject", spec, owner, content=None
+        )
+        with person_logged_in(owner):
+            specmsg.message.editContent("new content")
+        self.assertEqual("new content", specmsg.message.text_contents)

@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import PurePath
 from typing import Optional, Union
-from xmlrpc.client import DateTime, Fault
+from xmlrpc.client import DateTime, Fault  # nosec B411
 
 from pymacaroons import Macaroon
 from zope.component import getUtility

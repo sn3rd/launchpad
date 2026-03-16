@@ -54,7 +54,7 @@ __all__ = [
 
 import os.path
 import sys
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
 
 import six
 from breezy import urlutils
