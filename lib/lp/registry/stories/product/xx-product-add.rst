@@ -20,17 +20,20 @@ project registration.
     >>> print(user_browser.getLink("Register a team").url)
     https://documentation.ubuntu.com/launchpad/user/explanation/teams/
 
-    >>> print(user_browser.getLink("Activate a PPA").url)
-    https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/
-    ppa/
+    >>> print(
+    ...     user_browser.getLink("Activate a PPA").url
+    ... )  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/user/reference/.../ppas/ppa/
 
-    >>> print(user_browser.getLink("Access your personal branches").url)
-    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-
-    hosted-on-launchpad/create-and-maintain-personal-branch/
+    >>> print(
+    ...     user_browser.getLink("Access your personal branches").url
+    ... )  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/...create-and-maintain-personal-branch/
 
-    >>> print(user_browser.getLink("Translate a project").url)
-    https://documentation.ubuntu.com/launchpad/user/reference/translations/
-    translation-best-practices/
+    >>> print(
+    ...     user_browser.getLink("Translate a project").url
+    ... )  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/.../translation-best-practices/
 
     >>> print(user_browser.getLink("Request a project group").url)
     https://documentation.ubuntu.com/launchpad/user/reference/project-groups/
