@@ -626,8 +626,11 @@ class TestCVE(TestCaseWithFactory):
                 "jammy", cache_entities=cache_entities
             )
 
+        # Assert first result is equal to second result
         self.assertIs(first_result, self.distroseries)
         self.assertIs(second_result, self.distroseries)
+
+        # Assert queryByName only called once for series and distribution
         self.assertEqual(1, distro_series_set.queryByName.call_count)
         distro_series_set.queryByName.assert_called_once_with(
             self.distribution, "jammy"
@@ -635,7 +638,15 @@ class TestCVE(TestCaseWithFactory):
         self.assertEqual(1, distribution_set.getByName.call_count)
         distribution_set.getByName.assert_called_once_with("ubuntu")
 
+        # Assert entities exist in cache
+        self.assertIn("ubuntu/jammy", cache_entities["distroseries"])
+        self.assertIsNotNone(cache_entities["distroseries"]["ubuntu/jammy"])
+        self.assertIn("ubuntu", cache_entities["distribution"])
+        self.assertIsNotNone(cache_entities["distribution"]["ubuntu"])
+
     def test_get_distro_series_caches_missing_series(self):
+        # Check we also cache nonexistent series so that we don't need to
+        # check from the database again
         cache_entities = CVE.new_cache()
 
         distribution_set = Mock()
@@ -666,6 +677,9 @@ class TestCVE(TestCaseWithFactory):
         self.assertIsNone(cache_entities["distroseries"]["ubuntu/nonexistent"])
 
     def test_get_distro_series_caches_distribution_lookup(self):
+        # Check that when checking for different series within the same
+        # distribution, we only fetch the distribution from the database once
+
         cache_entities = CVE.new_cache()
 
         distribution_set = Mock()
@@ -684,6 +698,8 @@ class TestCVE(TestCaseWithFactory):
             CVE.get_distro_series("jammy", cache_entities=cache_entities)
             CVE.get_distro_series("noble", cache_entities=cache_entities)
 
+        # Assert distribution.getByName only called once even if
+        # distroseries.getByName called twice
         self.assertEqual(1, distribution_set.getByName.call_count)
         self.assertIs(
             self.distribution,
