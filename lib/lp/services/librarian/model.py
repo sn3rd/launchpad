@@ -63,11 +63,12 @@ class LibraryFileContent(StormBase):
         allow_none=False, default=UTC_NOW, tzinfo=timezone.utc
     )
     filesize = Int(allow_none=False)
+    sha512 = Unicode()
     sha256 = Unicode()
     sha1 = Unicode(allow_none=False)
     md5 = Unicode(allow_none=False)
 
-    def __init__(self, filesize, md5, sha1, sha256, id=None):
+    def __init__(self, filesize, md5, sha1, sha256, id=None, sha512=None):
         super().__init__()
         if id is not None:
             self.id = id
@@ -75,6 +76,7 @@ class LibraryFileContent(StormBase):
         self.md5 = md5
         self.sha1 = sha1
         self.sha256 = sha256
+        self.sha512 = sha512
 
 
 @implementer(ILibraryFileAlias)

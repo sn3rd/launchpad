@@ -376,12 +376,13 @@ class LibrarianClientTestCase(TestCase):
         self.assertEqual(5, client.check_error_calls)
 
     def test_addFile_hashes(self):
-        # addFile() sets the MD5, SHA-1 and SHA-256 hashes on the
+        # addFile() sets the MD5, SHA-1, SHA-256 and SHA-512 hashes on the
         # LibraryFileContent record.
         data = b"i am some data"
         md5 = hashlib.md5(data).hexdigest()
         sha1 = hashlib.sha1(data).hexdigest()
         sha256 = hashlib.sha256(data).hexdigest()
+        sha512 = hashlib.sha512(data).hexdigest()
 
         client = LibrarianClient()
         lfa = IStore(LibraryFileAlias).get(
@@ -392,6 +393,7 @@ class LibrarianClientTestCase(TestCase):
         self.assertEqual(md5, lfa.content.md5)
         self.assertEqual(sha1, lfa.content.sha1)
         self.assertEqual(sha256, lfa.content.sha256)
+        self.assertEqual(sha512, lfa.content.sha512)
 
     def test__getURLForDownload(self):
         # This protected method is used by getFileByAlias. It is supposed to
