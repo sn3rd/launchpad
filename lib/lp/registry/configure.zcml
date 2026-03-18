@@ -1544,6 +1544,7 @@
             permission="launchpad.LimitedView"
             attributes="
                 bugtargetdisplayname
+                bug_target_parent
                 getBugTaskWeightFunction
                 pillar
                 searchTasks"/>
@@ -1804,6 +1805,7 @@
              attributes="
                  bug_reported_acknowledgement
                  bug_reporting_guidelines
+                 bug_target_parent
                  content_templates
                  bugtargetname
                  createBug

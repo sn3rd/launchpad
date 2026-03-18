@@ -491,6 +491,11 @@ class DistributionSourcePackage(
         return not self.__eq__(other)
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.distribution
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self.distribution

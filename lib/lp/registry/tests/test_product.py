@@ -46,6 +46,7 @@ from lp.blueprints.model.specification import (
 from lp.bugs.interfaces.bugsummary import IBugSummaryDimension
 from lp.bugs.interfaces.bugsupervisor import IHasBugSupervisor
 from lp.bugs.interfaces.bugtarget import BUG_POLICY_ALLOWED_TYPES
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.code.model.branchnamespace import BRANCH_POLICY_ALLOWED_TYPES
 from lp.registry.enums import (
     EXCLUSIVE_TEAM_POLICY,
@@ -1545,6 +1546,23 @@ class TestProduct(TestCaseWithFactory):
             .find([(product, InformationType.PROPRIETARY)])
             .one(),
         )
+
+    def test_bug_target_parent(self):
+        product = self.factory.makeProduct()
+
+        parent = product.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IProduct interface.
+        self.assertTrue(IProduct.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the product itself.
+        self.assertEqual(product, parent)
 
 
 class TestProductBugInformationTypes(TestCaseWithFactory):

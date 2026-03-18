@@ -174,6 +174,11 @@ class ProductSeries(
         self.releasefileglob = releasefileglob
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.product
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self.product

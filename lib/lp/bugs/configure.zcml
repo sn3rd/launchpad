@@ -228,6 +228,7 @@
                 attributes="
                     bugtargetname
                     bugtargetdisplayname
+                    bug_target_parent
                     product
                     productseries
                     sourcepackagename

@@ -144,6 +144,11 @@ class ExternalPackage(
         return self.distribution.official_bug_tags
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.distribution
+
+    @property
     def pillar(self) -> IDistribution:
         """See `IBugTarget`."""
         return self.distribution

@@ -15,7 +15,9 @@ from zope.component import getUtility
 from zope.security.proxy import removeSecurityProxy
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.registry.errors import NoSuchDistroSeries
+from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distroseries import IDistroSeriesSet
 from lp.registry.interfaces.externalpackage import ExternalPackageType
 from lp.registry.interfaces.pocket import PackagePublishingPocket
@@ -492,6 +494,22 @@ class TestDistroSeries(TestCaseWithFactory):
             externalpackageseries.packagetype, ExternalPackageType.SNAP
         )
         self.assertEqual(externalpackageseries.channel, None)
+
+    def test_bug_target_parent(self):
+        distroseries = self.factory.makeDistroSeries()
+        parent = distroseries.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution of the series.
+        self.assertEqual(distroseries.distribution, parent)
 
 
 class TestDistroSeriesPackaging(TestCaseWithFactory):

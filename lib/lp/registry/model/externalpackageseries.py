@@ -166,6 +166,11 @@ class ExternalPackageSeries(
         return self.distroseries.official_bug_tags
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.distroseries.bug_target_parent
+
+    @property
     def pillar(self) -> IDistribution:
         """See `IBugTarget`."""
         return self.distroseries.pillar

@@ -757,6 +757,11 @@ class IBugTask(IHasBug, IBugTaskDelete):
             readonly=True,
         )
     )
+
+    bug_target_parent = Attribute(
+        "The parent bug target entity of this bug task."
+    )
+
     pillar = Choice(
         title=_("Pillar"),
         description=_(

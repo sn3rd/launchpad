@@ -15,11 +15,12 @@ from zope.security.proxy import removeSecurityProxy
 
 from lp.app.enums import InformationType
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.code.model.seriessourcepackagebranch import (
     SeriesSourcePackageBranchSet,
 )
 from lp.registry.errors import CannotPackageProprietaryProduct
-from lp.registry.interfaces.distribution import NoPartnerArchive
+from lp.registry.interfaces.distribution import IDistribution, NoPartnerArchive
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.series import SeriesStatus
 from lp.registry.interfaces.sourcepackage import ISourcePackage
@@ -504,6 +505,23 @@ class TestSourcePackage(TestCaseWithFactory):
         self.assertTrue(
             sourcepackage.personHasDriverRights(distroseries.owner)
         )
+
+    def test_bug_target_parent(self):
+        source_package = self.factory.makeSourcePackage()
+
+        parent = source_package.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution itself.
+        self.assertEqual(source_package.distroseries.distribution, parent)
 
 
 class TestSourcePackageWebService(WebServiceTestCase):

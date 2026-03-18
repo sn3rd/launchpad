@@ -294,6 +294,11 @@ class DistroSeries(
         return self.display_name
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.distribution
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self.distribution

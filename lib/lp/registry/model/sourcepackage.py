@@ -543,6 +543,11 @@ class SourcePackage(
         return self.distroseries.owner
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.distroseries.distribution
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self.distroseries.distribution

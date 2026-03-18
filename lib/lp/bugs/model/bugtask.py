@@ -53,6 +53,7 @@ from lp.app.errors import NotFoundError
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.bugs.interfaces.bug import IBugSet
 from lp.bugs.interfaces.bugtarget import IBugTarget
+from lp.bugs.interfaces.bugtargetparent import bug_target_parent_sort_key
 from lp.bugs.interfaces.bugtask import (
     BUG_SUPERVISOR_BUGTASK_STATUSES,
     DB_INCOMPLETE_BUGTASK_STATUSES,
@@ -726,6 +727,22 @@ class BugTask(StormBase):
     def related_tasks(self):
         """See `IBugTask`."""
         return [task for task in self.bug.bugtasks if task != self]
+
+    @property
+    def bug_target_parent(self):
+        """See `IBugTask`."""
+        return self.target.bug_target_parent
+
+    @property
+    def other_affected_target_parents(self):
+        """See `IBugTask`."""
+        result = set()
+        this_parent = self.bug_target_parent
+        for task in self.bug.bugtasks:
+            that_parent = task.bug_target_parent
+            if that_parent != this_parent:
+                result.add(that_parent)
+        return sorted(result, key=bug_target_parent_sort_key)
 
     @property
     def pillar(self):

@@ -14,12 +14,14 @@ from zope.security.proxy import removeSecurityProxy
 from lp.app.enums import InformationType
 from lp.app.interfaces.informationtype import IInformationType
 from lp.app.interfaces.services import IService
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.registry.enums import SharingPermission
 from lp.registry.errors import (
     CannotPackageProprietaryProduct,
     ProprietaryPillar,
 )
 from lp.registry.interfaces.distribution import IDistributionSet
+from lp.registry.interfaces.product import IProduct
 from lp.registry.interfaces.productseries import (
     IProductSeries,
     IProductSeriesSet,
@@ -76,6 +78,23 @@ class TestProductSeries(TestCaseWithFactory):
                 "Translations are disabled for proprietary" " projects.",
             ):
                 series.translations_autoimport_mode = mode
+
+    def test_bug_target_parent(self):
+        series = self.factory.makeProductSeries()
+
+        parent = series.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IProduct interface.
+        self.assertTrue(IProduct.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the product itself.
+        self.assertEqual(series.product, parent)
 
 
 class ProductSeriesReleasesTestCase(TestCaseWithFactory):
