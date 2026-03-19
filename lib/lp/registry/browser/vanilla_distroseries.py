@@ -14,6 +14,7 @@ from enum import Enum
 from typing import List, Literal, Tuple
 from urllib.parse import parse_qs, urlencode
 
+from markupsafe import Markup, escape
 from zope.component import getUtility
 
 from lp.bugs.interfaces.bugtask import (
@@ -28,6 +29,7 @@ from lp.registry.browser import MilestoneOverlayMixin
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
+from lp.soyuz.interfaces.publishing import IPublishingSet
 
 
 class ChipColor(str, Enum):
@@ -54,6 +56,12 @@ STATUS_CHIP_COLORS = {
     SeriesStatus.FUTURE: ChipColor.INFORMATION,
     SeriesStatus.EXPERIMENTAL: ChipColor.CAUTION,
     SeriesStatus.OBSOLETE: ChipColor.CAUTION,
+}
+
+BUILD_STATUS_ICONS = {
+    BuildStatus.FULLYBUILT: "p-icon--success-grey",
+    BuildStatus.FAILEDTOBUILD: "p-icon--error-grey is-negative",
+    BuildStatus.FAILEDTOUPLOAD: "p-icon--error-grey is-negative",
 }
 
 
@@ -311,6 +319,93 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             "failed_to_build_packages_count": failed_to_build,
             "failed_to_upload_packages_count": failed_to_upload,
         }
+
+    def _build_packages_list_data(
+        self, creator=None, empty_message="No recent package uploads found."
+    ):
+        """Return an HTML table of recent source uploads, or empty-state p."""
+        uploads = getUtility(IPublishingSet).getRecentSourceUploads(
+            self.context, creator=creator, limit=10
+        )
+        if not uploads:
+            return Markup('<p class="u-text--muted">{}</p>').format(
+                empty_message
+            )
+
+        rows = []
+        for upload in uploads:
+            build_chips = [
+                Markup(
+                    '<span class="u-flex--row"> <i class="{}"></i>{}</span>'
+                ).format(
+                    BUILD_STATUS_ICONS.get(
+                        build["build_status"], "p-icon--warning-grey"
+                    ),
+                    escape(build["arch_tag"]),
+                )
+                for build in upload["builds"]
+            ]
+            cells = [
+                escape(upload["name"]),
+                escape(upload["version"]),
+                escape(upload["pocket_title"]),
+                Markup(
+                    "<span"
+                    ' class="u-flex--row"'
+                    ' style="gap: var(--dimension-spacing-inline-s);"'
+                    ">{}</span>"
+                ).format(Markup(" ").join(build_chips)),
+            ]
+            rows.append(
+                Markup("<tr>{}</tr>").format(
+                    Markup("").join(
+                        Markup("<td>{}</td>").format(cell) for cell in cells
+                    )
+                )
+            )
+
+        col_widths = ["20%", "15%", "15%", "50%"]
+        colgroup = Markup("").join(
+            Markup('<col style="width: {}">').format(w) for w in col_widths
+        )
+        headers = ["Source package", "Version", "Pocket", "Builds"]
+        header_row = Markup("").join(
+            Markup("<th>{}</th>").format(h) for h in headers
+        )
+        return Markup(
+            "<table>"
+            "<colgroup>{}</colgroup>"
+            "<thead><tr>{}</tr></thead>"
+            "<tbody>{}</tbody>"
+            "</table>"
+        ).format(colgroup, header_row, Markup("").join(rows))
+
+    @property
+    def packages_list_data(self):
+        """Return recent source uploads table HTML for the template."""
+        return self._build_packages_list_data()
+
+    @property
+    def my_uploads_data(self):
+        """Return the current user's recent uploads table HTML."""
+        if self.user is None:
+            return Markup("")
+        return self._build_packages_list_data(
+            creator=self.user,
+            empty_message="You have no recent uploads to this series.",
+        )
+
+    @property
+    def packages_url(self):
+        """URL to the upload queue for this distroseries."""
+        return canonical_url(self.context, view_name="+queue")
+
+    @property
+    def my_related_packages_url(self):
+        """URL to the current user's +related-packages page, or None."""
+        if self.user is None:
+            return None
+        return canonical_url(self.user, view_name="+related-packages")
 
     @property
     def next_milestone(self):
