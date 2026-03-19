@@ -19,12 +19,15 @@ __all__ = [
     "NotInPool",
     "OverrideError",
     "PoolFileOverwriteError",
+    "SourceUploadBuildInfo",
+    "SourceUploadInfo",
     "active_publishing_status",
     "inactive_publishing_status",
     "name_priority_map",
 ]
 
 import http.client
+from typing import List, TypedDict
 
 from lazr.restful.declarations import (
     REQUEST_USER,
@@ -45,6 +48,7 @@ from zope.interface import Attribute, Interface
 from zope.schema import Bool, Choice, Date, Datetime, Int, Text, TextLine
 
 from lp import _
+from lp.buildmaster.enums import BuildStatus
 from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.person import IPerson
 from lp.registry.interfaces.pocket import PackagePublishingPocket
@@ -1104,6 +1108,22 @@ class IBinaryPackagePublishingHistory(
     """A binary package publishing record."""
 
 
+class SourceUploadBuildInfo(TypedDict):
+    """Build status for one architecture of a source upload."""
+
+    arch_tag: str
+    build_status: BuildStatus
+
+
+class SourceUploadInfo(TypedDict):
+    """Data for one row in the recent source uploads list."""
+
+    name: str
+    version: str
+    pocket_title: str
+    builds: List[SourceUploadBuildInfo]
+
+
 class IPublishingSet(Interface):
     """Auxiliary methods for dealing with sets of publications."""
 
@@ -1468,6 +1488,23 @@ class IPublishingSet(Interface):
         for details. The call is just proxied here so that it can also be
         used with an ArchiveSourcePublication passed in as
         the source_package_pub, allowing the use of the cached results.
+        """
+
+    def getRecentSourceUploads(distroseries, creator=None, offset=0, limit=20):
+        """Return recent active source package uploads for a distroseries.
+
+        Returns active (PENDING or PUBLISHED) source package publishing
+        records in the distro's primary archives, across all pockets,
+        ordered by ``datecreated`` descending.
+
+        :param distroseries: An `IDistroSeries`.
+        :param creator: If given, only return uploads where this person
+            is the creator (`SourcePackagePublishingHistory.creator`).
+        :param offset: Number of records to skip. Defaults to 0.
+        :param limit: Maximum number of records to return. Defaults to 20.
+        :return: A list of `SourceUploadInfo` ordered by ``datecreated``
+            descending. The ``builds`` list is empty for uploads that have
+            no builds yet.
         """
 
 
