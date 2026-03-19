@@ -23,6 +23,7 @@
   inline-size: var(--icon-size);
   block-size: var(--icon-size);
   background-color: var(--color-icon-default);
+  background-image: unset;
   mask-image: var(--icon-svg);
   mask-size: var(--icon-size);
   mask-position: center;
@@ -52,4 +53,16 @@
 .p-icon--circle {
   --icon-size: 0.5rem;
   --icon-svg: url("data:image/svg+xml,%3Csvg width='14' height='14' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='7' cy='7' r='7' fill='%23000' fill-rule='nonzero'/%3E%3C/svg%3E");
+}
+
+.p-icon--error-grey {
+  --icon-svg: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 1.52588e-05C12.4183 1.52588e-05 16 3.58174 16 8.00002C16 12.4183 12.4183 16 8 16C3.58172 16 0 12.4183 0 8.00002C0 3.58174 3.58172 1.52588e-05 8 1.52588e-05ZM10.2821 4.63808L11.3427 5.69874L9.05007 7.99008L11.3427 10.2821L10.2821 11.3427L7.99007 9.05008L5.69873 11.3427L4.63807 10.2821L6.92907 7.99008L4.63807 5.69874L5.69873 4.63808L7.99007 6.92908L10.2821 4.63808ZM1.5 8.00002C1.5 4.41016 4.41015 1.50002 8 1.50002C11.5899 1.50002 14.5 4.41016 14.5 8.00002C14.5 11.5899 11.5899 14.5 8 14.5C4.41015 14.5 1.5 11.5899 1.5 8.00002Z' fill='%23000'  fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.p-icon--success-grey {
+  --icon-svg: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0a8 8 0 110 16A8 8 0 018 0zm0 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm2.814 2.45l1.203.897-5.537 7.43-3.485-3.694 1.09-1.03 2.259 2.394 4.47-5.997z' fill='%23000'  fill-rule='nonzero'/%3E%3C/svg%3E");
+}
+
+.p-icon--warning-grey {
+  --icon-svg: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8.734.289a1 1 0 01.429.429l6.631 12.823A1 1 0 0114.906 15H1.643a1 1 0 01-.888-1.46L7.386.719a1 1 0 011.348-.43zm-.46 1.976L2.464 13.5h11.62L8.274 2.265zm.5 8.022a.5.5 0 01.492.41l.008.09v1a.5.5 0 01-.41.492l-.09.008h-1a.5.5 0 01-.491-.41l-.009-.09v-1a.5.5 0 01.41-.492l.09-.008h1zm.5-4.68V8.98h-2V5.608h2z' fill='%23000' fill-rule='nonzero'/%3E%3C/svg%3E");
 }
