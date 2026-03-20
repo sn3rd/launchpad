@@ -11,14 +11,10 @@ from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pillar import IPillarNameSet
 from lp.services.beautifulsoup import BeautifulSoup, SoupStrainer
-from lp.services.config import config
-from lp.services.features.testing import FeatureFixture
-from lp.services.memcache.interfaces import IMemcacheClient
 from lp.services.webapp.authorization import check_permission
 from lp.services.webapp.interfaces import ILaunchpadRoot
 from lp.testing import (
     TestCaseWithFactory,
-    anonymous_logged_in,
     login_admin,
     login_person,
     record_two_runs,
@@ -88,9 +84,6 @@ class LaunchpadRootPermissionTest(TestCaseWithFactory):
         view = create_initialized_view(
             self.root, "index.html", principal=self.expert
         )
-        # Stub out the getRecentBlogPosts which fetches a blog feed using
-        # urlfetch.
-        view.getRecentBlogPosts = lambda: []
         content = BeautifulSoup(view(), parse_only=SoupStrainer("a"))
         self.assertTrue(
             content.find("a", href="+featuredprojects"),
@@ -143,89 +136,12 @@ class LaunchpadRootIndexViewTestCase(TestCaseWithFactory):
         user = self.factory.makePerson()
         login_person(user)
         view = create_initialized_view(root, "index.html", principal=user)
-        # Replace the blog posts so the view does not make a network request.
-        view.getRecentBlogPosts = lambda: []
         markup = BeautifulSoup(view(), parse_only=SoupStrainer(id="document"))
         self.assertIs(False, view.has_watermark)
         self.assertIs(None, markup.find(True, id="watermark"))
         logo = markup.find(True, id="launchpad-logo-and-name")
         self.assertIsNot(None, logo)
         self.assertEqual("/@@/launchpad-logo-and-name.svg", logo["src"])
-
-    @staticmethod
-    def _make_blog_post(linkid, title, body, date):
-        return {
-            "title": title,
-            "description": body,
-            "link": "http://blog.invalid/%s" % (linkid,),
-            "date": date,
-        }
-
-    def test_blog_posts(self):
-        """Posts from the launchpad blog are shown when feature is enabled"""
-        self.useFixture(FeatureFixture({"app.root_blog.enabled": True}))
-        posts = [
-            self._make_blog_post(1, "A post", "Post contents.", "2002"),
-            self._make_blog_post(2, "Another post", "More contents.", "2003"),
-        ]
-        calls = []
-
-        def _get_blog_posts():
-            calls.append("called")
-            return posts
-
-        root = getUtility(ILaunchpadRoot)
-        with anonymous_logged_in():
-            view = create_initialized_view(root, "index.html")
-            view.getRecentBlogPosts = _get_blog_posts
-            result = view()
-        markup = BeautifulSoup(
-            result, parse_only=SoupStrainer(id="homepage-blogposts")
-        )
-        self.assertEqual(["called"], calls)
-        items = markup.find_all("li", "news")
-        # Notice about launchpad being opened is always added at the end
-        self.assertEqual(2, len(items))
-
-    def test_blog_disabled(self):
-        """Launchpad blog not queried for display without feature"""
-        calls = []
-
-        def _get_blog_posts():
-            calls.append("called")
-            return []
-
-        root = getUtility(ILaunchpadRoot)
-        user = self.factory.makePerson()
-        login_person(user)
-        view = create_initialized_view(root, "index.html", principal=user)
-        view.getRecentBlogPosts = _get_blog_posts
-        markup = BeautifulSoup(view(), parse_only=SoupStrainer(id="homepage"))
-        self.assertEqual([], calls)
-        self.assertIs(None, markup.find(True, id="homepage-blogposts"))
-        # Even logged in users should get the launchpad intro text in the left
-        # column rather than blank space when the blog is not being displayed.
-        self.assertTrue(view.show_whatslaunchpad)
-        self.assertTrue(markup.find(True, "homepage-whatslaunchpad"))
-
-    def test_blog_posts_with_memcache(self):
-        self.useFixture(FeatureFixture({"app.root_blog.enabled": True}))
-        posts = [
-            self._make_blog_post(1, "A post", "Post contents.", "2002"),
-            self._make_blog_post(2, "Another post", "More contents.", "2003"),
-        ]
-        key = "%s:homepage-blog-posts" % config.instance_name
-        getUtility(IMemcacheClient).set(key, posts)
-
-        root = getUtility(ILaunchpadRoot)
-        with anonymous_logged_in():
-            view = create_initialized_view(root, "index.html")
-            result = view()
-        markup = BeautifulSoup(
-            result, parse_only=SoupStrainer(id="homepage-blogposts")
-        )
-        items = markup.find_all("li", "news")
-        self.assertEqual(2, len(items))
 
     def test_featured_projects_query_count(self):
         def add_featured_projects():

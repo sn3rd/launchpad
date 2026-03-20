@@ -213,28 +213,6 @@
           </div>
         </section>
 
-        <section class="p-strip is-shallow" tal:condition="features/app.root_blog.enabled">
-          <div id="homepage-blogposts">
-            <div class="u-fixed-width u-clearfix">
-              <h2 class="u-float-left">Recent Launchpad blog posts</h2>
-              <a href="http://blog.launchpad.net" class="p-button u-float-right u-hide--small">Read the blog</a>
-            </div>
-            <div class="u-fixed-width u-clearfix">
-              <ul tal:define="posts view/getRecentBlogPosts">
-                <li class="news" tal:repeat="post posts">
-                  <a tal:attributes="href post/link" tal:content="post/title">
-                  </a>
-                  <span class="registered">&ndash; <tal:date content="post/date"></tal:date></span><br />
-                <tal:description content="structure post/description">
-                  Tell us a little about how you use Launchpad by answering
-                  our short survey.
-                </tal:description>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
       </div><!-- homepage -->
     </div><!--main-->
   </body>

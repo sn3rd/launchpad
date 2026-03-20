@@ -9,11 +9,8 @@ __all__ = [
 
 
 import re
-import time
 from typing import Any, List
 
-import feedparser
-import requests
 from lazr.batchnavigator.z3batching import batch
 from zope.component import getUtility
 from zope.formlib.interfaces import ConversionError
@@ -33,16 +30,13 @@ from lp.registry.browser.announcement import HasAnnouncementsView
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pillar import IPillarNameSet
 from lp.registry.interfaces.product import IProductSet
-from lp.services.config import config
 from lp.services.features import getFeatureFlag
-from lp.services.memcache.interfaces import IMemcacheClient
 from lp.services.propertycache import cachedproperty
 from lp.services.sitesearch.interfaces import (
     SiteSearchResponseError,
     active_search_service,
 )
 from lp.services.statistics.interfaces.statistic import ILaunchpadStatisticSet
-from lp.services.timeout import urlfetch
 from lp.services.webapp import LaunchpadView
 from lp.services.webapp.authorization import check_permission
 from lp.services.webapp.batching import BatchNavigator
@@ -130,48 +124,6 @@ class LaunchpadRootIndexView(HasAnnouncementsView, LaunchpadView):
         Shown when not logged in or if blog is disabled.
         """
         return self.user is None or not getFeatureFlag("app.root_blog.enabled")
-
-    def getRecentBlogPosts(self):
-        """Return the parsed feed of the most recent blog posts.
-
-        It returns a list of dict with keys title, description, link and date.
-
-        The date is formatted and the description which may contain HTML is
-        sanitized.
-
-        The number of blog posts to display is controlled through
-        launchpad.homepage_recent_posts_count. The posts are fetched
-        from the feed specified in launchpad.homepage_recent_posts_feed.
-
-        FeedParser takes care of sanitizing the HTML contained in the feed.
-        """
-        key = "%s:homepage-blog-posts" % config.instance_name
-        cached_data = getUtility(IMemcacheClient).get(key)
-        if cached_data:
-            return cached_data
-        try:
-            # Use urlfetch which supports timeout
-            response = urlfetch(
-                config.launchpad.homepage_recent_posts_feed, use_proxy=True
-            )
-        except requests.RequestException:
-            return []
-        feed = feedparser.parse(response.content)
-        posts = []
-        max_count = config.launchpad.homepage_recent_posts_count
-        # FeedParser takes care of HTML sanitisation.
-        for entry in feed.entries[:max_count]:
-            posts.append(
-                {
-                    "title": entry.title,
-                    "description": entry.description,
-                    "link": entry.link,
-                    "date": time.strftime("%d %b %Y", entry.published_parsed),
-                }
-            )
-        # The cache of posts expires after an hour.
-        getUtility(IMemcacheClient).set(key, posts, expire=3600)
-        return posts
 
 
 class LaunchpadSearchFormView(LaunchpadView):
