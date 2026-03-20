@@ -1819,6 +1819,68 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             importer._find_existing_bug(self.lp_cve, self.ubuntu)
         )
 
+    def test_separate_importers_use_independent_caches(self):
+        # Check that 2 different importer runs use 2 different caches
+        importer_1 = UCTImporter(self.ubuntu, dry_run=True)
+        importer_2 = UCTImporter(self.ubuntu, dry_run=True)
+
+        self.assertIsNot(importer_1.cache_entities, importer_2.cache_entities)
+
+        def mock_make_from_uct_record(record, cache_entities=None):
+            self.assertIsNotNone(cache_entities)
+            cache_entities["distribution"]["ubuntu"] = object()
+            return Mock(sequence="CVE-mismatch")
+
+        with patch(
+            "lp.bugs.scripts.uct.uctimport.CVE.make_from_uct_record",
+            side_effect=mock_make_from_uct_record,
+        ):
+            # An entity in cache 1 from importer 1 doesn't show in importer 2
+            importer_1.from_record(Mock(), "CVE-2022-23222")
+            self.assertIn("ubuntu", importer_1.cache_entities["distribution"])
+            self.assertNotIn(
+                "ubuntu", importer_2.cache_entities["distribution"]
+            )
+            importer_2.from_record(Mock(), "CVE-2022-23222")
+
+        # Entities in cache 1 are not the same as the ones from cache 2
+        # even if they point to the same object
+        self.assertIsNot(
+            importer_1.cache_entities["distribution"]["ubuntu"],
+            importer_2.cache_entities["distribution"]["ubuntu"],
+        )
+
+    def test_same_importer_uses_same_cache_across_imports(self):
+        # Check that a single importer instance reuses the same cache
+        # across multiple CVE imports
+        importer = UCTImporter(self.ubuntu, dry_run=True)
+        cache_ref = importer.cache_entities
+
+        # Track cache modifications across imports
+        cached_entries = []
+
+        def mock_make_from_uct_record(record, cache_entities):
+            cached_entries.append(cache_entities)
+            return Mock(sequence=record.sequence)
+
+        with patch(
+            "lp.bugs.scripts.uct.uctimport.CVE.make_from_uct_record",
+            side_effect=mock_make_from_uct_record,
+        ):
+            # First import
+            importer.from_record(
+                Mock(sequence="CVE-2022-00001"), "CVE-2022-00001"
+            )
+            # Second import with same importer
+            importer.from_record(
+                Mock(sequence="CVE-2022-00002"),
+                "CVE-2022-00002",
+            )
+
+        # Verify both imports used the same cache_entities instance
+        self.assertIs(cache_ref, importer.cache_entities)
+        self.assertIs(cached_entries[0], cached_entries[1])
+
     def test_naive_dates(self):
         cve = self.cve
         cve.date_made_public = cve.date_made_public.replace(tzinfo=None)
