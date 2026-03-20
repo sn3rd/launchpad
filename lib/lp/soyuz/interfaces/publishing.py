@@ -1491,11 +1491,13 @@ class IPublishingSet(Interface):
         """
 
     def getRecentSourceUploads(distroseries, creator=None, offset=0, limit=20):
-        """Return recent active source package uploads for a distroseries.
+        """Return recent active source package uploads and their builds
+        for a distroseries.
 
         Returns active (PENDING or PUBLISHED) source package publishing
         records in the distro's primary archives, across all pockets,
-        ordered by ``datecreated`` descending.
+        ordered by ``datecreated`` descending, together with associated
+        builds.
 
         :param distroseries: An `IDistroSeries`.
         :param creator: If given, only return uploads where this person
