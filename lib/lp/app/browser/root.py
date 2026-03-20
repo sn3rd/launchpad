@@ -30,7 +30,6 @@ from lp.registry.browser.announcement import HasAnnouncementsView
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pillar import IPillarNameSet
 from lp.registry.interfaces.product import IProductSet
-from lp.services.features import getFeatureFlag
 from lp.services.propertycache import cachedproperty
 from lp.services.sitesearch.interfaces import (
     SiteSearchResponseError,
@@ -121,9 +120,9 @@ class LaunchpadRootIndexView(HasAnnouncementsView, LaunchpadView):
     def show_whatslaunchpad(self):
         """True if introduction to Launchpad should be displayed.
 
-        Shown when not logged in or if blog is disabled.
+        Shown when not logged in.
         """
-        return self.user is None or not getFeatureFlag("app.root_blog.enabled")
+        return self.user is None
 
 
 class LaunchpadSearchFormView(LaunchpadView):
