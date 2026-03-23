@@ -595,7 +595,9 @@ class ProductSeries(
 
     def getTimeline(self, include_inactive=False):
         landmarks = []
-        for milestone in self.all_milestones[:MAX_TIMELINE_MILESTONES]:
+        for milestone in self.all_milestones_with_releases()[
+            :MAX_TIMELINE_MILESTONES
+        ]:
             if milestone.product_release is None:
                 # Skip inactive milestones, but include releases,
                 # even if include_inactive is False.

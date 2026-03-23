@@ -677,4 +677,4 @@ class ObjectMilestonesView(LaunchpadView):
 
     @cachedproperty
     def milestones(self):
-        return list(self.context.all_milestones)
+        return list(self.context.all_milestones_with_releases())

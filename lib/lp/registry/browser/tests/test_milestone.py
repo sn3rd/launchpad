@@ -704,3 +704,41 @@ class TestMilestoneTagView(TestQueryCountBase):
         self.assert_bugtasks_query_count(
             self.milestonetag, bugtask_count, query_limit=11
         )
+
+
+class TestObjectMilestonesViewQueryCount(TestCaseWithFactory):
+    """Verify that ObjectMilestonesView does not have N+1 query problems."""
+
+    layer = DatabaseFunctionalLayer
+
+    def _make_view(self, distribution):
+        return create_initialized_view(distribution, "+milestones")
+
+    def test_product_release_query_count_is_constant(self):
+        # The number of queries to render +milestones must not grow with the
+        # number of milestones (i.e. no N+1 on ProductRelease lookups).
+        owner = self.factory.makePerson()
+        distribution = self.factory.makeDistribution(owner=owner)
+
+        with person_logged_in(owner):
+            self.factory.makeDistroSeries(distribution=distribution)
+            for i in range(3):
+                self.factory.makeMilestone(
+                    distribution=distribution, name="1.%d" % i
+                )
+
+        with StormStatementRecorder() as recorder1:
+            view = self._make_view(distribution)
+            _ = view.milestones
+
+        with person_logged_in(owner):
+            for i in range(3, 6):
+                self.factory.makeMilestone(
+                    distribution=distribution, name="1.%d" % i
+                )
+
+        with StormStatementRecorder() as recorder2:
+            view = self._make_view(distribution)
+            _ = view.milestones
+
+        self.assertThat(recorder2, HasQueryCount.byEquality(recorder1))

@@ -44,7 +44,7 @@ from lp.registry.model.productrelease import ProductRelease
 from lp.services.database.decoratedresultset import DecoratedResultSet
 from lp.services.database.interfaces import IStore
 from lp.services.database.stormbase import StormBase
-from lp.services.propertycache import get_property_cache
+from lp.services.propertycache import cachedproperty, get_property_cache
 from lp.services.webapp.sorting import expand_numbers
 
 FUTURE_NONE = datetime.date(datetime.MAXYEAR, 1, 1)
@@ -94,6 +94,35 @@ class HasMilestonesMixin:
         store = Store.of(self)
         result = store.find(Milestone, self._getMilestoneCondition())
         return result.order_by(self._milestone_order)
+
+    def all_milestones_with_releases(self):
+        """See `IHasMilestones`."""
+        store = Store.of(self)
+        result = (
+            store.using(
+                Milestone,
+                LeftJoin(
+                    ProductRelease,
+                    ProductRelease.milestone_id == Milestone.id,
+                ),
+            )
+            .find(
+                (Milestone, ProductRelease),
+                self._getMilestoneCondition(),
+            )
+            .order_by(self._milestone_order)
+        )
+
+        def cache_product_release(row):
+            milestone, product_release = row
+            cache = get_property_cache(milestone)
+            if "product_release" not in cache:
+                cache.product_release = product_release
+            return milestone
+
+        return DecoratedResultSet(
+            result, result_decorator=cache_product_release
+        )
 
     def _get_milestones(self):
         """See `IHasMilestones`."""
@@ -282,7 +311,7 @@ class Milestone(
         elif self.distribution:
             return self.distribution
 
-    @property
+    @cachedproperty
     def product_release(self):
         store = Store.of(self)
         result = store.find(
@@ -332,6 +361,7 @@ class Milestone(
             datereleased=datereleased,
             milestone=self,
         )
+        del get_property_cache(self).product_release
         del get_property_cache(self.productseries).releases
         return release
 

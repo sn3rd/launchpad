@@ -205,7 +205,7 @@ class ProductReleaseFromSeriesAddView(
         """Add Milestone Choice field with custom terms."""
         terms = [
             SimpleTerm(milestone, milestone.name, milestone.name)
-            for milestone in self.context.all_milestones
+            for milestone in self.context.all_milestones_with_releases()
             if milestone.product_release is None
         ]
         terms.insert(0, SimpleTerm(None, None, "- Select Milestone -"))
