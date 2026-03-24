@@ -3344,6 +3344,7 @@ class LaunchpadObjectFactory(ObjectFactory):
             # This lets us run tests without a librarian server.
             lfc = LibraryFileContent(
                 filesize=len(content),
+                sha512=hashlib.sha512(content).hexdigest(),
                 sha256=hashlib.sha256(content).hexdigest(),
                 sha1=hashlib.sha1(content).hexdigest(),
                 md5=hashlib.md5(content).hexdigest(),
