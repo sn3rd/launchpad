@@ -957,6 +957,7 @@ class TestProduct(TestCaseWithFactory):
             "owner",
             "parent_subscription_target",
             "pillar",
+            "bug_target_parent",
             "projectgroup",
             "searchTasks",
             "title",

@@ -7,8 +7,14 @@ from zope.interface import Interface
 class IBugTargetParent(Interface):
     """Interface for objects that act as a bug target parent."""
 
+    def getDefaultBugInformationType():
+        """Return the default information type for bugs."""
 
-def bug_target_parent_sort_key(pillar):
+    def getAllowedBugInformationTypes():
+        """Return information types that are valid for bugs on this target."""
+
+
+def bug_target_parent_sort_key(bug_target_parent):
     """A sort key for a set of bug target parents. We want:
 
     - products first, alphabetically
@@ -19,10 +25,10 @@ def bug_target_parent_sort_key(pillar):
 
     product_name = ""
     distribution_name = ""
-    if IProduct.providedBy(pillar):
-        product_name = pillar.name
-    elif IDistribution.providedBy(pillar):
-        distribution_name = pillar.name
+    if IProduct.providedBy(bug_target_parent):
+        product_name = bug_target_parent.name
+    elif IDistribution.providedBy(bug_target_parent):
+        distribution_name = bug_target_parent.name
     # Move ubuntu to the top.
     if distribution_name == "ubuntu":
         distribution_name = "-"

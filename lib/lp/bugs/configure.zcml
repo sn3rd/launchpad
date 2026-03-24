@@ -229,6 +229,7 @@
                     bugtargetname
                     bugtargetdisplayname
                     bug_target_parent
+                    other_affected_target_parents
                     product
                     productseries
                     sourcepackagename

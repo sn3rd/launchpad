@@ -88,11 +88,11 @@ class DeleteBugTask(AuthorizationBase):
 
         bugtask = self.obj
         owner = None
-        if IHasOwner.providedBy(bugtask.pillar):
-            owner = bugtask.pillar.owner
+        if IHasOwner.providedBy(bugtask.bug_target_parent):
+            owner = bugtask.bug_target_parent.owner
         bugsupervisor = None
-        if IHasBugSupervisor.providedBy(bugtask.pillar):
-            bugsupervisor = bugtask.pillar.bug_supervisor
+        if IHasBugSupervisor.providedBy(bugtask.bug_target_parent):
+            bugsupervisor = bugtask.bug_target_parent.bug_supervisor
         return (
             user.inTeam(owner)
             or user.inTeam(bugsupervisor)
@@ -141,7 +141,7 @@ class AppendBug(AuthorizationBase):
 
 def _has_any_bug_role(user, tasks):
     """Return True if the user has any role on any of these bug tasks."""
-    targets = [task.pillar for task in tasks]
+    targets = [task.bug_target_parent for task in tasks]
     bug_target_roles = {}
     for target in targets:
         roles = []

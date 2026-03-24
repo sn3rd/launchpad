@@ -120,6 +120,7 @@ from lp.bugs.interfaces.bugnomination import (
 from lp.bugs.interfaces.bugnotification import IBugNotificationSet
 from lp.bugs.interfaces.bugpresence import IBugPresenceSet
 from lp.bugs.interfaces.bugtarget import ISeriesBugTarget
+from lp.bugs.interfaces.bugtargetparent import bug_target_parent_sort_key
 from lp.bugs.interfaces.bugtask import (
     UNRESOLVED_BUGTASK_STATUSES,
     BugTaskStatus,
@@ -873,6 +874,14 @@ class Bug(StormBase, InformationTypeMixin):
         return True
 
     @property
+    def affected_bug_target_parents(self):
+        """See `IBug`."""
+        result = set()
+        for task in self.bugtasks:
+            result.add(task.bug_target_parent)
+        return sorted(result, key=bug_target_parent_sort_key)
+
+    @property
     def affected_pillars(self):
         """See `IBug`."""
         result = set()
@@ -906,7 +915,7 @@ class Bug(StormBase, InformationTypeMixin):
                 return False
             if (
                 bugtask.status == BugTaskStatus.INCOMPLETE
-                and bugtask.pillar.enable_bug_expiration
+                and bugtask.bug_target_parent.enable_bug_expiration
             ):
                 # This bugtasks meets the basic conditions to expire.
                 has_an_expirable_bugtask = True
@@ -917,7 +926,7 @@ class Bug(StormBase, InformationTypeMixin):
     def can_expire(self):
         """See `IBug`.
 
-        Only Incomplete bug reports that affect a single pillar with
+        Only Incomplete bug reports that affect a single bug target parent with
         enabled_bug_expiration set to True can be expired. To qualify for
         expiration, the bug and its bugtasks meet the follow conditions:
 
@@ -1522,9 +1531,9 @@ class Bug(StormBase, InformationTypeMixin):
         remote_comment_id=None,
         send_notifications=True,
     ):
-        # Admins, commercial admins, registry experts, pillar owners,
-        # pillar drivers, and pillar bug supervisors should be able
-        # to disable email notifications
+        # Admins, commercial admins, registry experts, bug target parent
+        # owners, bug target parent drivers, and bug target parent bug
+        # supervisors should be able to disable email notifications
         if not send_notifications:
             authz = getAdapter(self, IAuthorization, "launchpad.Moderate")
             if not authz.checkAuthenticated(IPersonRoles(owner)):
@@ -1937,10 +1946,10 @@ class Bug(StormBase, InformationTypeMixin):
         if len(non_invalid_bugtasks) != 1:
             return None
         [valid_bugtask] = non_invalid_bugtasks
-        pillar = valid_bugtask.pillar
+        bug_target_parent = valid_bugtask.bug_target_parent
         if (
-            pillar.bug_tracking_usage == ServiceUsage.LAUNCHPAD
-            and pillar.answers_usage == ServiceUsage.LAUNCHPAD
+            bug_target_parent.bug_tracking_usage == ServiceUsage.LAUNCHPAD
+            and bug_target_parent.answers_usage == ServiceUsage.LAUNCHPAD
         ):
             return valid_bugtask
         else:
@@ -2118,10 +2127,10 @@ class Bug(StormBase, InformationTypeMixin):
             # directly targeted to this nomination target.
             if IDistroSeries.providedBy(target):
                 series_getter = operator.attrgetter("distroseries")
-                pillar_getter = operator.attrgetter("distribution")
+                bug_target_parent_getter = operator.attrgetter("distribution")
             elif IProductSeries.providedBy(target):
                 series_getter = operator.attrgetter("productseries")
-                pillar_getter = operator.attrgetter("product")
+                bug_target_parent_getter = operator.attrgetter("product")
             else:
                 return False
 
@@ -2134,12 +2143,14 @@ class Bug(StormBase, InformationTypeMixin):
             # No nomination or tasks are targeted at this
             # nomination target. But we also don't want to nominate for a
             # series of a product or distro for which we don't have a
-            # plain pillar task.
+            # plain bug target parent task.
             for task in self.bugtasks:
-                if pillar_getter(task) == pillar_getter(target):
+                if bug_target_parent_getter(task) == bug_target_parent_getter(
+                    target
+                ):
                     return True
 
-            # No tasks match the candidate's pillar. We must refuse.
+            # No tasks match the candidate's bug target parent. We must refuse.
             return False
         else:
             # The bug may be already nominated for this nomination target.
@@ -2273,9 +2284,9 @@ class Bug(StormBase, InformationTypeMixin):
     def getAllowedInformationTypes(self, who):
         """See `IBug`."""
         types = set(InformationType.items)
-        for pillar in self.affected_pillars:
+        for bug_target_parent in self.affected_bug_target_parents:
             types.intersection_update(
-                set(pillar.getAllowedBugInformationTypes())
+                set(bug_target_parent.getAllowedBugInformationTypes())
             )
         types.add(self.information_type)
         return types
@@ -2288,7 +2299,7 @@ class Bug(StormBase, InformationTypeMixin):
             raise CannotChangeInformationType("Forbidden by project policy.")
         if (
             information_type in PROPRIETARY_INFORMATION_TYPES
-            and len(self.affected_pillars) > 1
+            and len(self.affected_bug_target_parents) > 1
         ):
             raise CannotChangeInformationType(
                 "Proprietary bugs can only affect one project."
@@ -2588,7 +2599,9 @@ class Bug(StormBase, InformationTypeMixin):
         if roles.in_admin or roles.in_registry_experts:
             return True
         return getUtility(IService, "sharing").checkPillarAccess(
-            self.affected_pillars, InformationType.USERDATA, user
+            self.affected_bug_target_parents,
+            InformationType.USERDATA,
+            user,
         )
 
     def personIsDirectSubscriber(self, person):
@@ -2643,15 +2656,18 @@ class Bug(StormBase, InformationTypeMixin):
         )
 
     def _reconcileAccess(self):
-        # reconcile_access_for_artifacts will only use the pillar list if
-        # the information type is private. But affected_pillars iterates
+        # reconcile_access_for_artifacts will only use the bug target parent
+        # list if the information type is private. But
+        # affected_bug_target_parents iterates
         # over the tasks immediately, which is needless expense for
         # public bugs.
         if self.information_type in PRIVATE_INFORMATION_TYPES:
-            pillars = self.affected_pillars
+            bug_target_parents = self.affected_bug_target_parents
         else:
-            pillars = []
-        reconcile_access_for_artifacts([self], self.information_type, pillars)
+            bug_target_parents = []
+        reconcile_access_for_artifacts(
+            [self], self.information_type, bug_target_parents
+        )
 
     def _attachments_query(self):
         """Helper for the attachments* properties."""
@@ -3316,7 +3332,7 @@ class BugSet:
 
         if params.information_type is None:
             params.information_type = (
-                params.target.pillar.getDefaultBugInformationType()
+                params.target.bug_target_parent.getDefaultBugInformationType()
             )
 
         bug, event = self._makeBug(params)

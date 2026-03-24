@@ -1070,10 +1070,16 @@ class BugSecrecyEditView(LaunchpadFormView, BugSubscriptionPortletDetails):
     def _bug_will_be_invisible(self, information_type):
         # Return true if this bug will be totally invisible if it were to be
         # change to the specified information type.
-        pillars = self.context.bug.affected_pillars
+        bug_target_parents = self.context.bug.affected_bug_target_parents
         service = getUtility(IService, "sharing")
-        for pillar in pillars:
-            grant_counts = service.getAccessPolicyGrantCounts(pillar)
+        for bug_target_parent in bug_target_parents:
+            # TODO: ilkeremrekoc 2026-03-25: getAccessPolicyGrantCounts expects
+            # a pillar, when we add a bug_target_parent that isn't a pillar we
+            # need to add a condition here to avoid calling it with something
+            # it doesn't understand.
+            grant_counts = service.getAccessPolicyGrantCounts(
+                bug_target_parent
+            )
             for count_info in grant_counts:
                 if count_info[1] > 0 and count_info[0] == information_type:
                     return False

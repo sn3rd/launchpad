@@ -289,6 +289,11 @@ class IBugView(Interface):
     affected_pillars = Attribute(
         'The "pillars", products or distributions, affected by this bug.'
     )
+
+    affected_bug_target_parents = Attribute(
+        "The parent targets of the bug tasks affected by this bug."
+    )
+
     permits_expiration = Bool(
         title=_("Does the bug's state permit expiration?"),
         description=_(

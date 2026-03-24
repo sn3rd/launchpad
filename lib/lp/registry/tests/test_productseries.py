@@ -759,6 +759,7 @@ class ProductSeriesSecurityAdaperTestCase(TestCaseWithFactory):
             "parent",
             "personHasDriverRights",
             "pillar",
+            "bug_target_parent",
             "potemplate_count",
             "productserieslanguages",
             "release_files",
