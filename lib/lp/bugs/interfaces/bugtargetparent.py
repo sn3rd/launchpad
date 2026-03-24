@@ -3,9 +3,6 @@
 
 from zope.interface import Interface
 
-from lp.registry.interfaces.distribution import IDistribution
-from lp.registry.interfaces.product import IProduct
-
 
 class IBugTargetParent(Interface):
     """Interface for objects that act as a bug target parent."""
@@ -17,6 +14,9 @@ def bug_target_parent_sort_key(pillar):
     - products first, alphabetically
     - distributions, with ubuntu first and the rest alphabetically
     """
+    from lp.registry.interfaces.distribution import IDistribution
+    from lp.registry.interfaces.product import IProduct
+
     product_name = ""
     distribution_name = ""
     if IProduct.providedBy(pillar):
