@@ -11,7 +11,6 @@ from textwrap import dedent
 
 from fixtures import Fixture, TempDir
 from twisted.internet import defer, endpoints, reactor
-from twisted.python.compat import nativeString
 from twisted.web import server
 
 from lp.services.config import config
@@ -47,7 +46,7 @@ class InProcessKeyServerFixture(Fixture):
     @defer.inlineCallbacks
     def start(self):
         resource = KeyServerResource(self.useFixture(TempDir()).path)
-        endpoint = endpoints.serverFromString(reactor, nativeString("tcp:0"))
+        endpoint = endpoints.serverFromString(reactor, "tcp:0")
         self._port = yield endpoint.listen(server.Site(resource))
         config.push(
             "in-process-key-server-fixture",

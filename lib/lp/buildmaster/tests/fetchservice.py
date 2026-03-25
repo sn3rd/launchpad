@@ -11,7 +11,6 @@ from urllib.parse import urlsplit
 import fixtures
 from testtools.matchers import Equals, HasLength, MatchesStructure
 from twisted.internet import defer, endpoints, reactor
-from twisted.python.compat import nativeString
 from twisted.web import resource, server
 
 from lp.services.config import config
@@ -122,7 +121,7 @@ class InProcessFetchServiceAuthAPIFixture(fixtures.Fixture):
         root = resource.Resource()
         self.sessions = FetchServiceControlEndpoint()
         root.putChild(b"sessions", self.sessions)
-        endpoint = endpoints.serverFromString(reactor, nativeString("tcp:0"))
+        endpoint = endpoints.serverFromString(reactor, "tcp:0")
         site = server.Site(self.sessions)
         self.addCleanup(site.stopFactory)
         port = yield endpoint.listen(site)

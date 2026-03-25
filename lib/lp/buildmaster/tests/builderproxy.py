@@ -12,7 +12,6 @@ from urllib.parse import urlsplit
 import fixtures
 from testtools.matchers import Equals, HasLength, MatchesStructure
 from twisted.internet import defer, endpoints, reactor
-from twisted.python.compat import nativeString
 from twisted.web import resource, server
 
 from lp.services.config import config
@@ -71,7 +70,7 @@ class InProcessProxyAuthAPIFixture(fixtures.Fixture):
         root = resource.Resource()
         self.tokens = ProxyAuthAPITokensResource()
         root.putChild(b"tokens", self.tokens)
-        endpoint = endpoints.serverFromString(reactor, nativeString("tcp:0"))
+        endpoint = endpoints.serverFromString(reactor, "tcp:0")
         site = server.Site(self.tokens)
         self.addCleanup(site.stopFactory)
         port = yield endpoint.listen(site)

@@ -14,7 +14,6 @@ from twisted.internet.interfaces import IPushProducer
 from twisted.internet.protocol import Protocol
 from twisted.internet.threads import deferToThread
 from twisted.python import log
-from twisted.python.compat import intToBytes
 from twisted.web import http, proxy, resource, server, static, util
 from twisted.web.client import ProxyAgent
 from twisted.web.http_headers import Headers
@@ -311,7 +310,7 @@ class File(resource.Resource):
         self.size = size
 
     def _setContentHeaders(self, request):
-        request.setHeader(b"content-length", intToBytes(self.size))
+        request.setHeader(b"content-length", b'%d' % self.size)
         if self.type:
             request.setHeader(
                 b"content-type", six.ensure_binary(self.type, "ASCII")
