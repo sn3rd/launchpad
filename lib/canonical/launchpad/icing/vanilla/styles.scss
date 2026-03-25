@@ -38,6 +38,14 @@
     .p-pricing-block--50-50 {
       max-width: 100%;
     }
+    // remove the overflow which is used for text ellipsis, this prevents the tooltip from showing up
+    td,th {
+      overflow: unset;
+    }
+    // small adjustment to the tooltip arrow position to remove the gap
+    .p-tooltip__message::before {
+      bottom: 99%;
+    }
   }
 }
 
