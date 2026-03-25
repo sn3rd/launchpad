@@ -58,10 +58,28 @@ STATUS_CHIP_COLORS = {
     SeriesStatus.OBSOLETE: ChipColor.CAUTION,
 }
 
+# Vanilla icon CSS classes used for build status indicators.
+# See: lib/canonical/launchpad/icing/vanilla/icons.scss
+SUCCESS_ICON = "p-icon--success-grey"
+ERROR_ICON = "p-icon--error-grey is-negative"
+WARNING_ICON = "p-icon--warning-grey is-caution"
+LOADING_ICON = "p-icon--spinner"
+PENDING_ICON = "p-icon--loading-step"
+SKIP_ICON = "p-icon--skip"
+
 BUILD_STATUS_ICONS = {
-    BuildStatus.FULLYBUILT: "p-icon--success-grey",
-    BuildStatus.FAILEDTOBUILD: "p-icon--error-grey is-negative",
-    BuildStatus.FAILEDTOUPLOAD: "p-icon--error-grey is-negative",
+    BuildStatus.FULLYBUILT: SUCCESS_ICON,
+    BuildStatus.FAILEDTOBUILD: ERROR_ICON,
+    BuildStatus.FAILEDTOUPLOAD: ERROR_ICON,
+    BuildStatus.NEEDSBUILD: PENDING_ICON,
+    BuildStatus.BUILDING: LOADING_ICON,
+    BuildStatus.UPLOADING: LOADING_ICON,
+    BuildStatus.GATHERING: LOADING_ICON,
+    BuildStatus.SUPERSEDED: SKIP_ICON,
+    BuildStatus.CANCELLED: SKIP_ICON,
+    BuildStatus.CANCELLING: SKIP_ICON,
+    BuildStatus.MANUALDEPWAIT: WARNING_ICON,
+    BuildStatus.CHROOTWAIT: WARNING_ICON,
 }
 
 
@@ -323,7 +341,8 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def _build_packages_list_data(
         self, creator=None, empty_message="No recent package uploads found."
     ):
-        """Return an HTML table of recent source uploads, or empty-state p."""
+        """Return an HTML table of recent source uploads, or an empty-state
+        ``<p>`` element."""
         uploads = getUtility(IPublishingSet).getRecentSourceUploads(
             self.context, creator=creator, limit=10
         )
@@ -333,18 +352,32 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             )
 
         rows = []
+        tooltip_idx = 0
         for upload in uploads:
-            build_chips = [
-                Markup(
-                    '<span class="u-flex--row"> <i class="{}"></i>{}</span>'
-                ).format(
-                    BUILD_STATUS_ICONS.get(
-                        build["build_status"], "p-icon--warning-grey"
-                    ),
-                    escape(build["arch_tag"]),
+            build_chips = []
+            for build in upload["builds"]:
+                tooltip_id = "build-tooltip-%d" % tooltip_idx
+                tooltip_idx += 1
+                icon_class = BUILD_STATUS_ICONS.get(
+                    build["build_status"], PENDING_ICON
                 )
-                for build in upload["builds"]
-            ]
+                status_label = build["build_status"].title
+                build_chips.append(
+                    Markup(
+                        '<span class="u-flex--row p-tooltip--btm-center"'
+                        ' aria-describedby="{}">'
+                        ' <i class="{}"></i>{}'
+                        '<span class="p-tooltip__message" role="tooltip"'
+                        ' id="{}">{}</span>'
+                        "</span>"
+                    ).format(
+                        tooltip_id,
+                        icon_class,
+                        escape(build["arch_tag"]),
+                        tooltip_id,
+                        escape(status_label),
+                    )
+                )
             cells = [
                 escape(upload["name"]),
                 escape(upload["version"]),
