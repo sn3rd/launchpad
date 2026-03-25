@@ -2568,6 +2568,47 @@ class TestGetRecentSourceUploads(TestCaseWithFactory):
         self.assertEqual("arm64", builds[1]["arch_tag"])
         self.assertEqual(BuildStatus.FAILEDTOBUILD, builds[1]["build_status"])
 
+    def test_getRecentSourceUploads_with_in_progress_builds(self):
+        spph = self._makeSpph()
+        das_amd64 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="amd64"
+        )
+        das_arm64 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="arm64"
+        )
+        das_riscv = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="riscv64"
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_amd64,
+            archive=spph.archive,
+            status=BuildStatus.FULLYBUILT,
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_arm64,
+            archive=spph.archive,
+            status=BuildStatus.BUILDING,
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_riscv,
+            archive=spph.archive,
+            status=BuildStatus.NEEDSBUILD,
+        )
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(1, len(result))
+        builds = result[0]["builds"]
+        self.assertEqual(3, len(builds))
+        # Ordered by arch_tag ascending.
+        self.assertEqual("amd64", builds[0]["arch_tag"])
+        self.assertEqual(BuildStatus.FULLYBUILT, builds[0]["build_status"])
+        self.assertEqual("arm64", builds[1]["arch_tag"])
+        self.assertEqual(BuildStatus.BUILDING, builds[1]["build_status"])
+        self.assertEqual("riscv64", builds[2]["arch_tag"])
+        self.assertEqual(BuildStatus.NEEDSBUILD, builds[2]["build_status"])
+
     def test_getRecentSourceUploads_person_filter(self):
         person = self.factory.makePerson()
         other = self.factory.makePerson()

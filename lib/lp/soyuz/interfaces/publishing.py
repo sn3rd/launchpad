@@ -125,6 +125,22 @@ name_priority_map = {
 }
 
 
+class SourceUploadBuildInfo(TypedDict):
+    """Build status for one architecture of a source upload."""
+
+    arch_tag: str
+    build_status: BuildStatus
+
+
+class SourceUploadInfo(TypedDict):
+    """Data for one row in the recent source uploads list."""
+
+    name: str
+    version: str
+    pocket_title: str
+    builds: List[SourceUploadBuildInfo]
+
+
 #
 # Base Interfaces
 #
@@ -1106,22 +1122,6 @@ class IBinaryPackagePublishingHistory(
     IBinaryPackagePublishingHistoryPublic, IBinaryPackagePublishingHistoryEdit
 ):
     """A binary package publishing record."""
-
-
-class SourceUploadBuildInfo(TypedDict):
-    """Build status for one architecture of a source upload."""
-
-    arch_tag: str
-    build_status: BuildStatus
-
-
-class SourceUploadInfo(TypedDict):
-    """Data for one row in the recent source uploads list."""
-
-    name: str
-    version: str
-    pocket_title: str
-    builds: List[SourceUploadBuildInfo]
 
 
 class IPublishingSet(Interface):
