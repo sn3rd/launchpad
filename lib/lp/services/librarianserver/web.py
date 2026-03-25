@@ -310,7 +310,7 @@ class File(resource.Resource):
         self.size = size
 
     def _setContentHeaders(self, request):
-        request.setHeader(b"content-length", b'%d' % self.size)
+        request.setHeader(b"content-length", b"%d" % self.size)
         if self.type:
             request.setHeader(
                 b"content-type", six.ensure_binary(self.type, "ASCII")
