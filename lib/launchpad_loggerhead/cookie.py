@@ -72,7 +72,7 @@ class LaunchpadSecureCookie(dict):
 
         return b"?".join(
             [base64.b64encode(mac.digest()).strip(), b"&".join(result)]
-        )
+        ).decode("ascii")
 
     @classmethod
     def unserialize(cls, string, secret_key):
