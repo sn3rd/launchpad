@@ -199,7 +199,7 @@ class DistroSeriesTargetHelper:
         self.target = target
         self.target_parent = target.distribution
         self.target_arguments = {"distroseries": target}
-        self.pillar = target.distribution
+        self.bug_target_parent = target.distribution
         self.join = StructuralSubscription.distroseries == target
 
 
@@ -211,18 +211,23 @@ class OCIProjectTargetHelper:
     target_type_display = "OCI project"
 
     def __init__(self, target):
-        self.target = target.pillar
-        self.target_parent = target.pillar
-        self.pillar = target.pillar
-        if IDistribution.providedBy(target.pillar):
-            self.target_arguments = {"distribution": target.pillar}
-            self.join = StructuralSubscription.distribution == target.pillar
-        elif IProduct.providedBy(target.pillar):
-            self.target_arguments = {"product": target.pillar}
-            self.join = StructuralSubscription.product == target.pillar
+        self.target = target.bug_target_parent
+        self.target_parent = target.bug_target_parent
+        self.bug_target_parent = target.bug_target_parent
+        if IDistribution.providedBy(target.bug_target_parent):
+            self.target_arguments = {"distribution": target.bug_target_parent}
+            self.join = (
+                StructuralSubscription.distribution == target.bug_target_parent
+            )
+        elif IProduct.providedBy(target.bug_target_parent):
+            self.target_arguments = {"product": target.bug_target_parent}
+            self.join = (
+                StructuralSubscription.product == target.bug_target_parent
+            )
         else:
             raise AttributeError(
-                "Invalid pillar for OCIProject subscription: " % target.pillar
+                "Invalid bug_target_parent for OCIProject subscription: "
+                % target.bug_target_parent
             )
 
 
@@ -237,7 +242,7 @@ class ProjectGroupTargetHelper:
         self.target = target
         self.target_parent = None
         self.target_arguments = {"projectgroup": target}
-        self.pillar = target
+        self.bug_target_parent = target
         self.join = StructuralSubscription.projectgroup == target
 
 
@@ -255,7 +260,7 @@ class DistributionSourcePackageTargetHelper:
             "distribution": target.distribution,
             "sourcepackagename": target.sourcepackagename,
         }
-        self.pillar = target.distribution
+        self.bug_target_parent = target.distribution
         self.join = And(
             StructuralSubscription.distributionID == (target.distribution.id),
             StructuralSubscription.sourcepackagenameID
@@ -274,7 +279,7 @@ class MilestoneTargetHelper:
         self.target = target
         self.target_parent = target.target
         self.target_arguments = {"milestone": target}
-        self.pillar = target.target
+        self.bug_target_parent = target.target
         self.join = StructuralSubscription.milestone == target
 
 
@@ -289,7 +294,7 @@ class ProductTargetHelper:
         self.target = target
         self.target_parent = target.projectgroup
         self.target_arguments = {"product": target}
-        self.pillar = target
+        self.bug_target_parent = target
         if target.projectgroup is not None:
             self.join = Or(
                 StructuralSubscription.product == target,
@@ -310,7 +315,7 @@ class ProductSeriesTargetHelper:
         self.target = target
         self.target_parent = target.product
         self.target_arguments = {"productseries": target}
-        self.pillar = target.product
+        self.bug_target_parent = target.product
         self.join = StructuralSubscription.productseries == target
 
 
@@ -328,7 +333,7 @@ class DistributionTargetHelper:
             "distribution": target,
             "sourcepackagename": None,
         }
-        self.pillar = target
+        self.bug_target_parent = target
         self.join = And(
             StructuralSubscription.distributionID == target.id,
             StructuralSubscription.sourcepackagenameID == None,
@@ -517,7 +522,7 @@ class StructuralSubscriptionTargetMixin:
                 StructuralSubscription.subscriberID == subscriber.id
             )
 
-        store = Store.of(self.__helper.pillar)
+        store = Store.of(self.__helper.bug_target_parent)
         return store.find(StructuralSubscription, *clauses).order_by(
             "Person.displayname"
         )

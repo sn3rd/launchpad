@@ -45,10 +45,10 @@ class RealSubscriptionInfo:
 class VirtualSubscriptionInfo:
     """See `IVirtualSubscriptionInfo`"""
 
-    def __init__(self, principal, bug, pillar):
+    def __init__(self, principal, bug, bug_target_parent):
         self.principal = principal
         self.bug = bug
-        self.pillar = pillar
+        self.bug_target_parent = bug_target_parent
         self.tasks = []
 
 
@@ -85,15 +85,15 @@ class VirtualSubscriptionInfoCollection(AbstractSubscriptionInfoCollection):
 
     def __init__(self, person, administrated_team_ids):
         super().__init__(person, administrated_team_ids)
-        self._principal_pillar_to_info = {}
+        self._principal_bug_target_parent_to_info = {}
 
     def _add_item_to_collection(
-        self, collection, principal, bug, pillar, task
+        self, collection, principal, bug, bug_target_parent, task
     ):
-        key = (principal, pillar)
-        info = self._principal_pillar_to_info.get(key)
+        key = (principal, bug_target_parent)
+        info = self._principal_bug_target_parent_to_info.get(key)
         if info is None:
-            info = VirtualSubscriptionInfo(principal, bug, pillar)
+            info = VirtualSubscriptionInfo(principal, bug, bug_target_parent)
             collection.append(info)
             self.count += 1
         info.tasks.append(task)
@@ -126,12 +126,17 @@ class RealSubscriptionInfoCollection(AbstractSubscriptionInfoCollection):
             for info in infos:
                 info.principal_is_reporter = True
 
-    def annotateBugTaskResponsibilities(self, bugtask, pillar, bug_supervisor):
+    def annotateBugTaskResponsibilities(
+        self, bugtask, bug_target_parent, bug_supervisor
+    ):
         if bug_supervisor is not None:
             key = (bug_supervisor, bugtask.bug)
             infos = self._principal_bug_to_infos.get(key)
             if infos is not None:
-                value = {"task": bugtask, "pillar": pillar}
+                value = {
+                    "task": bugtask,
+                    "bug_target_parent": bug_target_parent,
+                }
                 for info in infos:
                     info.bug_supervisor_tasks.append(value)
 
@@ -181,7 +186,7 @@ class PersonSubscriptions:
                 # This is a direct subscription.
                 collection = direct
             collection.add(subscriber, subscribed_bug, subscription)
-        # Preload bug owners, then all pillars.
+        # Preload bug owners, then all bug_target_parents.
         list(
             getUtility(IPersonSet).getPrecachedPersonsFromIDs(
                 [bug.owner_id for bug in bugs]
@@ -197,10 +202,14 @@ class PersonSubscriptions:
         for task in all_tasks:
             # Get bug_supervisor.
             duplicates.annotateBugTaskResponsibilities(
-                task, task.pillar, task.pillar.bug_supervisor
+                task,
+                task.bug_target_parent,
+                task.bug_target_parent.bug_supervisor,
             )
             direct.annotateBugTaskResponsibilities(
-                task, task.pillar, task.pillar.bug_supervisor
+                task,
+                task.bug_target_parent,
+                task.bug_target_parent.bug_supervisor,
             )
         return (direct, duplicates)
 
@@ -234,12 +243,17 @@ class PersonSubscriptions:
             self.person, self.administrated_team_ids
         )
         for bugtask in bug.bugtasks:
-            owner = bugtask.pillar.owner
-            if person.inTeam(owner) and bugtask.pillar.bug_supervisor is None:
-                as_owner.add(owner, bug, bugtask.pillar, bugtask)
+            owner = bugtask.bug_target_parent.owner
+            if (
+                person.inTeam(owner)
+                and bugtask.bug_target_parent.bug_supervisor is None
+            ):
+                as_owner.add(owner, bug, bugtask.bug_target_parent, bugtask)
             assignee = bugtask.assignee
             if person.inTeam(assignee):
-                as_assignee.add(assignee, bug, bugtask.pillar, bugtask)
+                as_assignee.add(
+                    assignee, bug, bugtask.bug_target_parent, bugtask
+                )
         self.count = 0
         for name, collection in (
             ("direct", direct),
@@ -256,7 +270,7 @@ class PersonSubscriptions:
 
         def get_id(obj):
             "Get an id for the object so it can be shared."
-            # We could leverage .id for most objects, but not pillars.
+            # We could leverage .id for most objects, but not bug targets.
             identifier = reference_map.get(obj)
             if identifier is None:
                 identifier = "subscription-cache-reference-%d" % (
@@ -270,7 +284,7 @@ class PersonSubscriptions:
             return {
                 "principal": get_id(info.principal),
                 "bug": get_id(info.bug),
-                "pillar": get_id(info.pillar),
+                "bug_target_parent": get_id(info.bug_target_parent),
                 # We won't add bugtasks yet unless we need them.
             }
 
@@ -281,14 +295,18 @@ class PersonSubscriptions:
                 "subscription": get_id(info.subscription),
                 "principal_is_reporter": info.principal_is_reporter,
                 # We won't add bugtasks yet unless we need them.
-                "bug_supervisor_pillars": sorted(
-                    {get_id(d["pillar"]) for d in info.bug_supervisor_tasks}
+                "bug_supervisor_bug_target_parents": sorted(
+                    {
+                        get_id(d["bug_target_parent"])
+                        for d in info.bug_supervisor_tasks
+                    }
                 ),
             }
 
         direct = {}
         from_duplicate = {}
-        as_owner = {}  # This is an owner of a pillar with no bug supervisor.
+        as_owner = {}
+        # This is an owner of a bug_target_parent with no bug supervisor.
         as_assignee = {}
         subscription_data = {
             "direct": direct,

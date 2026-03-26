@@ -290,7 +290,9 @@ class IStructuralSubscriptionTargetHelper(Interface):
         "structural subscription constructor."
     )
 
-    pillar = Attribute("The pillar most closely corresponding to the context.")
+    bug_target_parent = Attribute(
+        "The bug_target_parent most closely corresponding to the context."
+    )
 
     join = Attribute(
         "A Storm join to get the `IStructuralSubscription`s relating "

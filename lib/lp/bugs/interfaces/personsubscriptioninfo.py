@@ -64,8 +64,8 @@ class IRealSubscriptionInfo(IAbstractSubscriptionInfo):
 
 
 class IVirtualSubscriptionInfo(IAbstractSubscriptionInfo):
-    pillar = Attribute(
-        """The pillar for the bugtask.  Useful for owner and
+    bug_target_parent = Attribute(
+        """The bug_target_parent for the bugtask.  Useful for owner and
         bug_supervisor"""
     )
 

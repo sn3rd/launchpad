@@ -364,9 +364,9 @@ class StructuralSubscriptionMenuMixin:
         # them.
         if IProjectGroupMilestone.providedBy(sst):
             return False
-        pillar = IStructuralSubscriptionTargetHelper(sst).pillar
+        parent = IStructuralSubscriptionTargetHelper(sst).bug_target_parent
         return (
-            pillar.bug_tracking_usage == ServiceUsage.LAUNCHPAD
+            parent.bug_tracking_usage == ServiceUsage.LAUNCHPAD
             and sst.userCanAlterBugSubscription(self.user, self.user)
         )
 

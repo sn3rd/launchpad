@@ -82,12 +82,12 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
                 self.assertThat(info, Provides(expected_interface))
 
     def assertVirtualSubscriptionInfoMatches(
-        self, info, bug, principal, pillar, bugtasks
+        self, info, bug, principal, bug_target_parent, bugtasks
     ):
         # Make sure that the virtual subscription info has expected values.
         self.assertEqual(info.bug, bug)
         self.assertEqual(info.principal, principal)
-        self.assertEqual(info.pillar, pillar)
+        self.assertEqual(info.bug_target_parent, bug_target_parent)
         self.assertContentEqual(info.tasks, bugtasks)
 
     def assertRealSubscriptionInfoMatches(
@@ -154,7 +154,8 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
         self.assertEqual(references[personal["bug"]], self.bug)
         self.assertEqual(references[personal["principal"]], self.subscriber)
         self.assertEqual(
-            references[personal["pillar"]], self.bug.default_bugtask.target
+            references[personal["bug_target_parent"]],
+            self.bug.default_bugtask.target,
         )
 
     def test_assignee_through_team(self):
@@ -256,7 +257,7 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
         self.assertEqual(references[personal["bug"]], self.bug)
         self.assertEqual(references[personal["subscription"]], subscription)
         self.assertEqual(personal["principal_is_reporter"], False)
-        self.assertEqual(personal["bug_supervisor_pillars"], [])
+        self.assertEqual(personal["bug_supervisor_bug_target_parents"], [])
 
     def test_direct_through_team(self):
         # Subscribed to the bug through membership in a team.
@@ -487,11 +488,16 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
             self.bug,
             self.subscriber,
             False,
-            [{"task": self.bug.default_bugtask, "pillar": target}],
+            [
+                {
+                    "task": self.bug.default_bugtask,
+                    "bug_target_parent": target,
+                }
+            ],
         )
 
     def test_owner(self):
-        # Bug is targeted to a pillar with no supervisor set.
+        # Bug is targeted to a bug_target_parent with no supervisor set.
         target = self.bug.default_bugtask.target
         # Load a `PersonSubscriptionInfo`s for target.owner and a bug.
         self.subscriptions.loadSubscriptionsFor(target.owner, self.bug)
@@ -516,7 +522,7 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
         self.assertFalse(self.subscriptions.muted)
 
     def test_owner_through_team(self):
-        # Bug is targeted to a pillar with no supervisor set.
+        # Bug is targeted to a bug_target_parent with no supervisor set.
         target = self.bug.default_bugtask.target
         team = self.factory.makeTeam(
             members=[self.subscriber],
@@ -540,7 +546,7 @@ class TestPersonSubscriptionInfo(TestCaseWithFactory):
         )
 
     def test_owner_through_team_as_admin(self):
-        # Bug is targeted to a pillar with no supervisor set.
+        # Bug is targeted to a bug_target_parent with no supervisor set.
         target = self.bug.default_bugtask.target
         team = self.factory.makeTeam(
             membership_policy=TeamMembershipPolicy.RESTRICTED
