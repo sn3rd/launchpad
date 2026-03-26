@@ -32,21 +32,21 @@
             <td>
               <a tal:replace="structure tracker/fmt:external-link" />
             </td>
-            <td tal:define="pillar_data python:view.getPillarData(tracker)">
-              <tal:pillars condition="pillar_data">
-                <tal:pillar-entry repeat="pillar pillar_data/pillars">
-                  <a tal:attributes="href pillar/fmt:url"
-                     tal:content="pillar/displayname"
-                     ></a><tal:comma condition="not: repeat/pillar/end">, </tal:comma>
-                </tal:pillar-entry>
-                <tal:many-pillars
-                    condition="pillar_data/has_more_pillars">
+            <td tal:define="bug_target_parent_data python:view.getBugTargetParentData(tracker)">
+              <tal:bug-target-parents condition="bug_target_parent_data">
+                <tal:bug-target-parent-entry repeat="bug_target_parent bug_target_parent_data/bug_target_parents">
+                  <a tal:attributes="href bug_target_parent/fmt:url"
+                     tal:content="bug_target_parent/displayname"
+                     ></a><tal:comma condition="not: repeat/bug_target_parent/end">, </tal:comma>
+                </tal:bug-target-parent-entry>
+                <tal:many-bug-target-parents
+                    condition="bug_target_parent_data/has_more_bug_target_parents">
                   &hellip;
-                </tal:many-pillars>
-              </tal:pillars>
-              <tal:no-pillars condition="not: pillar_data">
+                </tal:many-bug-target-parents>
+              </tal:bug-target-parents>
+              <tal:no-bug-target-parents condition="not: bug_target_parent_data">
                 &mdash;
-              </tal:no-pillars>
+              </tal:no-bug-target-parents>
             </td>
             <td class="type"
                 tal:content="tracker/bugtrackertype/title">bugtrackertype</td>

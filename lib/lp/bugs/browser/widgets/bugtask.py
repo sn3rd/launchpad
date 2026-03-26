@@ -559,17 +559,21 @@ class BugTaskTargetWidget(LaunchpadTargetWidget):
     def setRenderedValue(self, value):
         self.setUpSubWidgets()
         if IOCIProject.providedBy(value):
-            if IProduct.providedBy(value.pillar):
+            if IProduct.providedBy(value.bug_target_parent):
                 # We do not support project-based OCIProjects in this widget
                 # yet. If we get an OCIProject based on a project, associate
                 # the value with the project only.
                 self.default_option = "product"
-                self.product_widget.setRenderedValue(value.pillar)
-            elif IDistribution.providedBy(value.pillar):
+                self.product_widget.setRenderedValue(value.bug_target_parent)
+            elif IDistribution.providedBy(value.bug_target_parent):
                 self.default_option = "package"
-                self.distribution_widget.setRenderedValue(value.pillar)
+                self.distribution_widget.setRenderedValue(
+                    value.bug_target_parent
+                )
                 self.package_widget.setRenderedValue(value)
-                self._syncPackageVocabularyDistribution(value.pillar)
+                self._syncPackageVocabularyDistribution(
+                    value.bug_target_parent
+                )
         else:
             super().setRenderedValue(value)
 
@@ -628,12 +632,12 @@ class FileBugSourcePackageNameWidget(SourcePackageNameWidgetBase):
     def getDistribution(self):
         """See `SourcePackageNameWidgetBase`."""
         field = self.context
-        pillar = field.context.pillar
-        assert IDistribution.providedBy(pillar), (
+        bug_target_parent = field.context.bug_target_parent
+        assert IDistribution.providedBy(bug_target_parent), (
             "FileBugSourcePackageNameWidget should be used only for"
             " distribution bug targets."
         )
-        return pillar
+        return bug_target_parent
 
     def _toFieldValue(self, input):
         """See `SourcePackageNameWidgetBase`."""
@@ -680,7 +684,7 @@ class AssigneeDisplayWidget(BrowserWidget):
                 % (person_img, html_escape(assignee.displayname)),
             )
         else:
-            if bugtask.pillar.official_malone:
+            if bugtask.bug_target_parent.official_malone:
                 return renderElement("i", contents="not assigned")
             else:
                 return renderElement("i", contents="unknown")

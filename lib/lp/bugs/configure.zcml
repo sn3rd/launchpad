@@ -426,7 +426,7 @@
                     watches_needing_update
                     watches_ready_to_check
                     watches_with_unpushed_comments
-                    getRelatedPillars
+                    getRelatedBugTargetParents
                     "/>
             <require
                 permission="launchpad.Edit"

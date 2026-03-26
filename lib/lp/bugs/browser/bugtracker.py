@@ -161,15 +161,17 @@ class BugTrackerSetView(LaunchpadView):
     """View for actions on the bugtracker index pages."""
 
     page_title = "Bug trackers registered in Launchpad"
-    pillar_limit = 3
+    bug_target_parent_limit = 3
 
     def initialize(self):
-        # eager load related pillars. In future we should do this for
-        # just the rendered trackers, and also use group by to get
+        # eager load related bug target parents. In future we should do this
+        # for just the rendered trackers, and also use group by to get
         # bug watch counts per tracker. However the batching makes
         # the inefficiency tolerable for now. Robert Collins 20100919.
-        self._pillar_cache = self.context.getPillarsForBugtrackers(
-            list(self.context.getAllTrackers()), self.user
+        self._bug_target_parent_cache = (
+            self.context.getBugTargetParentsForBugtrackers(
+                list(self.context.getAllTrackers()), self.user
+            )
         )
 
     @property
@@ -190,25 +192,28 @@ class BugTrackerSetView(LaunchpadView):
         navigator.setHeadings("tracker", "trackers")
         return navigator
 
-    def getPillarData(self, bugtracker):
-        """Return dict of pillars and booleans indicating ellipsis.
+    def getBugTargetParentData(self, bugtracker):
+        """Return dict of bug target parents and booleans indicating
+        ellipsis.
 
         In more detail, the dictionary holds a list of products/projects
         and a boolean determining whether or not there we omitted
-        pillars by truncating to pillar_limit.
+        bug target parents by truncating to bug_target_parent_limit.
 
-        If no pillars are mapped to this bugtracker, returns {}.
+        If no bug target parents are mapped to this bugtracker, returns {}.
         """
-        if bugtracker not in self._pillar_cache:
+        if bugtracker not in self._bug_target_parent_cache:
             return {}
-        pillars = self._pillar_cache[bugtracker]
-        if len(pillars) > self.pillar_limit:
-            has_more_pillars = True
+        bug_target_parents = self._bug_target_parent_cache[bugtracker]
+        if len(bug_target_parents) > self.bug_target_parent_limit:
+            has_more_bug_target_parents = True
         else:
-            has_more_pillars = False
+            has_more_bug_target_parents = False
         return {
-            "pillars": pillars[: self.pillar_limit],
-            "has_more_pillars": has_more_pillars,
+            "bug_target_parents": bug_target_parents[
+                : self.bug_target_parent_limit
+            ],
+            "has_more_bug_target_parents": has_more_bug_target_parents,
         }
 
 
@@ -231,8 +236,10 @@ class BugTrackerView(LaunchpadView):
         This property was created for the Related projects portlet in
         the bug tracker's page.
         """
-        pillars = chain(*self.context.getRelatedPillars(self.user))
-        return shortlist([p for p in pillars if p.active], 100)
+        bug_target_parents = chain(
+            *self.context.getRelatedBugTargetParents(self.user)
+        )
+        return shortlist([p for p in bug_target_parents if p.active], 100)
 
     @property
     def related_component_groups(self):
@@ -366,15 +373,20 @@ class BugTrackerEditView(LaunchpadEditFormView):
         # from being able to help themselves.
 
         # Check that no products or projects use this bugtracker.
-        pillars = (
+        bug_target_parents = (
             getUtility(IBugTrackerSet)
-            .getPillarsForBugtrackers([self.context])
+            .getBugTargetParentsForBugtrackers([self.context])
             .get(self.context, [])
         )
-        if len(pillars) > 0:
+        if len(bug_target_parents) > 0:
             reasons.append(
                 "This is the bug tracker for %s."
-                % english_list(sorted(pillar.title for pillar in pillars))
+                % english_list(
+                    sorted(
+                        bug_target_parent.title
+                        for bug_target_parent in bug_target_parents
+                    )
+                )
             )
 
         # Only admins and registry experts can delete bug watches en

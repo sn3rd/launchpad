@@ -816,7 +816,7 @@ class BugTracker(StormBase):
             .one()
         )
 
-    def getRelatedPillars(self, user=None):
+    def getRelatedBugTargetParents(self, user=None):
         """See `IBugTracker`."""
         products = (
             IStore(Product)
@@ -981,7 +981,7 @@ class BugTrackerSet:
             .config(limit=limit)
         )
 
-    def getPillarsForBugtrackers(self, bugtrackers, user=None):
+    def getBugTargetParentsForBugtrackers(self, bugtrackers, user=None):
         """See `IBugTrackerSet`."""
         ids = [tracker.id for tracker in bugtrackers]
         products = (

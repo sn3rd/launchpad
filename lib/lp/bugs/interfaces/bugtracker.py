@@ -501,7 +501,7 @@ class IBugTracker(Interface):
         If no components have been linked, returns value of None.
         """
 
-    def getRelatedPillars(user=None):
+    def getRelatedBugTargetParents(user=None):
         """Returns the `IProduct`s and `IProjectGroup`s using this tracker."""
 
 
@@ -602,8 +602,8 @@ class IBugTrackerSet(Interface):
         of bugwatches for each tracker, from highest to lowest.
         """
 
-    def getPillarsForBugtrackers(bug_trackers, user=None):
-        """Return dict mapping bugtrackers to lists of pillars."""
+    def getBugTargetParentsForBugtrackers(bug_trackers, user=None):
+        """Return dict mapping bugtrackers to lists of bug target parents."""
 
     def getAllTrackers(active=None):
         """Return a ResultSet of bugtrackers.

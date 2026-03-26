@@ -193,7 +193,8 @@ def bug_target_from_key(
 ):
     """Returns the IBugTarget defined by the given DB column values."""
     if ociproject:
-        # We must check ociproject first, since its pillar is denormalized
+        # We must check ociproject first, since its bug_target_parent is
+        # denormalized
         # in the database table (that is, ociproject-based BugTask will have
         # either the distribution or the product column filled too).
         return ociproject
@@ -261,16 +262,16 @@ def bug_target_to_key(target):
         values["channel"] = removeSecurityProxy(target).channel
     elif IOCIProject.providedBy(target):
         # De-normalize the ociproject, including also the ociproject's
-        # pillar (distribution or product).
-        pillar = target.pillar
-        if IDistribution.providedBy(pillar):
-            values["distribution"] = pillar
-        elif IProduct.providedBy(pillar):
-            values["product"] = pillar
+        # bug_target_parent (distribution or product).
+        bug_target_parent = target.bug_target_parent
+        if IDistribution.providedBy(bug_target_parent):
+            values["distribution"] = bug_target_parent
+        elif IProduct.providedBy(bug_target_parent):
+            values["product"] = bug_target_parent
         else:
             raise AssertionError(
                 "Bugs for OCI projects based in %s is not supported yet"
-                % pillar.__class__.__name__.lower()
+                % bug_target_parent.__class__.__name__.lower()
             )
         values["ociproject"] = target
     else:
@@ -418,12 +419,17 @@ def validate_target(
         # Launchpad database
         pass
 
-    legal_types = target.pillar.getAllowedBugInformationTypes()
-    new_pillar = target.pillar not in bug.affected_pillars
-    if new_pillar and bug.information_type not in legal_types:
+    legal_types = target.bug_target_parent.getAllowedBugInformationTypes()
+    new_bug_target_parent = (
+        target.bug_target_parent not in bug.affected_bug_target_parents
+    )
+    if new_bug_target_parent and bug.information_type not in legal_types:
         raise IllegalTarget(
             "%s doesn't allow %s bugs."
-            % (target.pillar.bugtargetdisplayname, bug.information_type.title)
+            % (
+                target.bug_target_parent.bugtargetdisplayname,
+                bug.information_type.title,
+            )
         )
 
     if bug.information_type in PROPRIETARY_INFORMATION_TYPES:
@@ -431,15 +437,16 @@ def validate_target(
         # which case that's ok.
         if retarget_existing and len(bug.bugtasks) <= 1:
             return
-        # We can add a target so long as the pillar exists already.
+        # We can add a target so long as the bug target parent exists already.
         if (
-            len(bug.affected_pillars) > 0
-            and target.pillar not in bug.affected_pillars
+            len(bug.affected_bug_target_parents) > 0
+            and target.bug_target_parent not in bug.affected_bug_target_parents
         ):
+            bug_target_parent = bug.default_bugtask.target.bug_target_parent
             raise IllegalTarget(
                 "This proprietary bug already affects %s. "
                 "Proprietary bugs cannot affect multiple projects."
-                % bug.default_bugtask.target.pillar.bugtargetdisplayname
+                % bug_target_parent.bugtargetdisplayname
             )
 
 
@@ -914,10 +921,10 @@ class BugTask(StormBase):
         """See `IBugTask`."""
         result = {}
         result["is_contributor"] = person.isBugContributorInTarget(
-            user, self.pillar
+            user, self.bug_target_parent
         )
         result["person_name"] = person.displayname
-        result["pillar_name"] = self.pillar.displayname
+        result["bug_target_parent_name"] = self.bug_target_parent.displayname
         return result
 
     def getConjoinedPrimary(self, bugtasks, bugtasks_by_package=None):
@@ -1056,20 +1063,24 @@ class BugTask(StormBase):
         # this behaviour for all projects.
         # This is a bit of a feature flag hack, but has been discussed as
         # a reasonable way to deploy this quickly.
-        pillar = self.pillar
-        if IDistribution.providedBy(pillar):
+        bug_target_parent = self.bug_target_parent
+        if IDistribution.providedBy(bug_target_parent):
             flag_name = "bugs.autoconfirm.enabled_distribution_names"
         else:
-            assert IProduct.providedBy(pillar), "unexpected pillar"
+            assert IProduct.providedBy(
+                bug_target_parent
+            ), "unexpected bug_target_parent"
             flag_name = "bugs.autoconfirm.enabled_product_names"
         enabled = features.getFeatureFlag(flag_name)
         if enabled is None:
             return False
         if (
             enabled.strip() != "*"
-            and pillar.name not in self._parse_launchpad_names(enabled)
+            and bug_target_parent.name
+            not in self._parse_launchpad_names(enabled)
         ):
-            # We are not generically enabled ('*') and our pillar's name
+            # We are not generically enabled ('*') and our bug target
+            # parent's name
             # is not explicitly enabled.
             return False
         return True
@@ -1283,7 +1294,7 @@ class BugTask(StormBase):
         """See `IBugTask`."""
         if user is None:
             return False
-        elif self.pillar.bug_supervisor is None:
+        elif self.bug_target_parent.bug_supervisor is None:
             return True
         else:
             return self.userHasBugSupervisorPrivileges(user)
@@ -1360,7 +1371,8 @@ class BugTask(StormBase):
         # Because of the mildly insane way that DistroSeries nominations
         # work (they affect all Distributions and
         # DistributionSourcePackages), we can't sensibly allow
-        # pillar changes to/from distributions with series tasks on this
+        # bug_target_parent changes to/from distributions with series tasks on
+        # this
         # bug. That would require us to create or delete tasks.
         # Changing just the sourcepackagename is OK, though, as a
         # validator on sourcepackagename will change all related tasks.
@@ -1371,8 +1383,10 @@ class BugTask(StormBase):
             # are product tasks).
             distros = set()
             for potential_target in (target, self.target):
-                if IDistribution.providedBy(potential_target.pillar):
-                    distros.add(potential_target.pillar)
+                if IDistribution.providedBy(
+                    potential_target.bug_target_parent
+                ):
+                    distros.add(potential_target.bug_target_parent)
                 else:
                     distros.add(None)
             if len(distros) > 1:
@@ -1424,7 +1438,7 @@ class BugTask(StormBase):
 
         if (
             self.milestone is not None
-            and self.milestone.target != target.pillar
+            and self.milestone.target != target.bug_target_parent
         ):
             # If the milestone for this bugtask is set, we
             # have to make sure that it's a milestone of the
@@ -1462,7 +1476,9 @@ class BugTask(StormBase):
         # such subscriptions.
         self.bug.clearBugNotificationRecipientsCache()
         getUtility(IRemoveArtifactSubscriptionsJobSource).create(
-            user, [self.bug], pillar=target_before_change.pillar
+            user,
+            [self.bug],
+            pillar=target_before_change.bug_target_parent,
         )
 
     def updateTargetNameCache(self, newtarget=None):
@@ -1617,7 +1633,7 @@ class BugTask(StormBase):
         # If you're the owner or a driver, you can change bug details.
         owner_context = context
         if IBugTarget.providedBy(context):
-            owner_context = context.pillar
+            owner_context = context.bug_target_parent
         return role.isOwner(owner_context) or role.isDriver(context)
 
     @classmethod
@@ -1634,7 +1650,7 @@ class BugTask(StormBase):
         # change bug details.
         supervisor_context = context
         if IBugTarget.providedBy(context):
-            supervisor_context = context.pillar
+            supervisor_context = context.bug_target_parent
         return cls.userHasDriverPrivilegesContext(
             context, user
         ) or role.isBugSupervisor(supervisor_context)
@@ -1950,11 +1966,11 @@ class BugTaskSet:
         if importance is None:
             importance = IBugTask["importance"].default
         target_keys = []
-        pillars = set()
+        bug_target_parents = set()
         for target in targets:
             if validate_target:
                 validate_new_target(bug, target)
-            pillars.add(target.pillar)
+            bug_target_parents.add(target.bug_target_parent)
             target_keys.append(bug_target_to_key(target))
 
         values = [
@@ -2451,7 +2467,7 @@ class BugTaskSet:
             ),
         )
 
-        # Pull in all the related pillars
+        # Pull in all the related bug target parents
         load(Distribution, distro_ids)
         load(DistroSeries, distro_series_ids)
         load(Product, product_ids)

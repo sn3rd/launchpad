@@ -862,7 +862,7 @@ class TestBugTasksTableView(TestCaseWithFactory):
         # Product tasks come first, sorted by product then series.
         # Distro tasks follow, sorted by package, distribution, then
         # series (by version in the case of distribution series).
-        # OCI projects comes after their pillars.
+        # OCI projects comes after their bug_target_parents.
         # ExternalPackages comes last, ordered by packagetype and channel
         foo = self.factory.makeProduct(displayname="Foo")
         self.factory.makeProductSeries(product=foo, name="2.0")
@@ -1486,8 +1486,8 @@ class TestBugTaskEditViewStatusField(TestCaseWithFactory):
         # The bug target owner and the bug target supervisor can set
         # the status to any value except Unknown and Expired.
         for user in (
-            self.bug.default_bugtask.pillar.owner,
-            self.bug.default_bugtask.pillar.bug_supervisor,
+            self.bug.default_bugtask.bug_target_parent.owner,
+            self.bug.default_bugtask.bug_target_parent.bug_supervisor,
         ):
             self.assertStatuses(
                 [
@@ -1510,7 +1510,7 @@ class TestBugTaskEditViewStatusField(TestCaseWithFactory):
     def test_status_field_bug_task_in_status_unknown(self):
         # If a bugtask has the status Unknown, this status is included
         # in the options.
-        owner = self.bug.default_bugtask.pillar.owner
+        owner = self.bug.default_bugtask.bug_target_parent.owner
         login_person(owner)
         self.bug.default_bugtask.transitionToStatus(
             BugTaskStatus.UNKNOWN, owner

@@ -762,6 +762,12 @@ class IBugTask(IHasBug, IBugTaskDelete):
         "The parent bug target entity of this bug task."
     )
 
+    other_affected_target_parents = Attribute(
+        "The other bug target parents affected by this bug. This returns a "
+        "list of bug target parents OTHER THAN the bug target parent "
+        "associated with this particular bug."
+    )
+
     pillar = Choice(
         title=_("Pillar"),
         description=_(

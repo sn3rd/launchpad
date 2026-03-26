@@ -190,13 +190,13 @@ class TestBugTaskCreation(TestCaseWithFactory):
 
     def test_ociproject_from_product_bug(self):
         """A bug that needs to be fixed in a specific oci project with a
-        product pillar.
+        product bug_target_parent.
         """
         bugtaskset = getUtility(IBugTaskSet)
         bug = self.factory.makeBug()
         person = self.factory.makePerson()
-        pillar = self.factory.makeProduct()
-        ociproject = self.factory.makeOCIProject(pillar=pillar)
+        bug_target_parent = self.factory.makeProduct()
+        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
 
         bugtask = bugtaskset.createTask(
             bug,
@@ -207,17 +207,17 @@ class TestBugTaskCreation(TestCaseWithFactory):
         )
 
         self.assertEqual(bugtask.target, ociproject)
-        self.assertEqual(bugtask.product, pillar)
+        self.assertEqual(bugtask.product, bug_target_parent)
 
     def test_ociproject_from_distro_bug(self):
         """A bug that needs to be fixed in a specific oci project with a
-        distribution pillar.
+        distribution bug_target_parent.
         """
         bugtaskset = getUtility(IBugTaskSet)
         bug = self.factory.makeBug()
         person = self.factory.makePerson()
-        pillar = self.factory.makeDistribution()
-        ociproject = self.factory.makeOCIProject(pillar=pillar)
+        bug_target_parent = self.factory.makeDistribution()
+        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
 
         bugtask = bugtaskset.createTask(
             bug,
@@ -228,7 +228,7 @@ class TestBugTaskCreation(TestCaseWithFactory):
         )
 
         self.assertEqual(bugtask.target, ociproject)
-        self.assertEqual(bugtask.distribution, pillar)
+        self.assertEqual(bugtask.distribution, bug_target_parent)
 
     def test_createmany_bugtasks(self):
         """We can create a set of bugtasks around different targets"""
@@ -900,9 +900,9 @@ class TestBugTaskPrivacy(TestCaseWithFactory):
         bug_ids = [bt.bug.id for bt in bugtasks]
         self.assertEqual(sorted(bug_ids), [1, 4, 5])
 
-        # We can create an access policy grant on the pillar to which the bug
-        # is targeted and No Privileges Person will have access to the private
-        # bug
+        # We can create an access policy grant on the bug_target_parent to
+        # which the bug is targeted and No Privileges Person will have access
+        # to the private bug
         aps = getUtility(IAccessPolicySource)
         [policy] = aps.find([(upstream_mozilla, InformationType.USERDATA)])
         apgs = getUtility(IAccessPolicyGrantSource)
@@ -1729,7 +1729,8 @@ class TestBugTaskContributor(TestCaseWithFactory):
         self.assertFalse(result["is_contributor"])
         self.assertEqual(person.displayname, result["person_name"])
         self.assertEqual(
-            bug.default_bugtask.pillar.displayname, result["pillar_name"]
+            bug.default_bugtask.bug_target_parent.displayname,
+            result["bug_target_parent_name"],
         )
 
     def test_contributor(self):
@@ -1745,7 +1746,8 @@ class TestBugTaskContributor(TestCaseWithFactory):
         self.assertTrue(result["is_contributor"])
         self.assertEqual(person.displayname, result["person_name"])
         self.assertEqual(
-            bug.default_bugtask.pillar.displayname, result["pillar_name"]
+            bug.default_bugtask.bug_target_parent.displayname,
+            result["bug_target_parent_name"],
         )
 
 
@@ -1778,10 +1780,11 @@ class TestBugTaskDeletion(TestCaseWithFactory):
             check_permission("launchpad.Delete", bug.default_bugtask)
         )
 
-    def test_pillar_owner_can_delete(self):
-        # With the feature flag on, the pillar owner can delete a bug task.
+    def test_bug_target_parent_owner_can_delete(self):
+        # With the feature flag on, the bug_target_parent owner can delete a
+        # bug task.
         bug = self.factory.makeBug()
-        login_person(bug.default_bugtask.pillar.owner)
+        login_person(bug.default_bugtask.bug_target_parent.owner)
         self.assertTrue(
             check_permission("launchpad.Delete", bug.default_bugtask)
         )
@@ -2347,7 +2350,7 @@ class TestConjoinedBugTasks(TestCaseWithFactory):
 
         # Now, if we set the current series task to Won't Fix, the generic task
         # will still be confirmed.
-        netapplet_owner = current_series_netapplet_task.pillar.owner
+        netapplet_owner = current_series_netapplet_task.bug_target_parent.owner
         current_series_netapplet_task.transitionToStatus(
             BugTaskStatus.WONTFIX, netapplet_owner
         )
@@ -2573,14 +2576,16 @@ class TestAutoConfirmBugTasksFlagForProduct(TestCaseWithFactory):
 
     def test_explicit_flag(self):
         bug_task = self.factory.makeBugTask(target=self.makeTarget())
-        with FeatureFixture({self.flag: bug_task.pillar.name}):
+        with FeatureFixture({self.flag: bug_task.bug_target_parent.name}):
             self.assertTrue(
                 removeSecurityProxy(bug_task)._checkAutoconfirmFeatureFlag()
             )
 
     def test_explicit_flag_of_many(self):
         bug_task = self.factory.makeBugTask(target=self.makeTarget())
-        flag_value = "  foo bar  " + bug_task.pillar.name + "    baz "
+        flag_value = (
+            "  foo bar  " + bug_task.bug_target_parent.name + "    baz "
+        )
         with FeatureFixture({self.flag: flag_value}):
             self.assertTrue(
                 removeSecurityProxy(bug_task)._checkAutoconfirmFeatureFlag()
@@ -2595,7 +2600,7 @@ class TestAutoConfirmBugTasksFlagForProduct(TestCaseWithFactory):
 
     def test_alt_flag_does_not_affect(self):
         bug_task = self.factory.makeBugTask(target=self.makeTarget())
-        with FeatureFixture({self.alt_flag: bug_task.pillar.name}):
+        with FeatureFixture({self.alt_flag: bug_task.bug_target_parent.name}):
             self.assertFalse(
                 removeSecurityProxy(bug_task)._checkAutoconfirmFeatureFlag()
             )
@@ -2897,12 +2902,12 @@ class TestValidateTransitionToTarget(TestCaseWithFactory):
         sp2 = self.factory.makeSourcePackage(distroseries=ds2)
         self.assertTransitionForbidden(sp1, sp2)
 
-    # If series tasks for a distribution exist, the pillar of the
+    # If series tasks for a distribution exist, the bug_target_parent of the
     # non-series task cannot be changed. This is due to the strange
     # rules around creation of DS/SP tasks.
-    def test_cannot_transition_pillar_of_distro_task_if_series_involved(self):
+    def test_cannot_transition_parent_of_distro_task_if_series_involved(self):
         # If a Distribution task has subordinate DistroSeries tasks, its
-        # pillar cannot be changed.
+        # bug_target_parent cannot be changed.
         series = self.factory.makeDistroSeries()
         product = self.factory.makeProduct()
         distro = self.factory.makeDistribution()
@@ -2923,7 +2928,7 @@ class TestValidateTransitionToTarget(TestCaseWithFactory):
 
     def test_cannot_transition_dsp_task_if_sp_tasks_exist(self):
         # If a DistributionSourcePackage task has subordinate
-        # SourcePackage tasks, its pillar cannot be changed.
+        # SourcePackage tasks, its bug_target_parent cannot be changed.
         sp = self.factory.makeSourcePackage(publish=True)
         product = self.factory.makeProduct()
         distro = self.factory.makeDistribution()
@@ -2944,8 +2949,8 @@ class TestValidateTransitionToTarget(TestCaseWithFactory):
 
     def test_cannot_transition_to_distro_with_series_tasks(self):
         # If there are any series (DistroSeries or SourcePackage) tasks
-        # for a distribution, you can't transition from another pillar
-        # to that distribution.
+        # for a distribution, you can't transition from another
+        # bug_target_parent to that distribution.
         ds = self.factory.makeDistroSeries()
         sp1 = self.factory.makeSourcePackage(distroseries=ds, publish=True)
         sp2 = self.factory.makeSourcePackage(distroseries=ds, publish=True)
@@ -3097,9 +3102,9 @@ class TestTransitionToTarget(TestCaseWithFactory):
             )
         self.assertEqual(milestone, task.milestone)
 
-    def test_milestone_preserved_within_a_pillar(self):
-        # Milestones are pillar-global, so transitions between packages
-        # don't unset them.
+    def test_milestone_preserved_within_a_bug_target_parent(self):
+        # Milestones are bug_target_parent-global, so transitions between
+        # packages don't unset them.
         sp = self.factory.makeSourcePackage(publish=True)
         dsp = sp.distribution_sourcepackage
         task = self.factory.makeBugTask(target=dsp.distribution)
@@ -3427,14 +3432,14 @@ class TestBugTargetKeys(TestCaseWithFactory):
         )
 
     def test_ociproject_based_in_distro(self):
-        pillar = self.factory.makeDistribution()
-        ociproject = self.factory.makeOCIProject(pillar=pillar)
+        bug_target_parent = self.factory.makeDistribution()
+        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
         self.assertTargetKeyWorks(
             ociproject,
             dict(
                 product=None,
                 productseries=None,
-                distribution=pillar,
+                distribution=bug_target_parent,
                 distroseries=None,
                 sourcepackagename=None,
                 packagetype=None,
@@ -3444,12 +3449,12 @@ class TestBugTargetKeys(TestCaseWithFactory):
         )
 
     def test_ociproject_based_in_product(self):
-        pillar = self.factory.makeProduct()
-        ociproject = self.factory.makeOCIProject(pillar=pillar)
+        bug_target_parent = self.factory.makeProduct()
+        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
         self.assertTargetKeyWorks(
             ociproject,
             dict(
-                product=pillar,
+                product=bug_target_parent,
                 productseries=None,
                 distribution=None,
                 distroseries=None,
@@ -3485,8 +3490,9 @@ class ValidateTargetMixin:
     a private bugs to check for multi-tenant constraints.
     """
 
-    def test_private_incorrect_pillar_task_forbidden(self):
-        # Another pillar cannot be added if there is already a bugtask.
+    def test_private_incorrect_bug_target_parent_task_forbidden(self):
+        # Another bug_target_parent cannot be added if there is already a
+        # bugtask.
         p1 = self.factory.makeProduct(
             bug_sharing_policy=BugSharingPolicy.PROPRIETARY_OR_PUBLIC
         )
@@ -3495,7 +3501,7 @@ class ValidateTargetMixin:
         )
         owner = self.factory.makePerson()
         bug = self.factory.makeBug(target=p1, owner=owner)
-        # validate_target allows cross-pillar transitions if there's
+        # validate_target allows cross-bug_target_parent transitions if there's
         # only one task, so we might need to create a second task to test.
         if not self.multi_tenant_test_one_task_only:
             self.factory.makeBugTask(
@@ -3528,7 +3534,7 @@ class ValidateTargetMixin:
         series = self.factory.makeProductSeries(product=p2)
         owner = self.factory.makePerson()
         bug = self.factory.makeBug(target=p1, owner=owner)
-        # validate_target allows cross-pillar transitions if there's
+        # validate_target allows cross-bug_target_parent transitions if there's
         # only one task, so we might need to create a second task to test.
         if not self.multi_tenant_test_one_task_only:
             self.factory.makeBugTask(
@@ -3826,9 +3832,9 @@ class TestValidateTarget(TestCaseWithFactory, ValidateTargetMixin):
             commercial_prod,
         )
 
-    def test_illegal_information_type_allowed_if_pillar_not_new(self):
+    def test_illegal_information_type_allowed_if_parent_not_new(self):
         # The bug's current information_type does not have to be permitted if
-        # we already affect the pillar.
+        # we already affect the bug_target_parent.
         prod = self.factory.makeProduct()
         series = self.factory.makeProductSeries(product=prod)
         bug = self.factory.makeBug(
@@ -3995,33 +4001,41 @@ class TestBugTaskUserHasBugSupervisorPrivileges(TestCaseWithFactory):
         ):
             self.assertTrue(bugtask.userHasBugSupervisorPrivileges(celeb))
 
-    def test_pillar_owner_is_allowed(self):
-        # The pillar owner has privileges.
-        pillar = self.factory.makeProduct()
-        bugtask = self.factory.makeBugTask(target=pillar)
-        self.assertTrue(bugtask.userHasBugSupervisorPrivileges(pillar.owner))
+    def test_bug_target_parent_owner_is_allowed(self):
+        # The bug_target_parent owner has privileges.
+        bug_target_parent = self.factory.makeProduct()
+        bugtask = self.factory.makeBugTask(target=bug_target_parent)
+        self.assertTrue(
+            bugtask.userHasBugSupervisorPrivileges(bug_target_parent.owner)
+        )
 
-    def test_pillar_driver_is_allowed(self):
-        # The pillar driver has privileges.
-        pillar = self.factory.makeProduct()
-        removeSecurityProxy(pillar).driver = self.factory.makePerson()
-        bugtask = self.factory.makeBugTask(target=pillar)
-        self.assertTrue(bugtask.userHasBugSupervisorPrivileges(pillar.driver))
+    def test_bug_target_parent_driver_is_allowed(self):
+        # The bug_target_parent driver has privileges.
+        bug_target_parent = self.factory.makeProduct()
+        removeSecurityProxy(bug_target_parent).driver = (
+            self.factory.makePerson()
+        )
+        bugtask = self.factory.makeBugTask(target=bug_target_parent)
+        self.assertTrue(
+            bugtask.userHasBugSupervisorPrivileges(bug_target_parent.driver)
+        )
 
-    def test_pillar_bug_supervisor(self):
-        # The pillar bug supervisor has privileges.
+    def test_bug_target_parent_bug_supervisor(self):
+        # The bug_target_parent bug supervisor has privileges.
         bugsupervisor = self.factory.makePerson()
-        pillar = self.factory.makeProduct(bug_supervisor=bugsupervisor)
-        bugtask = self.factory.makeBugTask(target=pillar)
+        bug_target_parent = self.factory.makeProduct(
+            bug_supervisor=bugsupervisor
+        )
+        bugtask = self.factory.makeBugTask(target=bug_target_parent)
         self.assertTrue(bugtask.userHasBugSupervisorPrivileges(bugsupervisor))
 
-    def test_ociproject_pillar_bug_supervisor(self):
-        # The pillar bug supervisor has privileges.
+    def test_ociproject_bug_target_parent_bug_supervisor(self):
+        # The bug_target_parent bug supervisor has privileges.
         bugsupervisor = self.factory.makePerson()
         someone_else = self.factory.makePerson()
         target = self.factory.makeOCIProject()
         with admin_logged_in():
-            target.pillar.bug_supervisor = bugsupervisor
+            target.bug_target_parent.bug_supervisor = bugsupervisor
         bugtask = self.factory.makeBugTask(target=target)
         self.assertTrue(bugtask.userHasBugSupervisorPrivileges(bugsupervisor))
         self.assertFalse(bugtask.userHasBugSupervisorPrivileges(someone_else))
@@ -4044,9 +4058,9 @@ class TestBugTaskUserHasBugSupervisorPrivileges(TestCaseWithFactory):
 
     def test_commercial_admin_has_no_privileges(self):
         # Commercial admins have no privileges.
-        pillar = self.factory.makeProduct()
-        self.factory.makeCommercialSubscription(pillar)
-        bugtask = self.factory.makeBugTask(target=pillar)
+        bug_target_parent = self.factory.makeProduct()
+        self.factory.makeCommercialSubscription(bug_target_parent)
+        bugtask = self.factory.makeBugTask(target=bug_target_parent)
         commercial_admin = self.factory.makeCommercialAdmin()
         self.assertFalse(
             bugtask.userHasBugSupervisorPrivileges(commercial_admin)
