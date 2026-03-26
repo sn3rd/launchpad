@@ -17,6 +17,7 @@ from lp.bugs.model.bugsubscriptionfilter import (
     MuteNotAllowed,
 )
 from lp.bugs.model.structuralsubscription import (
+    OCIProjectTargetHelper,
     get_structural_subscribers,
     get_structural_subscription_targets,
     get_structural_subscriptions,
@@ -879,6 +880,78 @@ class TestGetStructuralSubscribers(TestCaseWithFactory):
                 )
             ),
         )
+
+
+class TestOCIProjectTargetHelper(TestCaseWithFactory):
+    layer = DatabaseFunctionalLayer
+
+    def _make_oci_project_helper(self, pillar):
+        """Helper to create an OCI project and its helper."""
+        oci_project = self.factory.makeOCIProject(pillar=pillar)
+        return oci_project, OCIProjectTargetHelper(oci_project)
+
+    def test_helper_has_correct_target_type_display(self):
+        # OCIProjectTargetHelper provides a human-readable target type.
+        distribution = self.factory.makeDistribution()
+        _, helper = self._make_oci_project_helper(distribution)
+        self.assertEqual("OCI project", helper.target_type_display)
+
+    def test_helper_provides_access_to_target(self):
+        # OCIProjectTargetHelper provides access to the OCI project's target
+        # via the target property.
+        distribution = self.factory.makeDistribution()
+        oci_project, helper = self._make_oci_project_helper(distribution)
+        self.assertEqual(oci_project.bug_target_parent, helper.target)
+
+    def test_helper_provides_access_to_target_parent(self):
+        # OCIProjectTargetHelper provides access to the OCI project's parent
+        # via the target_parent property.
+        product = self.factory.makeProduct()
+        oci_project, helper = self._make_oci_project_helper(product)
+        self.assertEqual(oci_project.bug_target_parent, helper.target_parent)
+
+    def test_helper_provides_bug_target_parent(self):
+        # OCIProjectTargetHelper provides access to bug_target_parent directly.
+        distribution = self.factory.makeDistribution()
+        oci_project, helper = self._make_oci_project_helper(distribution)
+        self.assertEqual(
+            oci_project.bug_target_parent, helper.bug_target_parent
+        )
+
+    def test_helper_determines_target_arguments_for_distribution(self):
+        # OCIProjectTargetHelper correctly identifies the target arguments
+        # when the OCI project is associated with a distribution.
+        distribution = self.factory.makeDistribution()
+        oci_project, helper = self._make_oci_project_helper(distribution)
+        self.assertEqual(
+            {"distribution": oci_project.bug_target_parent},
+            helper.target_arguments,
+        )
+
+    def test_helper_determines_target_arguments_for_product(self):
+        # OCIProjectTargetHelper correctly identifies the target arguments
+        # when the OCI project is associated with a product.
+        product = self.factory.makeProduct()
+        oci_project, helper = self._make_oci_project_helper(product)
+        self.assertEqual(
+            {"product": oci_project.bug_target_parent},
+            helper.target_arguments,
+        )
+
+    def test_helper_raises_on_invalid_bug_target_parent(self):
+        # OCIProjectTargetHelper raises an AttributeError with a clear message
+        # when the OCI project has an invalid bug_target_parent.
+        class FakeOCIProject:
+            bug_target_parent = "bogus-parent"
+
+        expected = (
+            "Invalid bug_target_parent for OCIProject subscription: "
+            "bogus-parent"
+        )
+        error = self.assertRaises(
+            AttributeError, OCIProjectTargetHelper, FakeOCIProject()
+        )
+        self.assertEqual(expected, str(error))
 
 
 class TestBugSubscriptionFilterMute(TestCaseWithFactory):

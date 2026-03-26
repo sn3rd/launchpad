@@ -227,7 +227,7 @@ class OCIProjectTargetHelper:
         else:
             raise AttributeError(
                 "Invalid bug_target_parent for OCIProject subscription: "
-                % target.bug_target_parent
+                f"{target.bug_target_parent}"
             )
 
 
