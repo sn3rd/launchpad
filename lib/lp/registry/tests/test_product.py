@@ -970,6 +970,7 @@ class TestProduct(TestCaseWithFactory):
             "active_or_packaged_series",
             "aliases",
             "all_milestones",
+            "all_milestones_with_releases",
             "allowsTranslationEdits",
             "allowsTranslationSuggestions",
             "announce",

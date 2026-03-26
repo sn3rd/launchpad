@@ -701,6 +701,7 @@ class ProductSeriesSecurityAdaperTestCase(TestCaseWithFactory):
             "api_valid_specifications",
             "active",
             "all_milestones",
+            "all_milestones_with_releases",
             "answers_usage",
             "blueprints_usage",
             "branch",
