@@ -100,7 +100,7 @@ GIT_REPOSITORY_NAME_VALIDATION_ERROR_MESSAGE = _(
 # This is a copy of the pattern in database/schema/patch-2209-61-0.sql.
 # Don't change it without changing that.
 valid_git_repository_name_pattern = re.compile(
-    r"^(?i)[a-z0-9][a-z0-9+\.\-@_]*\Z"
+    r"(?i)^[a-z0-9][a-z0-9+\.\-@_]*\Z"
 )
 
 
