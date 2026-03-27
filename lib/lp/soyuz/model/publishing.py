@@ -2424,11 +2424,10 @@ class PublishingSet:
         )
 
         # Get builds for all publications in one UNION query.
-        publication_ids = [pub.id for pub in publications]
         builds_by_publication: defaultdict[
             int, List[SourceUploadBuildInfo]
         ] = defaultdict(list)
-        for pub, build, das in self.getBuildsForSourceIds(publication_ids):
+        for pub, build, das in self.getBuildsForSources(publications):
             builds_by_publication[pub.id].append(
                 SourceUploadBuildInfo(
                     arch_tag=das.architecturetag,
