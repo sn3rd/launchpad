@@ -10,6 +10,9 @@ LPCONFIG=launchpad-librarian1
 # fastdowntime.
 15 10 * * * {{ code_dir }}/cronscripts/librarian-gc.py -q --log-file=DEBUG:{{ logs_dir }}/librarian-gc.log
 
+# Backfill SHA-512 hashes for LibraryFileContent
+03-58/5 * * * * {{ code_dir }}/cronscripts/librarian-backfill-sha512.py -q --log-file=INFO:{{ logs_dir }}/librarian-backfill-sha512.log
+
 {% endif -%}
 {% if os_password and not upstream_host -%}
 # Feed locally-spooled uploads into Swift.
