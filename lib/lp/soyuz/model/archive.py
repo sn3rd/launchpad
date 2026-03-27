@@ -82,7 +82,10 @@ from lp.registry.interfaces.person import IPerson, IPersonSet, validate_person
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.role import IHasOwner, IPersonRoles
 from lp.registry.interfaces.series import SeriesStatus
-from lp.registry.interfaces.sourcepackagename import ISourcePackageNameSet
+from lp.registry.interfaces.sourcepackagename import (
+    ISourcePackageName,
+    ISourcePackageNameSet,
+)
 from lp.registry.model.gpgkey import GPGKey
 from lp.registry.model.sourcepackagename import SourcePackageName
 from lp.registry.model.teammembership import TeamParticipation
@@ -934,6 +937,39 @@ class Archive(StormBase, WebhookTargetMixin):
                 list(getUtility(IPersonSet).getPrecachedPersonsFromIDs(ids))
 
         return DecoratedResultSet(resultset, pre_iter_hook=eager_load)
+
+    def getArchiveSourcePackage(self, name):
+        """See `IArchive`."""
+        # Imported locally to avoid circular imports: ArchiveSourcePackage
+        # references IArchive, so importing it at module level would create
+        # a circular dependency.
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        if ISourcePackageName.providedBy(name):
+            sourcepackagename = name
+        else:
+            sourcepackagename = getUtility(ISourcePackageNameSet).queryByName(
+                name
+            )
+            if sourcepackagename is None:
+                return None
+
+        # Verify the archive has this package
+        has_publication = (
+            IStore(SourcePackagePublishingHistory)
+            .find(
+                SourcePackagePublishingHistory,
+                SourcePackagePublishingHistory.archive == self,
+                SourcePackagePublishingHistory.sourcepackagename
+                == sourcepackagename,
+            )
+            .any()
+        )
+
+        if not has_publication:
+            return None
+
+        return ArchiveSourcePackage(self, sourcepackagename)
 
     def getSourcesForDeletion(self, name=None, status=None, distroseries=None):
         """See `IArchive`."""

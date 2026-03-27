@@ -687,6 +687,15 @@ class IArchiveSubscriberView(Interface):
             name then they are sub-ordered newest first.
         """
 
+    def getArchiveSourcePackage(name):
+        """Return an ArchiveSourcePackage for this archive and package name.
+
+        :param name: A source package name string or `ISourcePackageName`.
+        :return: An `IArchiveSourcePackage`, or None if the source package
+            name doesn't exist or if this archive has no publications for this
+            package.
+        """
+
     def newAuthToken(person, token=None, date_created=None):
         """Create a new authorization token.
 

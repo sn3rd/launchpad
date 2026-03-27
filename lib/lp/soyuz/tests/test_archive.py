@@ -7790,3 +7790,120 @@ class TestBinaryBuildFinishWebhooks(TestCaseWithFactory):
         build.updateStatus(BuildStatus.FULLYBUILT)
 
         self.assertEqual(hook.deliveries.count(), 0)
+
+
+class TestGetArchiveSourcePackage(TestCaseWithFactory):
+    """Tests for Archive.getArchiveSourcePackage()."""
+
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.archive = self.factory.makeArchive()
+        self.sourcepackagename = self.factory.makeSourcePackageName(
+            name="mypackage"
+        )
+        # Create the package in the archive using factory method
+        self.factory.makeArchiveSourcePackage(
+            sourcepackagename=self.sourcepackagename,
+            archive=self.archive,
+        )
+
+    def test_with_sourcepackagename_object(self):
+        """getArchiveSourcePackage accepts ISourcePackageName object."""
+        asp = self.archive.getArchiveSourcePackage(self.sourcepackagename)
+        naked_asp = asp
+        self.assertEqual(self.sourcepackagename, naked_asp.sourcepackagename)
+        self.assertEqual(self.archive, naked_asp.archive)
+
+    def test_with_string_name(self):
+        """getArchiveSourcePackage accepts string package name."""
+        asp = self.archive.getArchiveSourcePackage(self.sourcepackagename.name)
+        naked_asp = asp
+        self.assertEqual(self.sourcepackagename.name, naked_asp.name)
+        self.assertEqual(self.archive, naked_asp.archive)
+
+    def test_returns_none_for_nonexistent_package(self):
+        """getArchiveSourcePackage returns None for non-existent package."""
+        asp = self.archive.getArchiveSourcePackage("nonexistentpackage123456")
+        self.assertIsNone(asp)
+
+    def test_returns_none_for_package_not_in_archive(self):
+        """getArchiveSourcePackage returns None if package not in archive."""
+        other_package = self.factory.makeSourcePackageName(name="otherpackage")
+        # Create package in a different archive to ensure we're testing
+        # that the package must exist in the specific archive
+        other_archive = self.factory.makeArchive()
+        self.factory.makeArchiveSourcePackage(
+            sourcepackagename=other_package,
+            archive=other_archive,
+        )
+
+        asp = self.archive.getArchiveSourcePackage(other_package)
+        self.assertIsNone(asp)
+
+    def test_returns_object_for_deleted_package(self):
+        """getArchiveSourcePackage returns object even for deleted packages."""
+        deleted_package = self.factory.makeSourcePackageName(
+            name="deletedpackage"
+        )
+        # First create a package, then delete it
+        self.factory.makeArchiveSourcePackage(
+            sourcepackagename=deleted_package,
+            archive=self.archive,
+        )
+        # Change the publication status to DELETED
+        publication = self.archive.getPublishedSources(
+            name=deleted_package.name
+        ).one()
+        removeSecurityProxy(publication).status = (
+            PackagePublishingStatus.DELETED
+        )
+        asp = self.archive.getArchiveSourcePackage(deleted_package)
+        self.assertIsNotNone(asp)
+        self.assertEqual(deleted_package, asp.sourcepackagename)
+        self.assertEqual(
+            PackagePublishingStatus.DELETED,
+            removeSecurityProxy(publication).status,
+        )
+
+    def test_returns_object_for_superseded_package(self):
+        """getArchiveSourcePackage returns object for superseded packages."""
+        superseded_package = self.factory.makeSourcePackageName(
+            name="supersededpkg"
+        )
+
+        # First create a package, then supersede it
+        self.factory.makeArchiveSourcePackage(
+            sourcepackagename=superseded_package,
+            archive=self.archive,
+        )
+
+        # Change the publication status to SUPERSEDED
+        publication = self.archive.getPublishedSources(
+            name=superseded_package.name
+        ).one()
+        removeSecurityProxy(publication).status = (
+            PackagePublishingStatus.SUPERSEDED
+        )
+
+        asp = self.archive.getArchiveSourcePackage(superseded_package)
+        self.assertIsNotNone(asp)
+        self.assertEqual(superseded_package, asp.sourcepackagename)
+        self.assertEqual(
+            PackagePublishingStatus.SUPERSEDED,
+            removeSecurityProxy(publication).status,
+        )
+
+    def test_same_package_with_object_and_string(self):
+        """getArchiveSourcePackage same for object and string."""
+        asp_object = self.archive.getArchiveSourcePackage(
+            self.sourcepackagename
+        )
+        asp_string = self.archive.getArchiveSourcePackage(
+            self.sourcepackagename.name
+        )
+        self.assertEqual(
+            asp_object.sourcepackagename,
+            asp_string.sourcepackagename,
+        )

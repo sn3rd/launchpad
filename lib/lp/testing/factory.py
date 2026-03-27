@@ -5700,6 +5700,30 @@ class LaunchpadObjectFactory(ObjectFactory):
             )
         )
 
+    def makeArchiveSourcePackage(
+        self,
+        sourcepackagename=None,
+        archive=None,
+    ):
+        """Make an ArchiveSourcePackage.
+
+        Creates a publication so the package exists in the archive.
+        """
+        if sourcepackagename is None or isinstance(sourcepackagename, str):
+            sourcepackagename = self.getOrMakeSourcePackageName(
+                sourcepackagename
+            )
+        if archive is None:
+            archive = self.makeArchive()
+
+        # Create a publication so the package exists
+        self.makeSourcePackagePublishingHistory(
+            sourcepackagename=sourcepackagename,
+            archive=archive,
+        )
+
+        return ProxyFactory(archive.getArchiveSourcePackage(sourcepackagename))
+
     def makeEmailMessage(
         self,
         body=None,
