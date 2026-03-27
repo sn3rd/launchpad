@@ -24,7 +24,7 @@ DEFAULT_WORKERS = 4
 def _hash_url(url):
     """Download content and return its SHA-512 hex digest."""
     digester = hashlib.sha512()
-    with urllib.request.urlopen(url) as response:
+    with urllib.request.urlopen(url, timeout=60) as response:
         while True:
             chunk = response.read(CHUNK_SIZE)
             if not chunk:
