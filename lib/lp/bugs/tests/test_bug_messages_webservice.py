@@ -206,8 +206,8 @@ class TestBugMessage(TestCaseWithFactory):
         self.assertFalse(self._email_sent())
 
     def test_disable_email_on_bug_comment_with_supervisor(self):
-        # A bug supervisor on at least one affected_pillar of the bug should
-        # be able to disable email notifications
+        # A bug supervisor on at least one affected_bug_target_parents of the
+        # bug should be able to disable email notifications
         self.person_set = getUtility(IPersonSet)
         admins = self.person_set.getByName("admins")
         self.admin = admins.teamowner
@@ -338,13 +338,14 @@ class TestSetCommentVisibility(TestCaseWithFactory):
 
     def test_userdata_grantee_can_set_visible(self):
         person = self.factory.makePerson()
-        pillar = removeSecurityProxy(self.bug.default_bugtask).pillar
+        proxiless_bugtask = removeSecurityProxy(self.bug.default_bugtask)
+        bug_target_parent = proxiless_bugtask.bug_target_parent
         policy = (
             getUtility(IAccessPolicySource)
-            .find([(pillar, InformationType.USERDATA)])
+            .find([(bug_target_parent, InformationType.USERDATA)])
             .one()
         )
         self.factory.makeAccessPolicyGrant(
-            policy=policy, grantor=pillar.owner, grantee=person
+            policy=policy, grantor=bug_target_parent.owner, grantee=person
         )
         self._test_hide_comment(person)

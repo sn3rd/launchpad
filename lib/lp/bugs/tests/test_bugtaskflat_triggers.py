@@ -291,7 +291,7 @@ class TestBugTaskFlatten(BugTaskFlatTestMixin):
         bugtask = self.makeLoggedInTask(private=True)
         flat = self.getBugTaskFlat(bugtask.id)
         [policy] = getUtility(IAccessPolicySource).find(
-            [(bugtask.pillar, InformationType.USERDATA)]
+            [(bugtask.bug_target_parent, InformationType.USERDATA)]
         )
         self.assertContentEqual([policy.id], flat.access_policies)
         self.assertContentEqual(

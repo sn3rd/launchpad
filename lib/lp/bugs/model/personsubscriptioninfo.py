@@ -286,6 +286,12 @@ class PersonSubscriptions:
                 "bug": get_id(info.bug),
                 "bug_target_parent": get_id(info.bug_target_parent),
                 # Backward compat alias for rolling JS migration
+                # TODO: ilkeremrekoc 2026-03-27: Currently, the "pillar"
+                # keyword would be stored in caches. In order to not break
+                # the cache when we add non-pillar bug target parents.
+                # This should be removed after a few days or a week, after
+                # giving users time to get a new cache with the
+                # "bug_target_parent" key.
                 "pillar": get_id(info.bug_target_parent),
                 # We won't add bugtasks yet unless we need them.
             }
@@ -305,6 +311,12 @@ class PersonSubscriptions:
                 # We won't add bugtasks yet unless we need them.
                 "bug_supervisor_bug_target_parents": bug_supervisor_ids,
                 # Backward compat alias for rolling JS migration
+                # TODO: ilkeremrekoc 2026-03-27: Currently, the
+                # "bug_supervisor_pillars" keyword would be stored in caches.
+                # In order to not break the cache when we add non-pillar bug
+                # target parents. This should be removed after a few days or
+                # a week, after giving users time to get a new cache with the
+                # "bug_supervisor_bug_target_parents" key.
                 "bug_supervisor_pillars": bug_supervisor_ids,
             }
 

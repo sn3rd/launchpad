@@ -1204,7 +1204,7 @@ A milestone can be assigned to the current task.
     >>> firefox_task = [
     ...     bugtask
     ...     for bugtask in bug_four.bugtasks
-    ...     if bugtask.pillar.name == "firefox"
+    ...     if bugtask.bug_target_parent.name == "firefox"
     ... ][0]
     >>> print(firefox_task.milestone)
     None
@@ -1241,7 +1241,7 @@ permissions also elicits an error message:
 
     >>> login("no-priv@canonical.com")
     >>> for bugtask in bug.bugtasks:
-    ...     print(bugtask.pillar.title)
+    ...     print(bugtask.bug_target_parent.title)
     ...
     Mozilla Firefox
     >>> print(bug.bugtasks[0].milestone)
@@ -1548,7 +1548,7 @@ Bug supervisors can set some restricted statuses:
 
     >>> with lp_dbuser():
     ...     login("foo.bar@canonical.com")
-    ...     upstream_task.pillar.bug_supervisor = email_user
+    ...     upstream_task.bug_target_parent.bug_supervisor = email_user
     ...
 
     >>> ignored = login_person(email_user)
@@ -1568,7 +1568,7 @@ Everyone else gets an explanatory error message:
 
     >>> with lp_dbuser():
     ...     login("foo.bar@canonical.com")
-    ...     upstream_task.pillar.bug_supervisor = None
+    ...     upstream_task.bug_target_parent.bug_supervisor = None
     ...
 
     >>> login("no-priv@canonical.com")

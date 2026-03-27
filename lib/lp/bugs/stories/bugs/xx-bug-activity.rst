@@ -276,7 +276,8 @@ If a target of a bug task is changed the old and new value will be shown.
     Hide
     --------
 
-If a bug task is deleted the pillar no longer affected will be shown.
+If a bug task is deleted the bug_target_parent no longer affected will be
+shown.
 
     >>> admin_browser.open("http://bugs.launchpad.test/firefox/+bug/6")
     >>> admin_browser.getLink(url="+distrotask").click()

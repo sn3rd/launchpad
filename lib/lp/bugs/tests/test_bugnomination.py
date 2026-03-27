@@ -250,8 +250,8 @@ class CanBeNominatedForTestMixin:
         self.assertFalse(self.bug.canBeNominatedFor(self.series))
 
     def test_not_canBeNominatedFor_random_series(self):
-        # A bug may only be nominated for a series if that series' pillar
-        # already has a task.
+        # A bug may only be nominated for a series if that series' bug target
+        # parent already has a task.
         self.assertFalse(self.bug.canBeNominatedFor(self.random_series))
 
 

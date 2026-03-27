@@ -207,7 +207,7 @@ redirected to the bug page.
     ...>pmount (Debian)</a>...
     ...
 
-We cannot allow proprietary bugs to affect more than one pillar.
+We cannot allow proprietary bugs to affect more than one bug target parent.
 
     >>> from lp.services.webapp import canonical_url
     >>> from lp.services.webapp.interfaces import ILaunchBag

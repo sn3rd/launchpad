@@ -54,8 +54,8 @@ choice if it was mistaken.
     If this bug was assigned by mistake,
     you may change the assignment.
 
-If the new assignee does have bugs assigned, but not in the relevant pillar,
-the user will be warned too.
+If the new assignee does have bugs assigned, but not in the relevant bug target
+parent, the user will be warned too.
 
     >>> admin_browser.open("http://bugs.launchpad.test/jokosher/+bug/11")
     >>> assignee_control = admin_browser.getControl(

@@ -2,7 +2,7 @@ Convert bug to question
 =======================
 
 Some bugs that are filed, aren't really bugs, they are questions. When
-the bug target's pillar uses Launchpad to track bugs, the bug can be
+the bug target's parent uses Launchpad to track bugs, the bug can be
 converted to a question. The process creates a new question using the
 bug's owner, title, and description. The bug's status is set to Invalid
 in every location that it affects.

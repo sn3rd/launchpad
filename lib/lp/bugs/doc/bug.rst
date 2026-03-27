@@ -910,10 +910,11 @@ You can get the set of bugtasks for at bug with the 'bugtasks' attribute:
     mozilla-firefox in Debian
     mozilla-firefox in Debian Woody
 
-You can also get a list of the "LP pillars" affected by a particular bug.
+You can also get a list of the "LP bug_target_parents" affected by a
+particular bug.
 
-    >>> for pillar in bug_two.affected_pillars:
-    ...     print(pillar.displayname)
+    >>> for bug_target_parent in bug_two.affected_bug_target_parents:
+    ...     print(bug_target_parent.displayname)
     ...
     Tomcat
     Ubuntu
@@ -969,8 +970,8 @@ will expire if it becomes inactive because of a bugtask.
 
 `bugtask-expiration.rst` outlines the complete list of constraints that
 govern expiration. In general, a bug that is not valid anywhere,
-that has a single unattended Incomplete bugtask whose pillar has enabled
-bug expiration. Once an bug is recognised to be valid for one bugtask
+that has a single unattended Incomplete bugtask whose bug_target_parent has
+enabled bug expiration. Once an bug is recognised to be valid for one bugtask
 (confirmed), or attended (is assigned or has a milestone), the bug will
 not permit expiration.
 
@@ -978,15 +979,16 @@ The thunderbird project does not use Launchpad to track bugs.
 Incomplete, unattended bug reports cannot ever expire for this project.
 
 create_old_bug creates an bug with a bugtask that is eligible for expiration,
-so long as the pillar object has enabled bug expiration. Every change to a
-bug or bugtask must be synced back to the database to test can_expire.
+so long as the bug_target_parent object has enabled bug expiration. Every
+change to a bug or bugtask must be synced back to the database to test
+can_expire.
 
     >>> from lp.bugs.tests.bug import create_old_bug
 
     >>> upstream_bugtask = create_old_bug("bug a", 1, thunderbird)
     >>> upstream_bugtask.status.name
     'INCOMPLETE'
-    >>> upstream_bugtask.pillar.enable_bug_expiration
+    >>> upstream_bugtask.bug_target_parent.enable_bug_expiration
     False
     >>> upstream_bugtask.bug.permits_expiration
     False
@@ -1002,7 +1004,7 @@ expire.
 
     >>> expirable_bugtask.status.name
     'INCOMPLETE'
-    >>> expirable_bugtask.pillar.enable_bug_expiration
+    >>> expirable_bugtask.bug_target_parent.enable_bug_expiration
     True
     >>> expirable_bugtask.bug.permits_expiration
     True

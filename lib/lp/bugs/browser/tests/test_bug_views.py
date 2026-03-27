@@ -257,7 +257,7 @@ class TestBugPortletSubscribers(TestCaseWithFactory):
         return css_class in element.get("class", [])
 
     def test_bug_mute_for_individual_structural_subscription(self):
-        # If the person has a structural subscription to the pillar,
+        # If the person has a structural subscription to the bug_target_parent,
         # then the mute link will be displayed to them.
         person = self.factory.makePerson(name="a-person")
         with person_logged_in(person):
