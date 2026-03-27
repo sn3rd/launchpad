@@ -18,7 +18,7 @@ from lp.services.librarian.model import LibraryFileAlias, LibraryFileContent
 from lp.services.scripts.base import LaunchpadCronScript
 
 CHUNK_SIZE = 64 * 1024
-DEFAULT_WORKERS = 8
+DEFAULT_WORKERS = 4
 
 
 def _hash_url(url):

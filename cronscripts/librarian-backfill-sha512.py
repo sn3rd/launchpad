@@ -16,4 +16,3 @@ if __name__ == "__main__":
         "librarian-backfill-sha512", dbuser="librarianbackfill"
     )
     script.lock_and_run()
-
