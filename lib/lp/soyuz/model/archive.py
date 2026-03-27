@@ -75,7 +75,7 @@ from lp.registry.errors import NoSuchDistroSeries
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
 )
-from lp.registry.interfaces.distroseries import IDistroSeriesSet
+from lp.registry.interfaces.distroseries import IDistroSeries, IDistroSeriesSet
 from lp.registry.interfaces.distroseriesparent import IDistroSeriesParentSet
 from lp.registry.interfaces.gpg import IGPGKeySet
 from lp.registry.interfaces.person import IPerson, IPersonSet, validate_person
@@ -970,6 +970,57 @@ class Archive(StormBase, WebhookTargetMixin):
             return None
 
         return ArchiveSourcePackage(self, sourcepackagename)
+
+    def getArchiveSourcePackageSeries(self, distroseries, name):
+        """See `IArchive`."""
+        # Imported locally to avoid circular imports:
+        # ArchiveSourcePackageSeries references IArchive, so importing it at
+        # module level would create a circular dependency.
+        from lp.registry.model.archivesourcepackageseries import (
+            ArchiveSourcePackageSeries,
+        )
+
+        # Resolve distroseries if string
+        if isinstance(distroseries, str):
+            try:
+                distroseries = self.distribution.getSeries(distroseries)
+            except NoSuchDistroSeries:
+                return None
+        elif not IDistroSeries.providedBy(distroseries):
+            return None
+        elif distroseries.distribution != self.distribution:
+            # Distroseries must belong to the same distribution as the archive
+            return None
+
+        # Resolve sourcepackagename
+        if ISourcePackageName.providedBy(name):
+            sourcepackagename = name
+        else:
+            sourcepackagename = getUtility(ISourcePackageNameSet).queryByName(
+                name
+            )
+            if sourcepackagename is None:
+                return None
+
+        # Verify the archive has this package in this distroseries
+        has_publication = (
+            IStore(SourcePackagePublishingHistory)
+            .find(
+                SourcePackagePublishingHistory,
+                SourcePackagePublishingHistory.archive == self,
+                SourcePackagePublishingHistory.distroseries == distroseries,
+                SourcePackagePublishingHistory.sourcepackagename
+                == sourcepackagename,
+            )
+            .any()
+        )
+
+        if not has_publication:
+            return None
+
+        return ArchiveSourcePackageSeries(
+            self, distroseries, sourcepackagename
+        )
 
     def getSourcesForDeletion(self, name=None, status=None, distroseries=None):
         """See `IArchive`."""

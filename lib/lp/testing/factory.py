@@ -5724,6 +5724,42 @@ class LaunchpadObjectFactory(ObjectFactory):
 
         return ProxyFactory(archive.getArchiveSourcePackage(sourcepackagename))
 
+    def makeArchiveSourcePackageSeries(
+        self,
+        sourcepackagename=None,
+        archive=None,
+        distroseries=None,
+    ):
+        """Make an ArchiveSourcePackageSeries.
+
+        Creates a publication so the package exists in the archive/series.
+        """
+        if sourcepackagename is None or isinstance(sourcepackagename, str):
+            sourcepackagename = self.getOrMakeSourcePackageName(
+                sourcepackagename
+            )
+        if archive is None:
+            if distroseries is None:
+                distroseries = self.makeDistroSeries()
+            archive = self.makeArchive(distribution=distroseries.distribution)
+        elif distroseries is None:
+            distroseries = self.makeDistroSeries(
+                distribution=archive.distribution
+            )
+
+        # Create a publication so the package exists
+        self.makeSourcePackagePublishingHistory(
+            sourcepackagename=sourcepackagename,
+            archive=archive,
+            distroseries=distroseries,
+        )
+
+        return ProxyFactory(
+            archive.getArchiveSourcePackageSeries(
+                distroseries, sourcepackagename
+            )
+        )
+
     def makeEmailMessage(
         self,
         body=None,

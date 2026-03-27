@@ -511,6 +511,58 @@ class TestDistroSeries(TestCaseWithFactory):
         # The parent should be the distribution of the series.
         self.assertEqual(distroseries.distribution, parent)
 
+    def test_getArchiveSourcePackageSeries(self):
+        # Test that we get the ArchiveSourcePackageSeries that belongs to the
+        # distroseries with the proper attributes
+        distroseries = self.factory.makeDistroSeries()
+        archive = self.factory.makeArchive(
+            distribution=distroseries.distribution
+        )
+        sourcepackagename = self.factory.getOrMakeSourcePackageName(
+            "my-package"
+        )
+        archivesourcepackageseries = (
+            distroseries.getArchiveSourcePackageSeries(
+                archive=archive, name=sourcepackagename
+            )
+        )
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).distroseries,
+            distroseries,
+        )
+        self.assertEqual(archivesourcepackageseries.name, "my-package")
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).archive, archive
+        )
+
+        # We can pass a string name as well
+        archivesourcepackageseries = (
+            distroseries.getArchiveSourcePackageSeries(
+                archive=archive, name="my-package"
+            )
+        )
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).distroseries,
+            distroseries,
+        )
+        self.assertEqual(archivesourcepackageseries.name, "my-package")
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).archive, archive
+        )
+
+        # Returns None if archive is from a different distribution
+        other_archive = self.factory.makeArchive()
+        result = distroseries.getArchiveSourcePackageSeries(
+            archive=other_archive, name="my-package"
+        )
+        self.assertIsNone(result)
+
+        # Returns None if source package name doesn't exist
+        result = distroseries.getArchiveSourcePackageSeries(
+            archive=archive, name="nonexistent-package"
+        )
+        self.assertIsNone(result)
+
 
 class TestDistroSeriesPackaging(TestCaseWithFactory):
     layer = DatabaseFunctionalLayer

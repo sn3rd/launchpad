@@ -661,6 +661,15 @@
             interface="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackageView"/>
     </class>
 
+    <!-- ArchiveSourcePackageSeries -->
+    <class
+        class="lp.registry.model.archivesourcepackageseries.ArchiveSourcePackageSeries">
+        <allow
+            interface="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeriesView"/>
+        <allow
+            interface="lp.bugs.interfaces.bugtarget.ISeriesBugTarget"/>
+    </class>
+
     <!-- CommercialSubscription -->
 
     <class

@@ -7907,3 +7907,184 @@ class TestGetArchiveSourcePackage(TestCaseWithFactory):
             asp_object.sourcepackagename,
             asp_string.sourcepackagename,
         )
+
+
+class TestGetArchiveSourcePackageSeries(TestCaseWithFactory):
+    """Tests for Archive.getArchiveSourcePackageSeries()."""
+
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.distribution = self.factory.makeDistribution()
+        self.distroseries = self.factory.makeDistroSeries(
+            distribution=self.distribution
+        )
+        self.archive = self.factory.makeArchive(distribution=self.distribution)
+        self.sourcepackagename = self.factory.makeSourcePackageName(
+            name="mypackage"
+        )
+        # Create the package in the archive using factory method
+        self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=self.sourcepackagename,
+            archive=self.archive,
+            distroseries=self.distroseries,
+        )
+
+    def test_with_sourcepackagename_object(self):
+        """getArchiveSourcePackageSeries accepts ISourcePackageName."""
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, self.sourcepackagename
+        )
+        naked_asp = removeSecurityProxy(asp)
+        self.assertEqual(self.sourcepackagename, naked_asp.sourcepackagename)
+        self.assertEqual(self.archive, naked_asp.archive)
+        self.assertEqual(self.distroseries, naked_asp.distroseries)
+
+    def test_with_string_name(self):
+        """getArchiveSourcePackageSeries accepts string package name."""
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, self.sourcepackagename.name
+        )
+        naked_asp = removeSecurityProxy(asp)
+        self.assertEqual(self.sourcepackagename.name, naked_asp.name)
+        self.assertEqual(self.archive, naked_asp.archive)
+        self.assertEqual(self.distroseries, naked_asp.distroseries)
+
+    def test_with_distroseries_name(self):
+        """getArchiveSourcePackageSeries accepts distroseries name."""
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries.name, self.sourcepackagename
+        )
+        naked_asp = removeSecurityProxy(asp)
+        self.assertEqual(self.distroseries, naked_asp.distroseries)
+
+    def test_returns_none_for_nonexistent_package(self):
+        """getArchiveSourcePackageSeries returns None for nonexistent."""
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, "nonexistentpackage123456"
+        )
+        self.assertIsNone(asp)
+
+    def test_returns_none_for_nonexistent_series(self):
+        """getArchiveSourcePackageSeries returns None for bad series."""
+        asp = self.archive.getArchiveSourcePackageSeries(
+            "nosuchseries", self.sourcepackagename
+        )
+        self.assertIsNone(asp)
+
+    def test_returns_none_for_package_not_in_archive(self):
+        """getArchiveSourcePackageSeries returns None if not in archive."""
+        other_package = self.factory.makeSourcePackageName(name="otherpackage")
+        # Create package in a different archive to ensure we're testing
+        # that the package must exist in the specific archive
+        other_archive = self.factory.makeArchive(
+            distribution=self.distribution
+        )
+        self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=other_package,
+            archive=other_archive,
+            distroseries=self.distroseries,
+        )
+        # Package name exists but has no publication in this archive
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, other_package
+        )
+        self.assertIsNone(asp)
+
+    def test_returns_none_for_package_not_in_series(self):
+        """getArchiveSourcePackageSeries returns None if not in series."""
+        other_series = self.factory.makeDistroSeries(
+            distribution=self.distribution
+        )
+        # Package exists in archive but not in this series
+        asp = self.archive.getArchiveSourcePackageSeries(
+            other_series, self.sourcepackagename
+        )
+        self.assertIsNone(asp)
+
+    def test_returns_object_for_deleted_package(self):
+        """getArchiveSourcePackageSeries returns object even for deleted
+        packages."""
+        deleted_package = self.factory.makeSourcePackageName(
+            name="deletedpackage"
+        )
+        # First create a package, then delete it
+        self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=deleted_package,
+            archive=self.archive,
+            distroseries=self.distroseries,
+        )
+        # Change the publication status to DELETED
+        publication = self.archive.getPublishedSources(
+            name=deleted_package.name
+        ).one()
+        removeSecurityProxy(publication).status = (
+            PackagePublishingStatus.DELETED
+        )
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, deleted_package
+        )
+        self.assertIsNotNone(asp)
+        self.assertEqual(
+            deleted_package, removeSecurityProxy(asp).sourcepackagename
+        )
+        # Verify the publication is still deleted
+        self.assertEqual(PackagePublishingStatus.DELETED, publication.status)
+
+    def test_returns_object_for_superseded_package(self):
+        """getArchiveSourcePackageSeries returns object for superseded."""
+        superseded_package = self.factory.makeSourcePackageName(
+            name="supersededpkg"
+        )
+        # First create a package, then supersede it
+        self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=superseded_package,
+            archive=self.archive,
+            distroseries=self.distroseries,
+        )
+        # Change the publication status to SUPERSEDED
+        publication = self.archive.getPublishedSources(
+            name=superseded_package.name
+        ).one()
+        removeSecurityProxy(publication).status = (
+            PackagePublishingStatus.SUPERSEDED
+        )
+        asp = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, superseded_package
+        )
+        self.assertIsNotNone(asp)
+        self.assertEqual(
+            superseded_package, removeSecurityProxy(asp).sourcepackagename
+        )
+        # Verify the publication is still superseded
+        self.assertEqual(
+            PackagePublishingStatus.SUPERSEDED, publication.status
+        )
+
+    def test_same_package_with_object_and_string(self):
+        """getArchiveSourcePackageSeries same for object and string."""
+        asp_object = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, self.sourcepackagename
+        )
+        asp_string = self.archive.getArchiveSourcePackageSeries(
+            self.distroseries, self.sourcepackagename.name
+        )
+        self.assertEqual(
+            removeSecurityProxy(asp_object).sourcepackagename,
+            removeSecurityProxy(asp_string).sourcepackagename,
+        )
+
+    def test_returns_none_for_distroseries_from_different_distribution(self):
+        """getArchiveSourcePackageSeries returns None if distroseries
+        belongs to a different distribution than the archive."""
+        # Create a distroseries from a different distribution
+        other_distribution = self.factory.makeDistribution()
+        other_distroseries = self.factory.makeDistroSeries(
+            distribution=other_distribution
+        )
+        # Try to get package using distroseries from wrong distribution
+        asp = self.archive.getArchiveSourcePackageSeries(
+            other_distroseries, self.sourcepackagename
+        )
+        self.assertIsNone(asp)
