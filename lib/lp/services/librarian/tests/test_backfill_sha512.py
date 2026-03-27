@@ -11,13 +11,12 @@ from zope.security.proxy import removeSecurityProxy
 
 from lp.services.database.interfaces import IStore
 from lp.services.librarian.model import LibraryFileContent
-from lp.testing import TestCaseWithFactory
-from lp.testing.dbuser import switch_dbuser
-from lp.testing.layers import LaunchpadZopelessLayer
-
 from lp.services.librarian.scripts.backfill_sha512 import (
     BackfillLibrarianSHA512,
 )
+from lp.testing import TestCaseWithFactory
+from lp.testing.dbuser import switch_dbuser
+from lp.testing.layers import LaunchpadZopelessLayer
 
 
 class TestBackfillLibrarianSHA512(TestCaseWithFactory):

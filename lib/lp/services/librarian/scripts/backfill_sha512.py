@@ -10,9 +10,8 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from storm.expr import In
-
 import transaction
+from storm.expr import In
 
 from lp.services.database.interfaces import IPrimaryStore
 from lp.services.librarian.model import LibraryFileAlias, LibraryFileContent
@@ -79,8 +78,9 @@ class BackfillLibrarianSHA512(LaunchpadCronScript):
                 LibraryFileContent.sha512 == None,
             ]
             contents = list(
-                store.find(LibraryFileContent, *conditions)
-                .order_by(LibraryFileContent.id)[:batch_size]
+                store.find(LibraryFileContent, *conditions).order_by(
+                    LibraryFileContent.id
+                )[:batch_size]
             )
 
             if not contents:
