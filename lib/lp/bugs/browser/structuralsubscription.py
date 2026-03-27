@@ -365,6 +365,10 @@ class StructuralSubscriptionMenuMixin:
         if IProjectGroupMilestone.providedBy(sst):
             return False
         parent = IStructuralSubscriptionTargetHelper(sst).bug_target_parent
+        # TODO: ilkeremrekoc 2026-03-27: Currently all bug target parents are
+        # pillars, that separately inherit from IServiceUsage, the attribute
+        # bug_tracking_usage. Soon we will add the IServiceUsage interface to
+        # the bug target parents as well to make a followable contract.
         return (
             parent.bug_tracking_usage == ServiceUsage.LAUNCHPAD
             and sst.userCanAlterBugSubscription(self.user, self.user)

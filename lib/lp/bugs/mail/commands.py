@@ -516,12 +516,13 @@ class AffectsEmailCommand(EmailCommand):
         """
         path = cls._normalizePath(path)
         name, rest = cls._splitPath(path)
+
+        # TODO: ilkeremrekoc 2026-03-25: Currently all bug target parents are
+        # pillars, but we will be able to have non-pillar bug target parents
+        # soon. So we should change this by then.
         bug_target_parent = getUtility(IPillarNameSet).getByName(
             name, ignore_inactive=True
         )
-        # TODO: ilkeremrekoc 2026-03-25: Currently all bug target parents are
-        # pillars, but we will be able to have bug target parents soon.
-        # So we should change this by then.
         if bug_target_parent is None:
             raise BugTargetNotFound(
                 "There is no project named '%s' registered in Launchpad."

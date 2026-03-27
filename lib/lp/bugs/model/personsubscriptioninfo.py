@@ -285,28 +285,33 @@ class PersonSubscriptions:
                 "principal": get_id(info.principal),
                 "bug": get_id(info.bug),
                 "bug_target_parent": get_id(info.bug_target_parent),
+                # Backward compat alias for rolling JS migration
+                "pillar": get_id(info.bug_target_parent),
                 # We won't add bugtasks yet unless we need them.
             }
 
         def real_sub_data(info):
+            bug_supervisor_ids = sorted(
+                {
+                    get_id(d["bug_target_parent"])
+                    for d in info.bug_supervisor_tasks
+                }
+            )
             return {
                 "principal": get_id(info.principal),
                 "bug": get_id(info.bug),
                 "subscription": get_id(info.subscription),
                 "principal_is_reporter": info.principal_is_reporter,
                 # We won't add bugtasks yet unless we need them.
-                "bug_supervisor_bug_target_parents": sorted(
-                    {
-                        get_id(d["bug_target_parent"])
-                        for d in info.bug_supervisor_tasks
-                    }
-                ),
+                "bug_supervisor_bug_target_parents": bug_supervisor_ids,
+                # Backward compat alias for rolling JS migration
+                "bug_supervisor_pillars": bug_supervisor_ids,
             }
 
         direct = {}
         from_duplicate = {}
-        as_owner = {}
         # This is an owner of a bug_target_parent with no bug supervisor.
+        as_owner = {}
         as_assignee = {}
         subscription_data = {
             "direct": direct,
