@@ -11,7 +11,7 @@ __all__ = [
 import html as html_module
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 from urllib.parse import parse_qs, urlencode
 
 from zope.component import getUtility
@@ -85,6 +85,8 @@ class Tabs:
         request,
         base_url: str,
         swap_url: str,
+        swap_target: str,
+        swap_style: Literal["innerHTML", "outerHTML"],
         aria_label: str,
     ) -> None:
         self._param = param
@@ -94,6 +96,8 @@ class Tabs:
         self._request = request
         self._base_url = base_url
         self._swap_url = swap_url
+        self._swap_target = swap_target
+        self._swap_style = swap_style
         self.aria_label = aria_label
 
     @property
@@ -108,14 +112,15 @@ class Tabs:
         return "%s-%s-panel" % (self._param, self.active)
 
     def _build_url(self, base_url: str, key: str) -> str:
-        """Build a URL, omitting the param for the default tab."""
+        """Build a URL preserving existing query params."""
         params = parse_qs(
-            self._request.get("QUERY_STRING", ""), keep_blank_values=True
+            self._request.get("QUERY_STRING", ""),
+            keep_blank_values=True,
         )
-        if key == self._default:
-            params.pop(self._param, None)
-        else:
+        if key != self._default:
             params[self._param] = [key]
+        else:
+            params.pop(self._param, None)
         qs = urlencode(params, doseq=True)
         return base_url + "?" + qs if qs else base_url
 
@@ -125,7 +130,10 @@ class Tabs:
             yield {
                 "label": label,
                 "href": self._build_url(self._base_url, key),
-                "swap_url": self._build_url(self._swap_url, key),
+                "swap_url": self._swap_url,
+                "swap_param_key": self._param,
+                "swap_param_value": key,
+                "is_default": key == self._default,
                 "active": "true" if selected == key else "false",
                 "panel_id": "%s-%s-panel" % (self._param, key),
             }
@@ -149,18 +157,35 @@ class Tabs:
             aria_current = (
                 ' aria-current="page"' if tab["active"] == "true" else ""
             )
+            swap_default = " swap-default" if tab["is_default"] else ""
+            swap_current = " swap-current" if tab["active"] == "true" else ""
             items.append(
                 '<div class="p-tabs__item">'
                 '<a class="p-tabs__link"'
-                ' href="%s"%s'
+                ' href="%s"'
+                ' swap-url="%s"'
+                ' swap-target="%s"'
+                ' swap-style="%s"'
+                ' swap-param-key="%s"'
+                ' swap-param-value="%s"'
+                "%s"
+                "%s"
+                "%s"
                 ' data-controls="%s">%s</a>'
                 "</div>"
                 % (
                     esc(tab["href"]),
+                    esc(tab["swap_url"]),
+                    esc(self._swap_target),
+                    esc(self._swap_style),
+                    esc(tab["swap_param_key"]),
+                    esc(tab["swap_param_value"]),
+                    swap_default,
+                    swap_current,
                     aria_current,
                     esc(tab["panel_id"]),
                     esc(tab["label"]),
-                )
+                ),
             )
         return (
             '<div class="p-tabs">'
@@ -192,6 +217,8 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 self.context,
                 view_name="+vanilla-distroseries-packages-chart",
             ),
+            swap_target="#packages-chart",
+            swap_style="outerHTML",
         )
         self.packages_list_tabs = Tabs(
             param="packages-list",
@@ -207,6 +234,8 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 self.context,
                 view_name="+vanilla-distroseries-packages-list",
             ),
+            swap_target="#packages-list",
+            swap_style="outerHTML",
         )
 
     @property

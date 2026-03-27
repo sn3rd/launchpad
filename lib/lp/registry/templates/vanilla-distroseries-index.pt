@@ -6,6 +6,7 @@
     <metal:block fill-slot="head_epilogue">
       <link type="text/css" rel="stylesheet" tal:attributes="href string:${icingroot}/vanilla/pages/distroseries.css" />
       <script type="module" tal:attributes="src string:${view/combo_url}/?lp/app/javascript/vanilla/tabs-min.js"></script>
+      <script type="module" tal:attributes="src string:${view/combo_url}/?lp/app/javascript/vanilla/swap-min.js"></script>
     </metal:block>
   </head>
   <body>
