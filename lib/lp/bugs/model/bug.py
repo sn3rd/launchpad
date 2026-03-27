@@ -174,7 +174,6 @@ from lp.registry.interfaces.sharingjob import (
 from lp.registry.interfaces.sourcepackage import ISourcePackage
 from lp.registry.model.accesspolicy import reconcile_access_for_artifacts
 from lp.registry.model.person import Person, PersonSet, person_sort_key
-from lp.registry.model.pillar import pillar_sort_key
 from lp.registry.model.teammembership import TeamParticipation
 from lp.services.config import config
 from lp.services.database import bulk
@@ -880,14 +879,6 @@ class Bug(StormBase, InformationTypeMixin):
         for task in self.bugtasks:
             result.add(task.bug_target_parent)
         return sorted(result, key=bug_target_parent_sort_key)
-
-    @property
-    def affected_pillars(self):
-        """See `IBug`."""
-        result = set()
-        for task in self.bugtasks:
-            result.add(task.pillar)
-        return sorted(result, key=pillar_sort_key)
 
     @property
     def permits_expiration(self):

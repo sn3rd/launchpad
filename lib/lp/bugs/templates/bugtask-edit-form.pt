@@ -189,7 +189,7 @@
           colspan="2" style="white-space: nowrap" />
       </tr>
     </table>
-    <table tal:condition="not:context/pillar/official_malone">
+    <table tal:condition="not:context/bug_target_parent/official_malone">
       <tr>
         <td>
           <label

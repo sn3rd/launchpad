@@ -1460,7 +1460,7 @@ class TestSharingService(
         shared_specifications = []
         all_pillars = []
         for bug in bugs or []:
-            all_pillars.extend(bug.affected_pillars)
+            all_pillars.extend(bug.affected_bug_target_parents)
         for branch in branches or []:
             context = branch.target.context
             if ISourcePackage.providedBy(context):

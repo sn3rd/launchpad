@@ -2400,12 +2400,12 @@ class LaunchpadObjectFactory(ObjectFactory):
         if target is None:
             default_bugtask = bug and removeSecurityProxy(bug.default_bugtask)
             if default_bugtask is not None:
-                existing_pillar = default_bugtask.pillar
-                if IProduct.providedBy(existing_pillar):
-                    target = self.makeProductSeries(product=existing_pillar)
-                elif IDistribution.providedBy(existing_pillar):
+                existing_parent = default_bugtask.bug_target_parent
+                if IProduct.providedBy(existing_parent):
+                    target = self.makeProductSeries(product=existing_parent)
+                elif IDistribution.providedBy(existing_parent):
                     target = self.makeDistroSeries(
-                        distribution=existing_pillar
+                        distribution=existing_parent
                     )
             if target is None:
                 target = self.makeProduct()

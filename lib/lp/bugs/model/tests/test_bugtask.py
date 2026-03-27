@@ -195,8 +195,8 @@ class TestBugTaskCreation(TestCaseWithFactory):
         bugtaskset = getUtility(IBugTaskSet)
         bug = self.factory.makeBug()
         person = self.factory.makePerson()
-        bug_target_parent = self.factory.makeProduct()
-        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
+        product = self.factory.makeProduct()
+        ociproject = self.factory.makeOCIProject(pillar=product)
 
         bugtask = bugtaskset.createTask(
             bug,
@@ -207,7 +207,7 @@ class TestBugTaskCreation(TestCaseWithFactory):
         )
 
         self.assertEqual(bugtask.target, ociproject)
-        self.assertEqual(bugtask.product, bug_target_parent)
+        self.assertEqual(bugtask.product, product)
 
     def test_ociproject_from_distro_bug(self):
         """A bug that needs to be fixed in a specific oci project with a
@@ -216,8 +216,8 @@ class TestBugTaskCreation(TestCaseWithFactory):
         bugtaskset = getUtility(IBugTaskSet)
         bug = self.factory.makeBug()
         person = self.factory.makePerson()
-        bug_target_parent = self.factory.makeDistribution()
-        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
+        distribution = self.factory.makeDistribution()
+        ociproject = self.factory.makeOCIProject(pillar=distribution)
 
         bugtask = bugtaskset.createTask(
             bug,
@@ -228,7 +228,7 @@ class TestBugTaskCreation(TestCaseWithFactory):
         )
 
         self.assertEqual(bugtask.target, ociproject)
-        self.assertEqual(bugtask.distribution, bug_target_parent)
+        self.assertEqual(bugtask.distribution, distribution)
 
     def test_createmany_bugtasks(self):
         """We can create a set of bugtasks around different targets"""
@@ -3432,14 +3432,14 @@ class TestBugTargetKeys(TestCaseWithFactory):
         )
 
     def test_ociproject_based_in_distro(self):
-        bug_target_parent = self.factory.makeDistribution()
-        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
+        distribution = self.factory.makeDistribution()
+        ociproject = self.factory.makeOCIProject(pillar=distribution)
         self.assertTargetKeyWorks(
             ociproject,
             dict(
                 product=None,
                 productseries=None,
-                distribution=bug_target_parent,
+                distribution=distribution,
                 distroseries=None,
                 sourcepackagename=None,
                 packagetype=None,
@@ -3449,12 +3449,12 @@ class TestBugTargetKeys(TestCaseWithFactory):
         )
 
     def test_ociproject_based_in_product(self):
-        bug_target_parent = self.factory.makeProduct()
-        ociproject = self.factory.makeOCIProject(pillar=bug_target_parent)
+        product = self.factory.makeProduct()
+        ociproject = self.factory.makeOCIProject(pillar=product)
         self.assertTargetKeyWorks(
             ociproject,
             dict(
-                product=bug_target_parent,
+                product=product,
                 productseries=None,
                 distribution=None,
                 distroseries=None,

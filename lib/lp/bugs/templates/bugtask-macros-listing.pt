@@ -23,16 +23,16 @@
   <tr tal:condition="show_extra_details|nothing">
     <td colspan="3" style="padding-bottom: 0.5em">
       <div class="registered">
-        <tal:affected_pillars define="also_in bugtask/other_affected_pillars">
-          in <a tal:attributes="href bugtask/pillar/fmt:url"
-                tal:content="bugtask/pillar/displayname"
+        <tal:affected_parents define="also_in bugtask/other_affected_target_parents">
+          in <a tal:attributes="href bugtask/bug_target_parent/fmt:url"
+                tal:content="bugtask/bug_target_parent/displayname"
               /><tal:comma condition="also_in">,</tal:comma>
-            <tal:per_pillar repeat="pillar also_in">
-              <a tal:attributes="href pillar/fmt:url"
-                 tal:content="pillar/displayname"
-                 /><tal:comma condition="not: repeat/pillar/end">,</tal:comma>
-            </tal:per_pillar>
-          </tal:affected_pillars>
+            <tal:per_bug_target_parent repeat="bug_target_parent also_in">
+              <a tal:attributes="href bug_target_parent/fmt:url"
+                 tal:content="bug_target_parent/displayname"
+                 /><tal:comma condition="not: repeat/bug_target_parent/end">,</tal:comma>
+            </tal:per_bug_target_parent>
+          </tal:affected_parents>
       </div>
     </td>
   </tr>

@@ -248,10 +248,8 @@
                     targetname
                     title
                     related_tasks
-                    other_affected_pillars
                     asEmailHeaderValue
                     getDelta
-                    pillar
                     bugtask_branches
                     conjoined_primary
                     conjoined_replica

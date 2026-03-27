@@ -286,9 +286,6 @@ class IBugView(Interface):
             )
         )
     )
-    affected_pillars = Attribute(
-        'The "pillars", products or distributions, affected by this bug.'
-    )
 
     affected_bug_target_parents = Attribute(
         "The parent targets of the bug tasks affected by this bug."
@@ -299,7 +296,8 @@ class IBugView(Interface):
         description=_(
             "Expiration is permitted when the bug is not valid anywhere, "
             "a message was sent to the bug reporter, and the bug is "
-            "associated with pillars that have enabled bug expiration."
+            "associated with bug target parents that have enabled bug "
+            "expiration."
         ),
         readonly=True,
     )
@@ -884,7 +882,8 @@ class IBugView(Interface):
     def getAllowedInformationTypes(user):
         """Get a list of acceptable `InformationType`s for this bug.
 
-        The intersection of the affected pillars' allowed types is permitted.
+        The intersection of the affected bug target parents' allowed types is
+        permitted.
         """
 
 

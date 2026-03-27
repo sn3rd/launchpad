@@ -55,7 +55,7 @@ class AffectsEmailCommandTestCase(TestCaseWithFactory):
             "foo/bar", AffectsEmailCommand._normalizePath("/products/foo/bar")
         )
 
-    def test_getBugTarget_no_pillar_error(self):
+    def test_getBugTarget_no_bug_target_parent_error(self):
         message = "There is no project named 'fnord' registered in Launchpad."
         self.assertRaisesWithContent(
             BugTargetNotFound,

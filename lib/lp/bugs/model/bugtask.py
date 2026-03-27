@@ -101,7 +101,6 @@ from lp.registry.interfaces.sharingjob import (
 )
 from lp.registry.interfaces.sourcepackage import ISourcePackage
 from lp.registry.interfaces.sourcepackagename import ISourcePackageNameSet
-from lp.registry.model.pillar import pillar_sort_key
 from lp.registry.model.sourcepackagename import SourcePackageName
 from lp.services import features
 from lp.services.channels import channel_list_to_string
@@ -750,22 +749,6 @@ class BugTask(StormBase):
             if that_parent != this_parent:
                 result.add(that_parent)
         return sorted(result, key=bug_target_parent_sort_key)
-
-    @property
-    def pillar(self):
-        """See `IBugTask`."""
-        return self.target.pillar
-
-    @property
-    def other_affected_pillars(self):
-        """See `IBugTask`."""
-        result = set()
-        this_pillar = self.pillar
-        for task in self.bug.bugtasks:
-            that_pillar = task.pillar
-            if that_pillar != this_pillar:
-                result.add(that_pillar)
-        return sorted(result, key=pillar_sort_key)
 
     @property
     def bugtargetdisplayname(self):
