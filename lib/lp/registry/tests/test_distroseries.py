@@ -477,6 +477,48 @@ class TestDistroSeries(TestCaseWithFactory):
             naked_distroseries.publishing_options["publish_i18n_index"]
         )
 
+    def test_valid_until_config(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertFalse(distroseries.valid_until_config)
+        with admin_logged_in():
+            distroseries.valid_until_config = {
+                PackagePublishingPocket.BACKPORTS: {
+                    "refresh_threshold": 5,
+                    "validity_period": 10,
+                }
+            }
+        self.assertTrue(distroseries.valid_until_config)
+        naked_distroseries = removeSecurityProxy(distroseries)
+        self.assertEqual(
+            {"BACKPORTS": {"refresh_threshold": 5, "validity_period": 10}},
+            naked_distroseries.publishing_options["valid_until_config"],
+        )
+
+    def test_unauth_users_cant_modify_publishing_option(self):
+        """Test that unauthorized users cannot edit valid_until_config."""
+        distroseries = self.factory.makeDistroSeries()
+        unauthorized_user = self.factory.makePerson()
+
+        with person_logged_in(unauthorized_user):
+            self.assertRaises(
+                Exception, setattr, distroseries, "valid_until_config", True
+            )
+
+    def test_distribution_owner_can_modify_publishing_option(self):
+        """Test that distribution owners can edit valid_until_config."""
+        distroseries = self.factory.makeDistroSeries()
+        distribution_owner = distroseries.distribution.owner
+
+        # Distribution owner can modify valid_until_config
+        with person_logged_in(distribution_owner):
+            distroseries.valid_until_config = {
+                PackagePublishingPocket.BACKPORTS: {
+                    "refresh_threshold": 5,
+                    "validity_period": 10,
+                }
+            }
+        self.assertTrue(distroseries.valid_until_config)
+
     def test_getExternalPackageSeries(self):
         # Test that we get the ExternalPackageSeries that belongs to the
         # distribution with the proper attributes

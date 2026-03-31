@@ -297,6 +297,7 @@ class DistroSeries(
             "advertise_by_hash": False,
             "strict_supported_component_dependencies": True,
             "publish_i18n_index": True,
+            "valid_until_config": {},
         }
 
     @property
@@ -1026,6 +1027,25 @@ class DistroSeries(
     def publish_i18n_index(self, value):
         assert isinstance(value, bool)
         self.publishing_options["publish_i18n_index"] = value
+
+    @property
+    def valid_until_config(self):
+        stored = self.publishing_options.get("valid_until_config", {})
+
+        return {
+            PackagePublishingPocket.items[key]: value
+            for key, value in stored.items()
+        }
+
+    @valid_until_config.setter
+    def valid_until_config(self, value):
+        if not value:
+            self.publishing_options["valid_until_config"] = {}
+            return
+
+        normalized = {pocket.name: config for pocket, config in value.items()}
+
+        self.publishing_options["valid_until_config"] = normalized
 
     def _customizeSearchParams(self, search_params):
         """Customize `search_params` for this distribution series."""

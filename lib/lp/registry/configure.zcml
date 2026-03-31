@@ -333,6 +333,7 @@
                 index_compressors
                 publish_by_hash
                 publish_i18n_index
+                valid_until_config
                 advertise_by_hash
                 strict_supported_component_dependencies
                 inherit_overrides_from_parents"/>

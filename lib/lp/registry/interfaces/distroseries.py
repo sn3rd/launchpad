@@ -37,13 +37,23 @@ from lazr.restful.declarations import (
 from lazr.restful.fields import CollectionField, Reference, ReferenceChoice
 from zope.component import getUtility
 from zope.interface import Attribute, Interface
-from zope.schema import Bool, Choice, Datetime, List, Object, TextLine
+from zope.schema import (
+    Bool,
+    Choice,
+    Datetime,
+    Dict,
+    Int,
+    List,
+    Object,
+    TextLine,
+)
 
 from lp import _
 from lp.app.interfaces.launchpad import IServiceUsage
 from lp.app.validators import LaunchpadValidationError
 from lp.app.validators.email import email_validator
 from lp.app.validators.name import name_validator
+from lp.app.validators.validation import validate_valid_until_config
 from lp.app.validators.version import sane_version
 from lp.blueprints.interfaces.specificationtarget import ISpecificationGoal
 from lp.bugs.interfaces.bugtarget import (
@@ -588,6 +598,56 @@ class IDistroSeriesPublic(
             description=_(
                 """
             Publish archive i18n/Index file, which is believed to be unused."""
+            ),
+        )
+    )
+
+    valid_until_config = exported(
+        Dict(
+            title=_("Valid-Until configuration"),
+            key_type=Choice(vocabulary=PackagePublishingPocket),
+            value_type=Dict(
+                key_type=TextLine(),
+                value_type=Int(min=1),
+                required=True,
+            ),
+            required=False,
+            constraint=validate_valid_until_config,
+            description=_(
+                """
+                Configuration for Valid-Until tags in Release files for main
+                archives.
+
+                Maps pockets to dicts with 'validity_period' and
+                'refresh_threshold' keys.
+
+                Each key must be one of:
+
+                - Release (can be specified only for unreleased series)
+                - Security
+                - Updates
+                - Proposed
+                - Backports
+
+                Each value must be a dict with two integer fields (both >= 1):
+
+                - refresh_threshold: Refresh when Valid-Until is within this
+                  many days (must be <= validity_period)
+                - validity_period: How many days the Release file remains valid
+
+                Example::
+
+                    {
+                      "SECURITY": {
+                        "refresh_threshold": 7,
+                        "validity_period": 14
+                      },
+                      "UPDATES": {
+                        "refresh_threshold": 5,
+                        "validity_period": 10
+                      }
+                    }
+                """
             ),
         )
     )

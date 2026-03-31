@@ -7,6 +7,7 @@ __all__ = [
     "validate_new_team_email",
     "validate_oci_branch_name",
     "validate_content_templates",
+    "validate_valid_until_config",
 ]
 
 import re
@@ -139,4 +140,75 @@ def validate_content_templates(value):
             raise ValueError(
                 f"The '{key}' dictionary must contain a 'default' key."
             )
+    return True
+
+
+def validate_valid_until_config(value):
+    """Validate valid_until_config dictionary structure.
+
+    Validates that each pocket's configuration contains exactly
+    'refresh_threshold' and 'validity_period' keys, and that
+    refresh_threshold <= validity_period.
+
+    Also validates that Release pocket configuration is only specified for
+    DistroSeries with SeriesStatus in EXPERIMENTAL or DEVELOPMENT.
+    """
+    # Avoid circular imports
+    from lp.registry.interfaces.pocket import PackagePublishingPocket
+    from lp.registry.model.distroseries import ACTIVE_UNRELEASED_STATUSES
+
+    if not value:
+        return True
+
+    errors = []
+
+    for pocket, config in value.items():
+        pocket_name = pocket.name
+
+        if pocket == PackagePublishingPocket.RELEASE:
+            distroseries = getUtility(ILaunchBag).distroseries
+            if distroseries.status not in ACTIVE_UNRELEASED_STATUSES:
+                allowed_statuses = ", ".join(
+                    status.name for status in ACTIVE_UNRELEASED_STATUSES
+                )
+                errors.append(
+                    f"Release pocket configuration can only be specified for "
+                    f"series with status: {allowed_statuses}. "
+                    f"Series ({distroseries.name}) has status "
+                    f"{distroseries.status.name}."
+                )
+                continue
+
+        expected_keys = {"refresh_threshold", "validity_period"}
+        actual_keys = set(config.keys())
+
+        if actual_keys != expected_keys:
+            extra_keys = actual_keys - expected_keys
+            missing_keys = expected_keys - actual_keys
+            error_parts = []
+            if extra_keys:
+                error_parts.append(f"unexpected keys: {sorted(extra_keys)}")
+            if missing_keys:
+                error_parts.append(f"missing keys: {sorted(missing_keys)}")
+            errors.append(
+                f"Invalid keys for pocket {pocket_name}: "
+                f"{', '.join(error_parts)}. "
+                f"Expected exactly 'refresh_threshold' and 'validity_period'."
+            )
+            continue
+
+        # Validate refresh_threshold <= validity_period
+        refresh_threshold = config["refresh_threshold"]
+        validity_period = config["validity_period"]
+
+        if refresh_threshold > validity_period:
+            errors.append(
+                f"refresh_threshold ({refresh_threshold}) must be <= "
+                f"validity_period ({validity_period}) for pocket "
+                f"{pocket_name}."
+            )
+
+    if errors:
+        raise LaunchpadValidationError(" ".join(errors))
+
     return True

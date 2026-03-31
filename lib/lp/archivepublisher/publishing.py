@@ -20,7 +20,7 @@ import shutil
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from itertools import chain, groupby
 from operator import attrgetter
@@ -53,7 +53,10 @@ from lp.archivepublisher.model.ftparchive import FTPArchiveHandler
 from lp.archivepublisher.utils import RepositoryIndexFile, get_ppa_reference
 from lp.registry.interfaces.pocket import PackagePublishingPocket, pocketsuffix
 from lp.registry.interfaces.series import SeriesStatus
-from lp.registry.model.distroseries import DistroSeries
+from lp.registry.model.distroseries import (
+    ACTIVE_RELEASED_STATUSES,
+    DistroSeries,
+)
 from lp.services.database.bulk import load
 from lp.services.database.constants import UTC_NOW
 from lp.services.database.interfaces import IStore
@@ -99,13 +102,6 @@ FORMAT_TO_SUBCOMPONENT = {
 
 # Number of days before unreferenced files are removed from by-hash.
 BY_HASH_STAY_OF_EXECUTION = 1
-
-# Pockets to set Valid-Until for
-VALID_UNTIL_POCKETS = [PackagePublishingPocket.SECURITY]
-# Time delta that Valid-Until must still be valid for
-VALID_UNTIL_REFRESH = timedelta(days=7)
-# Time delta to add to Valid-Until from current date
-VALID_UNTIL_ADD = timedelta(days=14)
 
 
 def reorder_components(components):
@@ -455,22 +451,57 @@ class Publisher:
         """True if a publication has happened in this release and pocket."""
         return distroseries.getSuite(pocket) in self.dirty_suites
 
-    def checkValidUntilNeedsRefresh(self, pocket, release_path):
+    def checkValidUntilNeedsRefresh(self, distroseries, pocket, release_path):
         """Check if this release file's Valid-Until has expired."""
-        if pocket not in VALID_UNTIL_POCKETS:
+
+        # we publish "Valid-until" flags only for the main archives
+        if not self.archive.is_main:
             return False
+
+        # RELEASE pocket should not have Valid-Until for stable series.
+        # While the validator prevents users from configuring this via the API,
+        # we perform this check as a safety measure against direct database
+        # modifications or internal code bypasses.
+        if (
+            pocket == PackagePublishingPocket.RELEASE
+            and distroseries.status in ACTIVE_RELEASED_STATUSES
+        ):
+            return False
+
         try:
             with open(release_path) as release_file:
                 release_data = Release(release_file)
         except FileNotFoundError:
             # Valid-Until is no reason to publish NEW Release files
             return False
+
+        if "Valid-Until" in release_data:
+            # Release file needs a refersh if Valid-Until was enabled
+            # previously, but has been disabled now.
+            if (
+                not distroseries.valid_until_config
+                or pocket not in distroseries.valid_until_config
+            ):
+                return True
+
+        # The configuration is unset, valid-until disabled completely
+        if not distroseries.valid_until_config:
+            return False
+
+        # check if the intended pockets are there
+        if pocket not in distroseries.valid_until_config:
+            return False
+
         if "Valid-Until" not in release_data:
             return True
+
         expiry = datetime.strptime(
             release_data["Valid-Until"], "%a, %d %b %Y %H:%M:%S UTC"
+        ).replace(tzinfo=timezone.utc)
+        pocket_config = distroseries.valid_until_config[pocket]
+        return expiry <= datetime.now(timezone.utc) + timedelta(
+            days=pocket_config["refresh_threshold"]
         )
-        return expiry <= datetime.utcnow() + VALID_UNTIL_REFRESH
 
     def markSuiteDirty(self, distroseries, pocket):
         """Mark a suite dirty only if it's allowed."""
@@ -1267,7 +1298,7 @@ class Publisher:
                         self.release_files_needed.add(suite)
 
                 needs_refresh = self.checkValidUntilNeedsRefresh(
-                    pocket, release_path
+                    distroseries, pocket, release_path
                 )
                 if needs_refresh:
                     self.log.debug(
@@ -1875,12 +1906,13 @@ class Publisher:
         release_file["Version"] = distroseries.version
         release_file["Codename"] = distroseries.name
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         release_file["Date"] = now.strftime("%a, %d %b %Y %k:%M:%S UTC")
-        if pocket in VALID_UNTIL_POCKETS:
-            release_file["Valid-Until"] = (now + VALID_UNTIL_ADD).strftime(
-                "%a, %d %b %Y %k:%M:%S UTC"
-            )
+        if self.archive.is_main and pocket in distroseries.valid_until_config:
+            pocket_config = distroseries.valid_until_config[pocket]
+            release_file["Valid-Until"] = (
+                now + timedelta(days=pocket_config["validity_period"])
+            ).strftime("%a, %d %b %Y %k:%M:%S UTC")
         release_file["Architectures"] = " ".join(sorted(all_architectures))
         release_file["Components"] = " ".join(
             reorder_components(all_components)
