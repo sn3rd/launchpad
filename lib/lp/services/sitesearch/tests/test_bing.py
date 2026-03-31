@@ -171,7 +171,6 @@ class TestBingSearchService(TestCase):
         with open(file_name) as response_file:
             response = json.loads(response_file.read())
         self.assertThat(response["webPages"]["value"], HasLength(2))
-
         matches = self.search_service._parse_search_response(response)
         self.assertThat(
             matches,
@@ -179,8 +178,7 @@ class TestBingSearchService(TestCase):
                 [
                     MatchesStructure.byEquality(
                         title="BugExpiry - Launchpad Help",
-                        url="https://documentation.ubuntu.com/launchpad/"
-                        "user/reference/bugs/bug-expiry/",
+                        url="http://example.net/bug-expiry",
                     ),
                 ]
             ),
