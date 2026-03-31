@@ -1665,7 +1665,7 @@ class Publisher:
                 suite,
             )
             result_hashes = list(executor.map(worker_func, file_list))
-        for filename, hashes in zip(file_list, result_hashes):
+        for hashes in result_hashes:
             if hashes is None:
                 continue
 
