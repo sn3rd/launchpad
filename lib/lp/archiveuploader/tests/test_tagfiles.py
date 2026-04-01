@@ -3,11 +3,16 @@
 # Copyright 2009-2018 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
+import os
 import unittest
 
 import apt_pkg
 
-from lp.archiveuploader.tagfiles import TagFileParseError, parse_tagfile
+from lp.archiveuploader.tagfiles import (
+    TagFileParseError,
+    parse_tagfile,
+    parse_tagfile_content,
+)
 from lp.archiveuploader.tests import datadir
 
 
@@ -71,6 +76,36 @@ class Testtagfiles(unittest.TestCase):
         self.assertRaises(KeyError, tf.__getitem__, "you")
         tf = parse_tagfile(datadir("changes-with-exploit-bottom"))
         self.assertRaises(KeyError, tf.__getitem__, "you")
+
+    def testParseCorruptedTagFiles(self):
+        """
+        parse_tagfile_content should raise TagFileParseError with
+        detailed information when parsing corrupted/random binary data.
+
+        We have seen instances where corrupted upload files in the queue
+        was causing segfaults while using apt_pkg for tagfile parsing.
+
+        The deb822 module, being implemented in Python, handles such faulty
+        uploads much more gracefully.
+        """
+
+        # Generate binary data that is guaranteed to be invalid:
+        # Mix random data with null bytes and invalid UTF-8 sequences
+        # to ensure it cannot be parsed as a valid tagfile
+        corrupted_data = (
+            b"\x00\xff\xfe"
+            + os.urandom(256)
+            + b"\x00" * 100
+            + b"\x80\x81\x82"  # Invalid UTF-8 sequences
+            + os.urandom(256)
+            + b"\xff\xff\x00\x00"
+        )
+
+        # ensure no segfaults
+        with self.assertRaises(TagFileParseError):
+            parse_tagfile_content(
+                corrupted_data, filename="test-corrupted.changes"
+            )
 
 
 class TestTagFileDebianPolicyCompat(unittest.TestCase):
