@@ -4161,6 +4161,35 @@ class TestSnapWebservice(TestCaseWithFactory):
         )
         self.assertEqual(400, response.status)
 
+    def test_new_with_build_path(self):
+        # Snap creation with build_path set works via the API.
+        snap = self.makeSnap(build_path="snap/dir")
+        self.assertEqual("snap/dir", snap["build_path"])
+
+    def test_build_path_default_none(self):
+        # build_path is None by default when creating a snap via the API.
+        snap = self.makeSnap()
+        self.assertIsNone(snap["build_path"])
+
+    def test_set_build_path(self):
+        # build_path can be set and cleared via the API.
+        snap = self.makeSnap()
+        self.assertIsNone(snap["build_path"])
+        response = self.webservice.patch(
+            snap["self_link"],
+            "application/json",
+            json.dumps({"build_path": "snap/dir"}),
+        )
+        self.assertEqual(209, response.status)
+        self.assertEqual("snap/dir", response.jsonBody()["build_path"])
+        response = self.webservice.patch(
+            snap["self_link"],
+            "application/json",
+            json.dumps({"build_path": None}),
+        )
+        self.assertEqual(209, response.status)
+        self.assertIsNone(response.jsonBody()["build_path"])
+
     def test_getByName(self):
         # lp.snaps.getByName returns a matching Snap.
         snap = self.makeSnap()

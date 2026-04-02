@@ -1908,15 +1908,16 @@ class SnapSet:
         if context is None:
             raise CannotFetchSnapcraftYaml("Snap source is not defined")
         try:
+            base_paths = (
+                "snap/snapcraft.yaml",
+                "build-aux/snap/snapcraft.yaml",
+                "snapcraft.yaml",
+                ".snapcraft.yaml",
+            )
             if build_path is not None:
-                paths = ("/".join((build_path, "snapcraft.yaml")),)
+                paths = tuple("/".join((build_path, p)) for p in base_paths)
             else:
-                paths = (
-                    "snap/snapcraft.yaml",
-                    "build-aux/snap/snapcraft.yaml",
-                    "snapcraft.yaml",
-                    ".snapcraft.yaml",
-                )
+                paths = base_paths
             for path in paths:
                 try:
                     blob = context.getBlob(path)

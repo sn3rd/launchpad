@@ -1043,6 +1043,38 @@ class TestSnapEditView(BaseTestSnapView):
             MatchesTagText(content, "store_upload"),
         )
 
+    def test_edit_snap_build_path(self):
+        # build_path can be set and cleared via the edit form.
+        snap = self.factory.makeSnap(
+            registrant=self.person,
+            owner=self.person,
+            distroseries=self.distroseries,
+            branch=self.factory.makeAnyBranch(),
+        )
+        browser = self.getViewBrowser(
+            snap, view_name="+edit", user=self.person
+        )
+        browser.getControl(name="field.build_path").value = "snap/dir"
+        browser.getControl("Update snap package").click()
+
+        content = find_main_content(browser.contents)
+        self.assertThat(
+            "Build path:\nsnap/dir\nEdit snap package",
+            MatchesTagText(content, "build_path"),
+        )
+        with person_logged_in(self.person):
+            self.assertEqual("snap/dir", snap.build_path)
+
+        # Clear the build path.
+        browser = self.getViewBrowser(
+            snap, view_name="+edit", user=self.person
+        )
+        browser.getControl(name="field.build_path").value = ""
+        browser.getControl("Update snap package").click()
+
+        with person_logged_in(self.person):
+            self.assertIsNone(snap.build_path)
+
     def test_edit_snap_built_for_older_store_series(self):
         distro_series = self.factory.makeUbuntuDistroSeries()
         with admin_logged_in():
