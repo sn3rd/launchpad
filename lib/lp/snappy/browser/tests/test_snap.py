@@ -535,6 +535,25 @@ class TestSnapAddView(BaseTestSnapView):
             MatchesTagText(content, "build_source_tarball"),
         )
 
+    def test_create_new_snap_build_path(self):
+        # We can create a new snap with a build path set.
+        self.useFixture(BranchHostingFixture(blob=b""))
+        branch = self.factory.makeAnyBranch()
+        browser = self.getViewBrowser(
+            branch, view_name="+new-snap", user=self.person
+        )
+        browser.getControl(name="field.name").value = "snap-name"
+        browser.getControl(name="field.build_path").value = "snap/dir"
+        browser.getControl("Create snap package").click()
+
+        content = find_main_content(browser.contents)
+        self.assertThat(
+            "Build path:\nsnap/dir\nEdit snap package",
+            MatchesTagText(content, "build_path"),
+        )
+        snap = getUtility(ISnapSet).getByName(self.person, "snap-name")
+        self.assertEqual("snap/dir", snap.build_path)
+
     def test_create_new_snap_auto_build(self):
         # Creating a new snap and asking for it to be automatically built
         # sets all the appropriate fields.
@@ -2286,6 +2305,19 @@ class TestSnapView(BaseTestSnapView):
         text = self.getMainText(snap)
         self.assertIn("Snap package information", text)
         self.assertNotIn("Distribution series:", text)
+
+    def test_index_build_path(self):
+        # The build path is shown when set.
+        snap = self.makeSnap(build_path="snap/dir")
+        text = self.getMainText(snap)
+        self.assertIn("Build path:", text)
+        self.assertIn("snap/dir", text)
+
+    def test_index_no_build_path(self):
+        # No build path line is shown when not set.
+        snap = self.makeSnap()
+        text = self.getMainText(snap)
+        self.assertNotIn("Build path:", text)
 
     def test_index_success_with_buildlog(self):
         # The build log is shown if it is there.

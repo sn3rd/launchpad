@@ -87,6 +87,7 @@ from lp.snappy.interfaces.snap import (
     ISnap,
     ISnapSet,
     ISnapView,
+    MissingSnapcraftYaml,
     NoSourceForSnap,
     SnapBuildAlreadyPending,
     SnapBuildDisallowedArchitecture,
@@ -3161,6 +3162,37 @@ class TestSnapSet(TestCaseWithFactory):
                 {"name": "test-snap"},
                 getUtility(ISnapSet).getSnapcraftYaml(snap),
             )
+
+    def test_getSnapcraftYaml_snap_build_path(self):
+        # When a snap has build_path set, getSnapcraftYaml looks for
+        # snapcraft.yaml at {build_path}/snapcraft.yaml.
+        def getBlob(path, filename, *args, **kwargs):
+            if filename == "mydir/snapcraft.yaml":
+                return b"name: test-snap"
+            else:
+                raise GitRepositoryBlobNotFound("dummy", filename)
+
+        self.useFixture(GitHostingFixture()).getBlob = getBlob
+        [git_ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=git_ref, build_path="mydir")
+        self.assertEqual(
+            {"name": "test-snap"}, getUtility(ISnapSet).getSnapcraftYaml(snap)
+        )
+
+    def test_getSnapcraftYaml_snap_build_path_missing(self):
+        # When a snap has build_path set but there is no snapcraft.yaml at
+        # that location, MissingSnapcraftYaml is raised.
+        def getBlob(path, filename, *args, **kwargs):
+            raise GitRepositoryBlobNotFound("dummy", filename)
+
+        self.useFixture(GitHostingFixture()).getBlob = getBlob
+        [git_ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=git_ref, build_path="mydir")
+        self.assertRaises(
+            MissingSnapcraftYaml,
+            getUtility(ISnapSet).getSnapcraftYaml,
+            snap,
+        )
 
     @responses.activate
     def test_getSnapcraftYaml_symlink_above_root(self):
