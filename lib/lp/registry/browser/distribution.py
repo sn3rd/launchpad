@@ -97,7 +97,7 @@ from lp.registry.browser.menu import (
 )
 from lp.registry.browser.objectreassignment import ObjectReassignmentView
 from lp.registry.browser.pillar import (
-    PillarBugsMenu,
+    BugTargetParentBugsMenu,
     PillarNavigationMixin,
     PillarViewMixin,
 )
@@ -674,7 +674,7 @@ class DistributionOverviewMenu(ApplicationMenu, DistributionLinksMixin):
         return Link("+configure-translations", text, summary, icon="edit")
 
 
-class DistributionBugsMenu(PillarBugsMenu):
+class DistributionBugsMenu(BugTargetParentBugsMenu):
     usedfor = IDistribution
     facet = "bugs"
 

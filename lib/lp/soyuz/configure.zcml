@@ -359,7 +359,8 @@
             interface="lp.soyuz.interfaces.archive.IArchiveSubscriberView"/>
         <require
             permission="launchpad.View"
-            interface="lp.soyuz.interfaces.archive.IArchiveView"/>
+            interface="lp.soyuz.interfaces.archive.IArchiveView"
+            attributes="official_bug_tags"/>
         <require
             permission="launchpad.Append"
             interface="lp.soyuz.interfaces.archive.IArchiveAppend"/>

@@ -137,7 +137,7 @@ from lp.registry.browser.menu import (
     RegistryCollectionActionMenuBase,
 )
 from lp.registry.browser.pillar import (
-    PillarBugsMenu,
+    BugTargetParentBugsMenu,
     PillarInvolvementView,
     PillarNavigationMixin,
     PillarViewMixin,
@@ -655,7 +655,7 @@ class ProductOverviewMenu(
         return Link("+download", text, icon="info")
 
 
-class ProductBugsMenu(PillarBugsMenu, ProductEditLinksMixin):
+class ProductBugsMenu(BugTargetParentBugsMenu, ProductEditLinksMixin):
     usedfor = IProduct
     facet = "bugs"
     configurable_bugtracker = True

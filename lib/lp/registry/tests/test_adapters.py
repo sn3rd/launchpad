@@ -3,16 +3,19 @@
 
 """Tests for adapters."""
 
+from lp.app.interfaces.launchpad import IServiceUsage
 from lp.registry.adapters import (
     distroseries_to_distribution,
     information_type_from_product,
     package_to_sourcepackagename,
     productseries_to_product,
+    sourcepackage_to_archive,
     sourcepackage_to_distribution,
 )
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.product import IProduct
 from lp.registry.interfaces.sourcepackagename import ISourcePackageName
+from lp.soyuz.interfaces.archive import IArchive
 from lp.testing import TestCaseWithFactory
 from lp.testing.layers import DatabaseFunctionalLayer
 
@@ -83,3 +86,19 @@ class TestAdapters(TestCaseWithFactory):
         product = information_type_from_product(milestone)
         self.assertTrue(IProduct.providedBy(product))
         self.assertEqual(product, milestone.product)
+
+    def test_sourcepackage_to_archive_asp(self):
+
+        asp = self.factory.makeArchiveSourcePackage()
+        archive = sourcepackage_to_archive(asp)
+        self.assertTrue(IArchive.providedBy(archive))
+        self.assertEqual(asp.archive, archive)
+        self.assertEqual(asp.archive, IServiceUsage(asp))
+
+    def test_sourcepackage_to_archive_asps(self):
+
+        asps = self.factory.makeArchiveSourcePackageSeries()
+        archive = sourcepackage_to_archive(asps)
+        self.assertTrue(IArchive.providedBy(archive))
+        self.assertEqual(asps.archive, archive)
+        self.assertEqual(asps.archive, IServiceUsage(asps))

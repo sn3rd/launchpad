@@ -230,11 +230,9 @@ class TestArchiveSourcePackageSeries(TestCaseWithFactory):
     def test_official_bug_tags(self):
         """Test official_bug_tags property"""
 
-        # Official bug tags aren't implemented yet due to Archive not having
-        # the bug tag mixin, so this should return None for now
         self.assertEqual(
             self.archivesourcepackageseries.official_bug_tags,
-            None,
+            self.archive.official_bug_tags,
         )
 
     def test_bug_target_parent(self):

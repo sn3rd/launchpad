@@ -660,6 +660,19 @@
         <allow
             interface="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackageView"/>
     </class>
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        provides="lp.services.webapp.interfaces.ILaunchpadContainer"
+        factory="lp.services.webapp.publisher.LaunchpadContainer"/>
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        provides="lp.app.interfaces.launchpad.IServiceUsage"
+        factory="lp.registry.adapters.sourcepackage_to_archive"
+        permission="zope.Public"/>
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archivesourcepackage.ArchiveSourcePackageBreadcrumb"/>
 
     <!-- ArchiveSourcePackageSeries -->
     <class
@@ -669,6 +682,15 @@
         <allow
             interface="lp.bugs.interfaces.bugtarget.ISeriesBugTarget"/>
     </class>
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        provides="lp.app.interfaces.launchpad.IServiceUsage"
+        factory="lp.registry.adapters.sourcepackage_to_archive"
+        permission="zope.Public"/>
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archivesourcepackageseries.ArchiveSourcePackageSeriesBreadcrumb"/>
 
     <!-- CommercialSubscription -->
 
