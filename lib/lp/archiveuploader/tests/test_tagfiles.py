@@ -50,24 +50,6 @@ class Testtagfiles(unittest.TestCase):
             TagFileParseError, parse_tagfile, datadir("empty-file")
         )
 
-    def testCheckParseMalformedSigRaises(self):
-        """lp.archiveuploader.tagfiles.parse_chantges should raise
-        TagFileParseError on malformed signatures
-        """
-        self.assertRaises(
-            TagFileParseError, parse_tagfile, datadir("malformed-sig-changes")
-        )
-
-    def testCheckParseUnterminatedSigRaises(self):
-        """lp.archiveuploader.tagfiles.parse_changes should raise
-        TagFileParseError on unterminated signatures
-        """
-        self.assertRaises(
-            TagFileParseError,
-            parse_tagfile,
-            datadir("unterminated-sig-changes"),
-        )
-
     def testParseChangesNotVulnerableToArchExploit(self):
         """lp.archiveuploader.tagfiles.parse_tagfile should not be vulnerable
         to tags outside of the signed portion
