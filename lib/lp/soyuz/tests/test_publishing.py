@@ -2688,3 +2688,120 @@ class TestGetRecentSourceUploads(TestCaseWithFactory):
         self.assertEqual(
             spphs[3].sourcepackagerelease.version, result[1]["version"]
         )
+
+
+class TestGetPocketCountsForDistro(TestCaseWithFactory):
+    """Tests for IPublishingSet.getPocketCountsForDistro."""
+
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.distribution = self.factory.makeDistribution()
+        self.distroseries = self.factory.makeDistroSeries(
+            distribution=self.distribution
+        )
+        self.other_distroseries = self.factory.makeDistroSeries(
+            distribution=self.distribution
+        )
+        self.publishing_set = getUtility(IPublishingSet)
+
+    def _makeSpph(self, **kwargs):
+        """Create an SPPH in the appropriate distro archive by default."""
+        distroseries = kwargs.setdefault("distroseries", self.distroseries)
+        kwargs.setdefault("pocket", PackagePublishingPocket.RELEASE)
+        kwargs.setdefault("status", PackagePublishingStatus.PUBLISHED)
+        if "archive" not in kwargs:
+            kwargs["archive"] = distroseries.main_archive
+        return self.factory.makeSourcePackagePublishingHistory(**kwargs)
+
+    def test_getPocketCountsForDistro_distribution(self):
+        self._makeSpph(pocket=PackagePublishingPocket.RELEASE)
+        self._makeSpph(pocket=PackagePublishingPocket.PROPOSED)
+        self._makeSpph(
+            distroseries=self.other_distroseries,
+            pocket=PackagePublishingPocket.PROPOSED,
+        )
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distribution
+        )
+        self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(2, counts.get(PackagePublishingPocket.PROPOSED, 0))
+
+    def test_getPocketCountsForDistro_distroseries(self):
+        self._makeSpph(pocket=PackagePublishingPocket.RELEASE)
+        self._makeSpph(pocket=PackagePublishingPocket.UPDATES)
+        self._makeSpph(
+            distroseries=self.other_distroseries,
+            pocket=PackagePublishingPocket.SECURITY,
+        )
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(1, counts.get(PackagePublishingPocket.UPDATES, 0))
+        self.assertNotIn(PackagePublishingPocket.SECURITY, counts)
+
+    def test_getPocketCountsForDistro_counts_all_pockets_across_statuses(self):
+        self._makeSpph(
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.PENDING,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.PROPOSED,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.UPDATES,
+            status=PackagePublishingStatus.SUPERSEDED,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.SECURITY,
+            status=PackagePublishingStatus.DELETED,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.BACKPORTS,
+            status=PackagePublishingStatus.OBSOLETE,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.PROPOSED,
+            status=PackagePublishingStatus.PENDING,
+        )
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(2, counts.get(PackagePublishingPocket.PROPOSED, 0))
+        self.assertEqual(1, counts.get(PackagePublishingPocket.UPDATES, 0))
+        self.assertEqual(1, counts.get(PackagePublishingPocket.SECURITY, 0))
+        self.assertEqual(1, counts.get(PackagePublishingPocket.BACKPORTS, 0))
+
+    def test_getPocketCountsForDistro_distro_archive_only(self):
+        self._makeSpph(pocket=PackagePublishingPocket.RELEASE)
+        ppa = self.factory.makeArchive(
+            distribution=self.distribution,
+            purpose=ArchivePurpose.PPA,
+        )
+        self._makeSpph(
+            archive=ppa,
+            pocket=PackagePublishingPocket.PROPOSED,
+        )
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertNotIn(PackagePublishingPocket.PROPOSED, counts)
+
+    def test_getPocketCountsForDistro_empty(self):
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual({}, counts)
+
+    def test_getPocketCountsForDistro_omits_zero_pockets(self):
+        self._makeSpph(pocket=PackagePublishingPocket.RELEASE)
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertNotIn(PackagePublishingPocket.PROPOSED, counts)
+        self.assertNotIn(PackagePublishingPocket.UPDATES, counts)

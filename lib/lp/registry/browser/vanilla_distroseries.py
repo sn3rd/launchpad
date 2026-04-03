@@ -196,9 +196,15 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         }
 
     @property
-    def binary_packages_summary_all_time(self):
-        """Return the packages build status summary of all time"""
+    def source_packages_summary_all_time(self):
+        """Return source package counts by status for all time."""
+        return getUtility(IPublishingSet).getPocketCountsForDistro(
+            self.context
+        )
 
+    @property
+    def binary_packages_summary_all_time(self):
+        """Return the packages build status summary of all time."""
         return getUtility(IBinaryPackageBuildSet).getCountsForDistro(
             self.context
         )
