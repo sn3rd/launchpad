@@ -2,6 +2,7 @@
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
 """BinaryPackageBuild interfaces."""
+from typing import Dict
 
 __all__ = [
     "BuildSetStatus",
@@ -479,7 +480,9 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         sourcepackagename matches (SQL LIKE).
         """
 
-    def getCountsForDistro(context, date_finished_since=None):
+    def getCountsForDistro(
+        context, date_finished_since=None
+    ) -> Dict[BuildStatus, int]:
         """Count builds grouped by status for a Distribution/DS/DAS.
 
         Returns a dict mapping `BuildStatus` values to their count.

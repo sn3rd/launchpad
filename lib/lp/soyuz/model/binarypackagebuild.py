@@ -1,6 +1,8 @@
 # Copyright 2009-2021 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
+from typing import Dict
+
 __all__ = [
     "BinaryPackageBuild",
     "BinaryPackageBuildSet",
@@ -1248,7 +1250,9 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
             DecoratedResultSet(result_set, result_decorator=itemgetter(0))
         )
 
-    def getCountsForDistro(self, context, date_finished_since=None):
+    def getCountsForDistro(
+        self, context, date_finished_since=None
+    ) -> Dict[BuildStatus, int]:
         """See `IBinaryPackageBuildSet`."""
         if IDistribution.providedBy(context):
             col = BinaryPackageBuild.distribution_id

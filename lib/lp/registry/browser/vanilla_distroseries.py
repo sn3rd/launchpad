@@ -195,6 +195,14 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             "failed_to_upload_packages_count": failed_to_upload,
         }
 
+    @property
+    def binary_packages_summary_all_time(self):
+        """Return the packages build status summary of all time"""
+
+        return getUtility(IBinaryPackageBuildSet).getCountsForDistro(
+            self.context
+        )
+
     def _build_packages_list_data(
         self, creator=None, empty_message="No recent package uploads found."
     ):

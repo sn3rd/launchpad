@@ -9,7 +9,12 @@
     </div>
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
          tal:condition="python:view.packages_chart_tabs.active == 'binary'">
-      <p class="u-text--muted">Package chart binary placeholder</p>
+      <ul tal:repeat="item python:view.binary_packages_summary_all_time.items()">
+        <li>
+          <span tal:content="python:item[0].title">Building</span>
+          <span tal:content="python:item[1]">1234</span>
+        </li>
+      </ul>
     </div>
   </div>
 </tal:root>
