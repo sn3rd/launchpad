@@ -49,7 +49,7 @@ Changes:
  etherwake (1.05-4) unstable; urgency=low
  .
    * Removed more typos in description. (Again thanks to Carlos Valdivia
-     Yagï¿½e)
+     Yagüe)
  .
  etherwake (1.05-3) unstable; urgency=low
  .
@@ -61,7 +61,7 @@ Changes:
      Debian package.
    * Fixed issues with new libc. The old sys/socket.h did not include
      bits/uio.h, which it does now. This unfortunately causes that
-     ether-wake wasnï¿½t build anymore. I just commented specific part as
+     ether-wake wasn´t build anymore. I just commented specific part as
      a quick fix for now. It seems that everything works even with the old
      libc, closes #87014.
  .

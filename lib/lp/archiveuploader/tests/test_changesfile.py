@@ -507,8 +507,8 @@ class TestSignatureVerification(TestCase):
         self.assertNotIn("evil", changesfile.changes_comment)
 
     def test_malformed_changes(self):
-        # A signed changes file with an unsigned prefix has only the
-        # signed part parsed.
+        # A signed changes file with corrupted signature
+        # should be rejected.
         path = datadir("signatures/malformed-sig.changes")
         changesfile = ChangesFile(path, InsecureUploadPolicy(), BufferLogger())
         errors = list(changesfile.parseChanges())
@@ -516,8 +516,8 @@ class TestSignatureVerification(TestCase):
         self.assertEqual(1, len(errors))
 
     def test_unterminate_sig_changes(self):
-        # A signed changes file with an unsigned prefix has only the
-        # signed part parsed.
+        # Incomplete PGP sign headers in a signed changes files gets
+        # rejected.
         path = datadir("signatures/unterminated-sig.changes")
         changesfile = ChangesFile(path, InsecureUploadPolicy(), BufferLogger())
         errors = list(changesfile.parseChanges())
