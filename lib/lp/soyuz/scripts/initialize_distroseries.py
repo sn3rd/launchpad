@@ -910,7 +910,7 @@ class InitializeDistroSeries:
         for old_series_ps, new_series_ps in parent_to_child.items():
             old_series_sets = old_series_ps.setsIncluded(direct_inclusion=True)
             for old_series_child in old_series_sets:
-                new_series_ps.add(parent_to_child[old_series_child])
+                new_series_ps.add((parent_to_child[old_series_child],))
             new_series_ps.add(
                 old_series_ps.sourcesIncluded(direct_inclusion=True)
             )
