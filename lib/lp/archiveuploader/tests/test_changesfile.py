@@ -5,7 +5,6 @@
 
 import os
 
-import six
 from debian.deb822 import Changes
 from testtools.matchers import Equals, MatchesDict, MatchesStructure
 from zope.component import getUtility
@@ -461,7 +460,7 @@ class TestSignatureVerification(TestCase):
         )
         expected = "\\AFormat: 1.7\n.*foo_1.0-1.diff.gz\\Z"
         self.assertTextMatchesExpressionIgnoreWhitespace(
-            expected, six.ensure_text(changesfile.parsed_content)
+            expected, changesfile.parsed_content.decode()
         )
 
     def test_valid_signature_accepted_with_non_standard_armor_header(self):
@@ -478,7 +477,7 @@ class TestSignatureVerification(TestCase):
             "\\AFormat: 1.7\n.*abiword-plugins-gnome_2.0.10-1.2_mips.deb\\Z"
         )
         self.assertTextMatchesExpressionIgnoreWhitespace(
-            expected, six.ensure_text(changesfile.parsed_content)
+            expected, changesfile.parsed_content.decode()
         )
 
     def test_no_signature_rejected(self):
@@ -501,7 +500,7 @@ class TestSignatureVerification(TestCase):
         )
         expected = "\\AFormat: 1.7\n.*foo_1.0-1.diff.gz\\Z"
         self.assertTextMatchesExpressionIgnoreWhitespace(
-            expected, six.ensure_text(changesfile.parsed_content)
+            expected, changesfile.parsed_content.decode()
         )
         self.assertEqual("breezy", changesfile.suite_name)
         self.assertNotIn("evil", changesfile.changes_comment)
