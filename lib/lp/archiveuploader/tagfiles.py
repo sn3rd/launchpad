@@ -37,6 +37,10 @@ def parse_tagfile_content(
     with tempfile.TemporaryFile() as f:
         f.write(strip_pgp_signature(content))
         f.seek(0)
+        # XXX tushar5526 2026-04-06: deb822 can use apt_pkg as its parsing
+        # backend. The segfault bug does not exist in the Noble libapt-pkg
+        # library, so ensure "use_apt_pkg=True" is passed once we migrate to
+        # Noble.
         try:
             stanzas = list(deb822.Deb822.iter_paragraphs(f))
         except Exception as e:
