@@ -3,16 +3,11 @@
 # Copyright 2009-2018 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
-import os
 import unittest
 
 import apt_pkg
 
-from lp.archiveuploader.tagfiles import (
-    TagFileParseError,
-    parse_tagfile,
-    parse_tagfile_content,
-)
+from lp.archiveuploader.tagfiles import TagFileParseError, parse_tagfile
 from lp.archiveuploader.tests import datadir
 
 
@@ -71,23 +66,8 @@ class Testtagfiles(unittest.TestCase):
         uploads much more gracefully.
         """
 
-        # Generate binary data that is guaranteed to be invalid:
-        # Mix random data with null bytes and invalid UTF-8 sequences
-        # to ensure it cannot be parsed as a valid tagfile
-        corrupted_data = (
-            b"\x00\xff\xfe"
-            + os.urandom(256)
-            + b"\x00" * 100
-            + b"\x80\x81\x82"  # Invalid UTF-8 sequences
-            + os.urandom(256)
-            + b"\xff\xff\x00\x00"
-        )
-
-        # ensure no segfaults
         with self.assertRaises(TagFileParseError):
-            parse_tagfile_content(
-                corrupted_data, filename="test-corrupted.changes"
-            )
+            parse_tagfile(datadir("corrupted-upload-file"))
 
 
 class TestTagFileDebianPolicyCompat(unittest.TestCase):
