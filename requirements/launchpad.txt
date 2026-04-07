@@ -119,7 +119,7 @@ oslo.config==7.0.0
 oslo.i18n==3.25.1
 oslo.serialization==2.29.3
 oslo.utils==3.42.1
-packaging==26.0
+packaging==24.2
 paramiko==2.4.1
 parso==0.7.1
 Paste==3.5.2
@@ -162,7 +162,7 @@ python-subunit==1.4.4
 python-swiftclient==4.6.0
 PyYAML==6.0.2
 rabbitfixture==0.5.3
-requests==2.32.4
+requests==2.32.3
 requests-file==1.4.3
 requests-toolbelt==0.9.1
 responses==0.17.0
@@ -210,7 +210,7 @@ wcwidth==0.2.6
 webencodings==0.5.1
 WebOb==1.8.9
 WebTest==2.0.35
-Werkzeug==3.0.6
+Werkzeug==1.0.1
 wheel-filename==1.1.0
 wrapt==1.12.1
 wsgi-intercept==1.9.2
