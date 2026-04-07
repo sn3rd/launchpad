@@ -46,4 +46,20 @@ class TestPathDoesNotEscape(TestCase):
         )
 
     def test_just_target(self):
-        self.assertTrue(path_does_not_escape("/target"))
+        # /target is an absolute path and must be rejected.  Previously this
+        # passed because it happened to equal the fake base path used
+        # internally, but that was a false negative.
+        self.assertRaises(
+            LaunchpadValidationError, path_does_not_escape, "/target"
+        )
+
+    def test_absolute_path_starting_with_target(self):
+        # An absolute path that starts with the fake base path string used
+        # internally (/target) must be rejected.  Previously os.path.join
+        # silently discarded the base for absolute inputs, making the
+        # commonprefix check pass incorrectly.
+        self.assertRaises(
+            LaunchpadValidationError,
+            path_does_not_escape,
+            "/target/foo",
+        )

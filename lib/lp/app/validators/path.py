@@ -16,6 +16,11 @@ def path_does_not_escape(path):
     This is only intended as a first defence, usage of this will also
     require checking for filesystem escapes (symlinks, etc).
     """
+    # os.path.join silently discards the base when the second argument is
+    # absolute, so an absolute path like /target/foo would bypass the
+    # commonprefix check below.  Reject absolute paths up front.
+    if os.path.isabs(path):
+        raise LaunchpadValidationError("Path must be relative")
     # We're not working with complete paths, so we need to make them so
     fake_base_path = "/target"
     # Ensure that we start with a common base
