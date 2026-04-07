@@ -647,7 +647,7 @@ class Dominator:
 
         for pub_record in source_list:
             # Has unremoved binaries and no published SPPH for the
-            # same SPR — leave it for consideration next time.
+            # same SPR
             if (
                 pub_record.id in source_ids_with_active_binaries
                 and pub_record.id not in source_ids_with_published_sibling

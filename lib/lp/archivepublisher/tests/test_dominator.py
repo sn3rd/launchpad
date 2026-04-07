@@ -193,6 +193,37 @@ class TestDominator(TestNativePublishingBase):
             PackagePublishingStatus.SUPERSEDED,
         )
 
+    def test_judge_death_rows_superseded_source_with_published_replacement(
+        self,
+    ):
+        """A superseded source is death-rowed when a PUBLISHED replacement
+        for the same SPR exists.
+
+        A package moved between components leaves a SUPERSEDED SPPH with
+        unremoved binaries alongside a new PUBLISHED SPPH for the same
+        SourcePackageRelease.  _judgeSuperseded must schedule the superseded
+        publication for deletion rather than skipping it.
+        """
+        spph = self.getPubSource(status=PackagePublishingStatus.PUBLISHED)
+        self.getPubBinaries(
+            pub_source=spph, status=PackagePublishingStatus.PUBLISHED
+        )
+        # The original publication is SUPERSEDED but not yet death-rowed,
+        # while a replacement PUBLISHED publication for the same SPR exists
+        removeSecurityProxy(spph).status = PackagePublishingStatus.SUPERSEDED
+        self.factory.makeSourcePackagePublishingHistory(
+            sourcepackagerelease=spph.sourcepackagerelease,
+            distroseries=spph.distroseries,
+            pocket=spph.pocket,
+            archive=spph.archive,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        dominator = Dominator(self.logger, spph.archive)
+        dominator.judge(spph.distroseries, spph.pocket)
+
+        self.assertIsNotNone(spph.scheduleddeletiondate)
+
     def test_dominateBinaries_rejects_empty_publication_list(self):
         """Domination asserts for non-empty input list."""
         with lp_dbuser():
