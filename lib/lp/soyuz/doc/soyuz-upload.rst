@@ -90,6 +90,11 @@ been uploaded over FTP.
     ...     uploads.append(send_filepaths)
     ...     seq += 1
     ...
+    WARNING:debian.deb822:decoding from utf-8 failed; attempting to detect the
+    true encoding
+
+This warning is expected because the etherwake file contains non-UTF-8
+characters (Yagüe) and debian.deb822 detects the encoding automatically.
 
 Check that what we've just uploaded (everything in test_files_dir) is
 what we were expecting to have uploaded.

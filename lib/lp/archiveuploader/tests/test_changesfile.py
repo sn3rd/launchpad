@@ -5,7 +5,6 @@
 
 import os
 
-import six
 from debian.deb822 import Changes
 from testtools.matchers import Equals, MatchesDict, MatchesStructure
 from zope.component import getUtility
@@ -461,7 +460,24 @@ class TestSignatureVerification(TestCase):
         )
         expected = "\\AFormat: 1.7\n.*foo_1.0-1.diff.gz\\Z"
         self.assertTextMatchesExpressionIgnoreWhitespace(
-            expected, six.ensure_text(changesfile.parsed_content)
+            expected, changesfile.parsed_content.decode()
+        )
+
+    def test_valid_signature_accepted_with_non_standard_armor_header(self):
+        # A correctly signed changes file is accepted, and all its
+        # content is parsed.
+        path = datadir("signatures/non-standard-armor-header-signed.changes")
+        changesfile = ChangesFile(path, InsecureUploadPolicy(), BufferLogger())
+        self.assertEqual([], list(changesfile.parseChanges()))
+        self.assertEqual(
+            getUtility(IPersonSet).getByEmail("foo.bar@canonical.com"),
+            changesfile.signer,
+        )
+        expected = (
+            "\\AFormat: 1.7\n.*abiword-plugins-gnome_2.0.10-1.2_mips.deb\\Z"
+        )
+        self.assertTextMatchesExpressionIgnoreWhitespace(
+            expected, changesfile.parsed_content.decode()
         )
 
     def test_no_signature_rejected(self):
@@ -484,7 +500,25 @@ class TestSignatureVerification(TestCase):
         )
         expected = "\\AFormat: 1.7\n.*foo_1.0-1.diff.gz\\Z"
         self.assertTextMatchesExpressionIgnoreWhitespace(
-            expected, six.ensure_text(changesfile.parsed_content)
+            expected, changesfile.parsed_content.decode()
         )
         self.assertEqual("breezy", changesfile.suite_name)
         self.assertNotIn("evil", changesfile.changes_comment)
+
+    def test_malformed_changes(self):
+        # A signed changes file with corrupted signature
+        # should be rejected.
+        path = datadir("signatures/malformed-sig.changes")
+        changesfile = ChangesFile(path, InsecureUploadPolicy(), BufferLogger())
+        errors = list(changesfile.parseChanges())
+        self.assertIsInstance(errors[0], UploadError)
+        self.assertEqual(1, len(errors))
+
+    def test_unterminate_sig_changes(self):
+        # Incomplete PGP sign headers in a signed changes files gets
+        # rejected.
+        path = datadir("signatures/unterminated-sig.changes")
+        changesfile = ChangesFile(path, InsecureUploadPolicy(), BufferLogger())
+        errors = list(changesfile.parseChanges())
+        self.assertIsInstance(errors[0], UploadError)
+        self.assertEqual(1, len(errors))

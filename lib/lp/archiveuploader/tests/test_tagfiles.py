@@ -45,24 +45,6 @@ class Testtagfiles(unittest.TestCase):
             TagFileParseError, parse_tagfile, datadir("empty-file")
         )
 
-    def testCheckParseMalformedSigRaises(self):
-        """lp.archiveuploader.tagfiles.parse_chantges should raise
-        TagFileParseError on malformed signatures
-        """
-        self.assertRaises(
-            TagFileParseError, parse_tagfile, datadir("malformed-sig-changes")
-        )
-
-    def testCheckParseUnterminatedSigRaises(self):
-        """lp.archiveuploader.tagfiles.parse_changes should raise
-        TagFileParseError on unterminated signatures
-        """
-        self.assertRaises(
-            TagFileParseError,
-            parse_tagfile,
-            datadir("unterminated-sig-changes"),
-        )
-
     def testParseChangesNotVulnerableToArchExploit(self):
         """lp.archiveuploader.tagfiles.parse_tagfile should not be vulnerable
         to tags outside of the signed portion
@@ -71,6 +53,21 @@ class Testtagfiles(unittest.TestCase):
         self.assertRaises(KeyError, tf.__getitem__, "you")
         tf = parse_tagfile(datadir("changes-with-exploit-bottom"))
         self.assertRaises(KeyError, tf.__getitem__, "you")
+
+    def testParseCorruptedTagFiles(self):
+        """
+        parse_tagfile_content should raise TagFileParseError with
+        detailed information when parsing corrupted/random binary data.
+
+        We have seen instances where corrupted upload files in the queue
+        was causing segfaults while using apt_pkg for tagfile parsing.
+
+        The deb822 module, being implemented in Python, handles such faulty
+        uploads much more gracefully.
+        """
+
+        with self.assertRaises(TagFileParseError):
+            parse_tagfile(datadir("corrupted-upload-file"))
 
 
 class TestTagFileDebianPolicyCompat(unittest.TestCase):
