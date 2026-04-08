@@ -18,3 +18,5 @@ enable-cron:
       description: The name of the cron job to enable.
 enable-cron-all:
   description: Enable all cron jobs in this Launchpad environment.
+get-current-config:
+  description: Display the current cron control configuration.
