@@ -6,6 +6,7 @@
 __all__ = [
     "PublishDistro",
     "ARCHIVEPUBLISHER_HISTORY_ENABLED",
+    "PUBLISHER_DIRECT_INDEXES",
 ]
 
 import os
@@ -62,6 +63,7 @@ from lp.soyuz.enums import (
 from lp.soyuz.interfaces.archive import MAIN_ARCHIVE_PURPOSES, IArchiveSet
 
 ARCHIVEPUBLISHER_HISTORY_ENABLED = "archivepublisher.history.enabled"
+PUBLISHER_DIRECT_INDEXES = "archivepublisher.direct_indexes.enabled"
 
 
 def is_ppa_private(ppa):
@@ -559,7 +561,10 @@ class PublishDistro(PublisherScript):
                     ArchivePurpose.PRIMARY,
                     ArchivePurpose.COPY,
                 ):
-                    publisher.C_doFTPArchive(careful_indexing)
+                    if getFeatureFlag(PUBLISHER_DIRECT_INDEXES):
+                        publisher.C_doDirectIndexes(careful_indexing)
+                    else:
+                        publisher.C_doFTPArchive(careful_indexing)
                 else:
                     publisher.C_writeIndexes(careful_indexing)
             elif publishing_method == ArchivePublishingMethod.ARTIFACTORY:
