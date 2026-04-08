@@ -13,11 +13,24 @@ from lp.archivepublisher.indices import (
     IndexStanzaFields,
     build_binary_stanza_fields,
     build_source_stanza_fields,
+    generate_packages_index,
+    generate_sources_index,
+    read_extra_overrides,
+)
+from lp.services.database.interfaces import IStore
+from lp.soyuz.enums import (
+    BinaryPackageFormat,
+    PackagePublishingPriority,
+    PackagePublishingStatus,
+)
+from lp.soyuz.model.publishing import (
+    BinaryPackagePublishingHistory,
+    SourcePackagePublishingHistory,
 )
 from lp.soyuz.tests.test_publishing import TestNativePublishingBase
 
 
-def build_bpph_stanza(bpph):
+def build_bpph_stanza(bpph, include_sha512=False):
     return build_binary_stanza_fields(
         bpph.binarypackagerelease,
         bpph.component,
@@ -25,12 +38,16 @@ def build_bpph_stanza(bpph):
         bpph.priority,
         bpph.phased_update_percentage,
         False,
+        include_sha512=include_sha512,
     )
 
 
-def build_spph_stanza(spph):
+def build_spph_stanza(spph, include_sha512=False):
     return build_source_stanza_fields(
-        spph.sourcepackagerelease, spph.component, spph.section
+        spph.sourcepackagerelease,
+        spph.component,
+        spph.section,
+        include_sha512=include_sha512,
     )
 
 
@@ -625,3 +642,516 @@ class TestIndexStanzaFieldsHelper(unittest.TestCase):
             ],
             fields.makeOutput().splitlines(),
         )
+
+
+class TestDirectSourcesIndex(TestNativePublishingBase):
+    """Tests for SQL-based direct Sources index generation."""
+
+    def _generate(self, pub_source, overrides=None):
+        """Helper to call generate_sources_index for a given SPPH."""
+        store = IStore(SourcePackagePublishingHistory)
+        return generate_sources_index(
+            store,
+            pub_source.archive_id,
+            pub_source.distroseries_id,
+            pub_source.pocket.value,
+            pub_source.component_id,
+            overrides=overrides,
+        )
+
+    def _expected_with_priority(self, pub_source, priority="extra"):
+        """Build expected output from ORM path with Priority inserted.
+
+        The ORM path (build_source_stanza_fields) does not emit Priority
+        because PPAs don't use it.
+        """
+        lines = (
+            build_spph_stanza(pub_source, include_sha512=True)
+            .makeOutput()
+            .splitlines()
+        )
+        for i, line in enumerate(lines):
+            if line.startswith("Section:"):
+                lines.insert(i, "Priority: %s" % priority)
+                break
+        return "\n".join(lines) + "\n\n"
+
+    def test_matches_stanza_builder(self):
+        """Direct SQL output matches the existing stanza builder."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+            builddepends="fooish",
+            builddependsindep="pyfoo",
+            build_conflicts="bar",
+            build_conflicts_indep="pybar",
+            user_defined_fields=[
+                ("Build-Depends-Arch", "libfoo-dev"),
+                ("Build-Conflicts-Arch", "libbar-dev"),
+            ],
+        )
+
+        content = self._generate(pub_source)
+        expected = self._expected_with_priority(pub_source)
+        self.assertEqual(expected, content.decode("utf-8"))
+
+    def test_custom_fields(self):
+        """User-defined fields are included and deduplicated."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+            builddepends="fooish",
+            builddependsindep="pyfoo",
+            build_conflicts="bar",
+            build_conflicts_indep="pybar",
+            user_defined_fields=[
+                ("Python-Version", "< 1.5"),
+                ("CHECKSUMS-SHA1", "BLAH"),
+                ("Build-Depends-Arch", "libfoo-dev"),
+                ("Build-Conflicts-Arch", "libbar-dev"),
+            ],
+        )
+
+        content = self._generate(pub_source)
+        expected = self._expected_with_priority(pub_source)
+        self.assertEqual(expected, content.decode("utf-8"))
+
+    def test_empty_index(self):
+        """An empty archive produces empty output."""
+        self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        store = IStore(SourcePackagePublishingHistory)
+        content = generate_sources_index(store, -1, 1, 0, 1)
+        self.assertEqual(b"", content)
+
+    def test_multiple_packages_ordered(self):
+        """Multiple packages appear in name order."""
+        pub_a = self.getPubSource(
+            sourcename="aaa-pkg",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubSource(
+            sourcename="zzz-pkg",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubSource(
+            sourcename="mmm-pkg",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        content = self._generate(pub_a)
+        stanzas = content.decode("utf-8").strip().split("\n\n")
+        names = []
+        for stanza in stanzas:
+            for line in stanza.splitlines():
+                if line.startswith("Package:"):
+                    names.append(line.split(": ", 1)[1])
+                    break
+        self.assertEqual(["aaa-pkg", "mmm-pkg", "zzz-pkg"], names)
+
+    def test_only_published_status(self):
+        """Only PUBLISHED packages are included."""
+        self.getPubSource(
+            sourcename="pending-pkg",
+            status=PackagePublishingStatus.PENDING,
+        )
+        pub_published = self.getPubSource(
+            sourcename="published-pkg",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        content = self._generate(pub_published)
+        decoded = content.decode("utf-8")
+        self.assertIn("Package: published-pkg", decoded)
+        self.assertNotIn("Package: pending-pkg", decoded)
+
+    def test_lib_prefix_poolification(self):
+        """Source names starting with 'lib' use 4-char pool prefix."""
+        pub_source = self.getPubSource(
+            sourcename="libfoo",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        content = self._generate(pub_source)
+        self.assertIn(b"Directory: pool/main/libf/libfoo", content)
+
+    def test_homepage(self):
+        """Homepage field is included when present."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pub_source.sourcepackagerelease.homepage = "https://example.com"
+        self.layer.commit()
+
+        content = self._generate(pub_source)
+        expected = self._expected_with_priority(pub_source)
+        self.assertEqual(expected, content.decode("utf-8"))
+
+    def test_priority_from_binaries(self):
+        """Priority is derived from the highest-priority published binary."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubBinaries(
+            pub_source=pub_source,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        content = self._generate(pub_source)
+        # getPubBinaries defaults to STANDARD priority.
+        self.assertIn(b"Priority: standard", content)
+
+    def test_priority_uses_highest(self):
+        """When multiple binaries exist, the highest priority wins."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs = self.getPubBinaries(
+            pub_source=pub_source,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs[0].priority = PackagePublishingPriority.IMPORTANT
+        self.layer.commit()
+
+        content = self._generate(pub_source)
+        self.assertIn(b"Priority: important", content)
+
+    def test_priority_default_no_binaries(self):
+        """Without published binaries, Priority defaults to extra."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        content = self._generate(pub_source)
+        self.assertIn(b"Priority: extra", content)
+
+    def test_extra_overrides_applied(self):
+        """Extra override fields are appended to the matching stanza."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        package_name = pub_source.sourcepackagerelease.sourcepackagename.name
+        overrides = {package_name: {"Task": "ubuntu-desktop"}}
+
+        content = self._generate(pub_source, overrides=overrides)
+        self.assertIn(b"Task: ubuntu-desktop", content)
+
+    def test_extra_overrides_no_duplicate(self):
+        """Override headers already in the stanza are not duplicated."""
+        pub_source = self.getPubSource(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        package_name = pub_source.sourcepackagerelease.sourcepackagename.name
+        # "Package" is always present; an attempt to override it must be
+        # silently ignored by IndexStanzaFields.
+        overrides = {package_name: {"Package": "should-not-replace"}}
+
+        content = self._generate(pub_source, overrides=overrides)
+        decoded = content.decode("utf-8")
+        self.assertEqual(1, decoded.count("Package:"))
+        self.assertIn("Package: %s" % package_name, decoded)
+
+
+class TestDirectPackagesIndex(TestNativePublishingBase):
+    """Tests for SQL-based direct Packages index generation."""
+
+    def _generate(
+        self, bpph, separate_long_descriptions=False, overrides=None
+    ):
+        """Helper to call generate_packages_index for a given BPPH."""
+        store = IStore(BinaryPackagePublishingHistory)
+        arch = bpph.distroarchseries
+        packages_bytes, translations_bytes = generate_packages_index(
+            store,
+            bpph.archive_id,
+            arch.distroseries.id,
+            bpph.pocket.value,
+            bpph.component_id,
+            arch.id,
+            arch.architecturetag,
+            arch.underlying_architecturetag,
+            separate_long_descriptions,
+            overrides=overrides,
+        )
+        return packages_bytes, translations_bytes
+
+    def test_matches_stanza_builder(self):
+        """Direct SQL output matches the existing ORM stanza builder
+        (plus SHA512 and Homepage which the ORM path omits)."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        bpph = pubs[0]
+
+        packages_bytes, _ = self._generate(bpph)
+        expected = (
+            build_bpph_stanza(bpph, include_sha512=True).makeOutput() + "\n\n"
+        )
+        self.assertEqual(expected, packages_bytes.decode("utf-8"))
+
+    def test_empty_index(self):
+        """An empty archive produces empty output."""
+        store = IStore(BinaryPackagePublishingHistory)
+        packages_bytes, translations_bytes = generate_packages_index(
+            store,
+            -1,
+            1,
+            0,
+            1,
+            1,
+            "i386",
+            None,
+        )
+        self.assertEqual(b"", packages_bytes)
+        self.assertEqual(b"", translations_bytes)
+
+    def test_multiple_packages_ordered(self):
+        """Multiple packages appear in name order."""
+        pub_a = self.getPubBinaries(
+            binaryname="aaa-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubBinaries(
+            binaryname="zzz-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubBinaries(
+            binaryname="mmm-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pub_a[0])
+        stanzas = packages_bytes.decode("utf-8").strip().split("\n\n")
+        names = []
+        for stanza in stanzas:
+            for line in stanza.splitlines():
+                if line.startswith("Package:"):
+                    names.append(line.split(": ", 1)[1])
+                    break
+        self.assertEqual(["aaa-bin", "mmm-bin", "zzz-bin"], names)
+
+    def test_only_published_status(self):
+        """Only PUBLISHED packages are included."""
+        self.getPubBinaries(
+            binaryname="pending-bin",
+            status=PackagePublishingStatus.PENDING,
+        )
+        pub_published = self.getPubBinaries(
+            binaryname="published-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pub_published[0])
+        decoded = packages_bytes.decode("utf-8")
+        self.assertIn("Package: published-bin", decoded)
+        self.assertNotIn("Package: pending-bin", decoded)
+
+    def test_priority_field(self):
+        """Priority is included and maps correctly."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        # Default priority is STANDARD
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Priority: standard", packages_bytes)
+
+    def test_priority_optional(self):
+        """Priority correctly maps OPTIONAL."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs[0].priority = PackagePublishingPriority.OPTIONAL
+        self.layer.commit()
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Priority: optional", packages_bytes)
+
+    def test_source_field_same_name_version(self):
+        """Source field is omitted when package and
+        source have same name/version."""
+        pubs = self.getPubBinaries(
+            binaryname="foo-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        packages_bytes, _ = self._generate(pubs[0])
+        decoded = packages_bytes.decode("utf-8")
+        # Source name is 'foo' (derived from 'foo-bin' split on '-'),
+        # but binary name is 'foo-bin', so Source field should be present.
+        self.assertIn("Source: foo", decoded)
+
+    def test_essential_field(self):
+        """Essential field is set to 'yes' when bpr.essential is True."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        bpr = pubs[0].binarypackagerelease
+        bpr.essential = True
+        self.layer.commit()
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Essential: yes", packages_bytes)
+
+    def test_filename_poolified(self):
+        """Filename uses correct pool path."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Filename: pool/main/f/foo/", packages_bytes)
+
+    def test_lib_prefix_poolification(self):
+        """Source names starting with 'lib' use 4-char pool prefix."""
+        pubs = self.getPubBinaries(
+            binaryname="libfoo-bin",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Filename: pool/main/libf/libfoo/", packages_bytes)
+
+    def test_homepage_field(self):
+        """Homepage field is included when set on BPR."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        bpr = pubs[0].binarypackagerelease
+        bpr.homepage = "https://example.com"
+        self.layer.commit()
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Homepage: https://example.com", packages_bytes)
+
+    def test_user_defined_fields(self):
+        """User defined fields are included."""
+        pubs = self.getPubBinaries(
+            user_defined_fields=[("Multi-Arch", "same")],
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"Multi-Arch: same", packages_bytes)
+
+    def test_sha512_included(self):
+        """SHA512 hash is included in the output."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+
+        packages_bytes, _ = self._generate(pubs[0])
+        self.assertIn(b"SHA512:", packages_bytes)
+
+    def test_extra_overrides_applied(self):
+        """Extra override fields are appended to the matching stanza."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        bpph = pubs[0]
+        package_name = bpph.binarypackagerelease.binarypackagename.name
+        overrides = {package_name: {"Task": "ubuntu-desktop"}}
+
+        packages_bytes, _ = self._generate(bpph, overrides=overrides)
+        self.assertIn(b"Task: ubuntu-desktop", packages_bytes)
+
+    def test_extra_overrides_no_duplicate(self):
+        """Override headers already in the stanza are not duplicated."""
+        pubs = self.getPubBinaries(
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        bpph = pubs[0]
+        package_name = bpph.binarypackagerelease.binarypackagename.name
+        # "Package" is always present; an attempt to override it must be
+        # silently ignored by IndexStanzaFields.
+        overrides = {package_name: {"Package": "should-not-replace"}}
+
+        packages_bytes, _ = self._generate(bpph, overrides=overrides)
+        decoded = packages_bytes.decode("utf-8")
+        self.assertEqual(1, decoded.count("Package:"))
+        self.assertIn("Package: %s" % package_name, decoded)
+
+    def test_formats_filter_deb_excludes_udeb(self):
+        """Passing formats=[DEB] omits UDEB packages."""
+        deb_pubs = self.getPubBinaries(
+            binaryname="my-deb",
+            format=BinaryPackageFormat.DEB,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubBinaries(
+            binaryname="my-udeb",
+            format=BinaryPackageFormat.UDEB,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        store = IStore(BinaryPackagePublishingHistory)
+        arch = deb_pubs[0].distroarchseries
+        bpph = deb_pubs[0]
+        packages_bytes, _ = generate_packages_index(
+            store,
+            bpph.archive_id,
+            arch.distroseries.id,
+            bpph.pocket.value,
+            bpph.component_id,
+            arch.id,
+            arch.architecturetag,
+            arch.underlying_architecturetag,
+            formats=[BinaryPackageFormat.DEB],
+        )
+        decoded = packages_bytes.decode("utf-8")
+        self.assertIn("Package: my-deb", decoded)
+        self.assertNotIn("Package: my-udeb", decoded)
+
+    def test_formats_filter_udeb_excludes_deb(self):
+        """Passing formats=[UDEB] omits DEB packages."""
+        deb_pubs = self.getPubBinaries(
+            binaryname="my-deb",
+            format=BinaryPackageFormat.DEB,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self.getPubBinaries(
+            binaryname="my-udeb",
+            format=BinaryPackageFormat.UDEB,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        store = IStore(BinaryPackagePublishingHistory)
+        arch = deb_pubs[0].distroarchseries
+        bpph = deb_pubs[0]
+        packages_bytes, _ = generate_packages_index(
+            store,
+            bpph.archive_id,
+            arch.distroseries.id,
+            bpph.pocket.value,
+            bpph.component_id,
+            arch.id,
+            arch.architecturetag,
+            arch.underlying_architecturetag,
+            formats=[BinaryPackageFormat.UDEB],
+        )
+        decoded = packages_bytes.decode("utf-8")
+        self.assertIn("Package: my-udeb", decoded)
+        self.assertNotIn("Package: my-deb", decoded)
+
+
+class TestExtraOverrides(TestNativePublishingBase):
+    """Tests for the extra override reading and application."""
+
+    def test_read_extra_overrides(self):
+        """Override file is parsed into a dict."""
+        _, path = tempfile.mkstemp()
+        self.addCleanup(os.remove, path)
+        with open(path, "w") as f:
+            f.write("pkg-a\tTask\tubuntu-desktop\n")
+            f.write("pkg-a\tTask\tubuntu-server\n")
+            f.write("pkg-b\tBuild-Essential\tyes\n")
+
+        result = read_extra_overrides(path)
+
+        self.assertEqual(
+            {
+                "pkg-a": {"Task": "ubuntu-desktop, ubuntu-server"},
+                "pkg-b": {"Build-Essential": "yes"},
+            },
+            result,
+        )
+
+    def test_read_extra_overrides_missing_file(self):
+        """A missing file returns an empty dict."""
+        result = read_extra_overrides("/nonexistent/path")
+        self.assertEqual({}, result)
