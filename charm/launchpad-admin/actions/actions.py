@@ -2,6 +2,8 @@
 # Copyright 2023 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
+import os
+import re
 import subprocess
 import sys
 import traceback
@@ -15,7 +17,35 @@ basic.bootstrap_charm_deps()
 basic.init_config_states()
 
 from charmhelpers.core import hookenv  # noqa: E402
+from charms.launchpad.payload import home_dir  # noqa: E402
 from ols import base  # noqa: E402
+
+
+def analyze_table() -> None:
+    params = hookenv.action_get()
+    table_name = params["table-name"]
+
+    if not re.match(
+        r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$", table_name
+    ):
+        raise ValueError(f"Invalid table name '{table_name}'")
+
+    db_admin_shell = os.path.join(home_dir(), "bin", "db-admin")
+    subprocess.run(
+        [
+            "sudo",
+            "-H",
+            "-u",
+            base.user(),
+            db_admin_shell,
+            "-c",
+            f"ANALYZE {table_name}",
+        ],
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+    hookenv.action_set({"result": f"Analyzed the {table_name} table."})
 
 
 def create_bot_account():
@@ -65,7 +95,9 @@ def suspend_bot_account():
 def main(argv):
     action = Path(argv[0]).name
     try:
-        if action == "create-bot-account":
+        if action == "analyze-table":
+            analyze_table()
+        elif action == "create-bot-account":
             create_bot_account()
         elif action == "suspend-bot-account":
             suspend_bot_account()
