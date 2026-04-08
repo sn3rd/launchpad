@@ -39,6 +39,7 @@ from lp.blueprints.model.specification import (
 )
 from lp.bugs.enums import VulnerabilityStatus
 from lp.bugs.interfaces.bugtarget import BUG_POLICY_ALLOWED_TYPES
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.bugs.interfaces.bugtask import BugTaskImportance
 from lp.bugs.model.tests.test_vulnerability import (
     grant_access_to_non_public_vulnerability,
@@ -1002,6 +1003,22 @@ class TestDistribution(TestCaseWithFactory):
 
         with anonymous_logged_in(), ExpectedException(Unauthorized):
             distribution.code_admin = code_admin_team
+
+    def test_bug_target_parent(self):
+        distro = self.factory.makeDistribution()
+        parent = distro.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution itself.
+        self.assertEqual(distro, parent)
 
 
 class TestDistributionBugInformationTypes(TestCaseWithFactory):

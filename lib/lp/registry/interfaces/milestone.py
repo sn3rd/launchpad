@@ -374,6 +374,16 @@ class IHasMilestones(Interface):
         )
     )
 
+    def all_milestones_with_releases():
+        """Return all milestones with their product releases pre-fetched.
+
+        Similar to `all_milestones`, but performs a single LEFT JOIN with
+        ProductRelease so that accessing `milestone.product_release` on each
+        result does not trigger an additional query per row.  Use this instead
+        of `all_milestones` whenever you iterate the result and access
+        `product_release` on the individual milestones.
+        """
+
 
 class ICanGetMilestonesDirectly(Interface):
     """An interface for classes providing getMilestone(name)."""

@@ -519,7 +519,7 @@ The task's importance can be modified directly.
     High
 
 Only bug supervisors or people who can otherwise edit the bugtask's
-pillar are authorised to edit the importance.
+bug_target_parent are authorised to edit the importance.
 
     >>> print(
     ...     user_webservice.named_post(

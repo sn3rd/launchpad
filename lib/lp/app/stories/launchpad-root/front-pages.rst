@@ -3,9 +3,7 @@ Launchpad front pages
 
 Visit our home page with the typical configuration:
 
-    >>> from lp.services.features.testing import FeatureFixture
-    >>> with FeatureFixture({"app.root_blog.enabled": True}):
-    ...     browser.open("http://launchpad.test/")
+    >>> browser.open("http://launchpad.test/")
     >>> browser.url
     'http://launchpad.test/'
 
@@ -42,25 +40,6 @@ The footer doesn't contain the links that are already present on the page.
 
     >>> print(find_tags_by_class(browser.contents, "lp-arcana"))
     []
-
-The front page also lists the recent blog posts published on the Launchpad
-blog:
-
-    >>> print(
-    ...     extract_text(
-    ...         find_tag_by_id(browser.contents, "homepage-blogposts"),
-    ...         formatter="html",
-    ...     )
-    ... )
-    Recent Launchpad blog posts
-    Read the blog
-    Launchpad EPIC 2010 photo
-    &ndash; 16 Jul 2010
-    The Launchpad and Bazaar teams have been in Prague this week...
-    Three tips for faster launchpadlib api clients
-    &ndash; 14 Jul 2010
-    Three tips from Leonard...
-    New Launchpad Bugs Status: Opinion...
 
 The homepage looks different when the user is logged in:
 

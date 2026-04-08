@@ -484,7 +484,9 @@ class ProductSeriesView(
 
     @cachedproperty
     def milestone_batch_navigator(self):
-        return BatchNavigator(self.context.all_milestones, self.request)
+        return BatchNavigator(
+            self.context.all_milestones_with_releases(), self.request
+        )
 
 
 class ProductSeriesDetailedDisplayView(ProductSeriesView):

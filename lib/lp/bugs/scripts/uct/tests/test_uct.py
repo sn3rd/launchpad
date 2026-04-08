@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
+from unittest.mock import Mock, patch
 
 from zope.component import getUtility
 
@@ -21,6 +22,8 @@ from lp.bugs.scripts.uct import (
     UCTImportError,
     UCTRecord,
 )
+from lp.registry.interfaces.distribution import IDistributionSet
+from lp.registry.interfaces.distroseries import IDistroSeriesSet
 from lp.registry.interfaces.series import SeriesStatus
 from lp.registry.model.sourcepackage import SourcePackage
 from lp.services.propertycache import clear_property_cache
@@ -574,6 +577,8 @@ class TestCVE(TestCaseWithFactory):
             ],
             global_tags={"cisa-kev"},
         )
+        self.distribution = ubuntu
+        self.distroseries = current_series
 
     def test_make_from_uct_record(self):
         cve = CVE.make_from_uct_record(self.uct_record)
@@ -594,6 +599,141 @@ class TestCVE(TestCaseWithFactory):
         )
         self.assertEqual(xenial, CVE.get_distro_series("esm-infra/xenial"))
         self.assertEqual(precise, CVE.get_distro_series("precise/esm"))
+
+    def test_get_distro_series_uses_cache(self):
+        # Check that when calling `get_distro_series` for the same series, we
+        # get the cached value instead of calling `queryByName` which accesses
+        # the database
+        cache_entities = CVE.new_cache()
+
+        distribution_set = Mock()
+        distribution_set.getByName.return_value = self.distribution
+        distro_series_set = Mock()
+        distro_series_set.queryByName.return_value = self.distroseries
+
+        def mock_getUtility(interface):
+            if interface is IDistributionSet:
+                return distribution_set
+            if interface is IDistroSeriesSet:
+                return distro_series_set
+            raise AssertionError(f"Unexpected utility requested: {interface}")
+
+        with patch("lp.bugs.scripts.uct.models.getUtility", mock_getUtility):
+            first_result = CVE.get_distro_series(
+                "jammy", cache_entities=cache_entities
+            )
+            second_result = CVE.get_distro_series(
+                "jammy", cache_entities=cache_entities
+            )
+
+        # Assert first result is equal to second result
+        self.assertIs(first_result, self.distroseries)
+        self.assertIs(second_result, self.distroseries)
+
+        # Assert queryByName only called once for series and distribution
+        self.assertEqual(1, distro_series_set.queryByName.call_count)
+        distro_series_set.queryByName.assert_called_once_with(
+            self.distribution, "jammy"
+        )
+        self.assertEqual(1, distribution_set.getByName.call_count)
+        distribution_set.getByName.assert_called_once_with("ubuntu")
+
+        # Assert entities exist in cache
+        self.assertIn("ubuntu/jammy", cache_entities["distroseries"])
+        self.assertIsNotNone(cache_entities["distroseries"]["ubuntu/jammy"])
+        self.assertIn("ubuntu", cache_entities["distribution"])
+        self.assertIsNotNone(cache_entities["distribution"]["ubuntu"])
+
+    def test_get_distro_series_caches_missing_series(self):
+        # Check we also cache nonexistent series so that we don't need to
+        # check from the database again
+        cache_entities = CVE.new_cache()
+
+        distribution_set = Mock()
+        distribution_set.getByName.return_value = self.distribution
+        distro_series_set = Mock()
+        distro_series_set.queryByName.return_value = None
+
+        def mock_getUtility(interface):
+            if interface is IDistributionSet:
+                return distribution_set
+            if interface is IDistroSeriesSet:
+                return distro_series_set
+            raise AssertionError(f"Unexpected utility requested: {interface}")
+
+        with patch("lp.bugs.scripts.uct.models.getUtility", mock_getUtility):
+            first_result = CVE.get_distro_series(
+                "nonexistent", cache_entities=cache_entities
+            )
+            second_result = CVE.get_distro_series(
+                "nonexistent", cache_entities=cache_entities
+            )
+
+        self.assertIsNone(first_result)
+        self.assertIsNone(second_result)
+        self.assertEqual(1, distro_series_set.queryByName.call_count)
+        self.assertEqual(1, distribution_set.getByName.call_count)
+        self.assertIn("ubuntu/nonexistent", cache_entities["distroseries"])
+        self.assertIsNone(cache_entities["distroseries"]["ubuntu/nonexistent"])
+
+    def test_get_distro_series_caches_distribution_lookup(self):
+        # Check that when checking for different series within the same
+        # distribution, we only fetch the distribution from the database once
+
+        cache_entities = CVE.new_cache()
+
+        distribution_set = Mock()
+        distribution_set.getByName.return_value = self.distribution
+        distro_series_set = Mock()
+        distro_series_set.queryByName.return_value = self.distroseries
+
+        def mock_getUtility(interface):
+            if interface is IDistributionSet:
+                return distribution_set
+            if interface is IDistroSeriesSet:
+                return distro_series_set
+            raise AssertionError(f"Unexpected utility requested: {interface}")
+
+        with patch("lp.bugs.scripts.uct.models.getUtility", mock_getUtility):
+            CVE.get_distro_series("jammy", cache_entities=cache_entities)
+            CVE.get_distro_series("noble", cache_entities=cache_entities)
+
+        # Assert distribution.getByName only called once even if
+        # distroseries.getByName called twice
+        self.assertEqual(1, distribution_set.getByName.call_count)
+        self.assertIs(
+            self.distribution,
+            cache_entities["distribution"]["ubuntu"],
+        )
+        self.assertEqual(2, distro_series_set.queryByName.call_count)
+
+    def test_make_from_uct_record_caches_products(self):
+        cache_entities = CVE.new_cache()
+
+        CVE.make_from_uct_record(
+            self.uct_record, cache_entities=cache_entities
+        )
+
+        product_cache = cache_entities["product"]
+        self.assertEqual(2, len(product_cache))
+        package_names = {package.name for package in self.uct_record.packages}
+        self.assertEqual(
+            {("ubuntu", package_name) for package_name in package_names},
+            set(product_cache.keys()),
+        )
+        for product in product_cache.values():
+            self.assertIsNotNone(product)
+
+    def test_get_product_cache_key_includes_distribution(self):
+        spn = self.factory.makeSourcePackageName(name="openssl")
+        self.assertEqual(
+            ("ubuntu", "openssl"),
+            CVE._get_product_cache_key(spn, "ubuntu"),
+        )
+        self.assertEqual(
+            ("ubuntu-esm", "openssl"),
+            CVE._get_product_cache_key(spn, "ubuntu-esm"),
+        )
 
     def test_get_patches(self):
         spn = self.factory.makeSourcePackageName()
@@ -1678,6 +1818,68 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         self.assertIsNone(
             importer._find_existing_bug(self.lp_cve, self.ubuntu)
         )
+
+    def test_separate_importers_use_independent_caches(self):
+        # Check that 2 different importer runs use 2 different caches
+        importer_1 = UCTImporter(self.ubuntu, dry_run=True)
+        importer_2 = UCTImporter(self.ubuntu, dry_run=True)
+
+        self.assertIsNot(importer_1.cache_entities, importer_2.cache_entities)
+
+        def mock_make_from_uct_record(record, cache_entities=None):
+            self.assertIsNotNone(cache_entities)
+            cache_entities["distribution"]["ubuntu"] = object()
+            return Mock(sequence="CVE-mismatch")
+
+        with patch(
+            "lp.bugs.scripts.uct.uctimport.CVE.make_from_uct_record",
+            side_effect=mock_make_from_uct_record,
+        ):
+            # An entity in cache 1 from importer 1 doesn't show in importer 2
+            importer_1.from_record(Mock(), "CVE-2022-23222")
+            self.assertIn("ubuntu", importer_1.cache_entities["distribution"])
+            self.assertNotIn(
+                "ubuntu", importer_2.cache_entities["distribution"]
+            )
+            importer_2.from_record(Mock(), "CVE-2022-23222")
+
+        # Entities in cache 1 are not the same as the ones from cache 2
+        # even if they point to the same object
+        self.assertIsNot(
+            importer_1.cache_entities["distribution"]["ubuntu"],
+            importer_2.cache_entities["distribution"]["ubuntu"],
+        )
+
+    def test_same_importer_uses_same_cache_across_imports(self):
+        # Check that a single importer instance reuses the same cache
+        # across multiple CVE imports
+        importer = UCTImporter(self.ubuntu, dry_run=True)
+        cache_ref = importer.cache_entities
+
+        # Track cache modifications across imports
+        cached_entries = []
+
+        def mock_make_from_uct_record(record, cache_entities):
+            cached_entries.append(cache_entities)
+            return Mock(sequence=record.sequence)
+
+        with patch(
+            "lp.bugs.scripts.uct.uctimport.CVE.make_from_uct_record",
+            side_effect=mock_make_from_uct_record,
+        ):
+            # First import
+            importer.from_record(
+                Mock(sequence="CVE-2022-00001"), "CVE-2022-00001"
+            )
+            # Second import with same importer
+            importer.from_record(
+                Mock(sequence="CVE-2022-00002"),
+                "CVE-2022-00002",
+            )
+
+        # Verify both imports used the same cache_entities instance
+        self.assertIs(cache_ref, importer.cache_entities)
+        self.assertIs(cached_entries[0], cached_entries[1])
 
     def test_naive_dates(self):
         cve = self.cve

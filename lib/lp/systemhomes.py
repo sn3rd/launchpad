@@ -127,12 +127,12 @@ class MaloneApplication(HasBugsBase):
         data = []
         for bug in bugs:
             bugtask = bug.default_bugtask
-            different_pillars = (
+
+            different_parents = (
                 related_bug
                 and (
-                    set(bug.affected_pillars).isdisjoint(
-                        related_bug.affected_pillars
-                    )
+                    set(bug.affected_bug_target_parents)
+                    != set(related_bug.affected_bug_target_parents)
                 )
                 or False
             )
@@ -149,7 +149,10 @@ class MaloneApplication(HasBugsBase):
                     "bug_summary": bug.title,
                     "description": bug.description,
                     "bug_url": canonical_url(bugtask),
-                    "different_pillars": different_pillars,
+                    "different_bug_target_parents": different_parents,
+                    # Pillars in bugs are deprecated. We are leaving this here
+                    # for API compatibility even though it returns the same.
+                    "different_pillars": different_parents,
                 }
             )
         return data

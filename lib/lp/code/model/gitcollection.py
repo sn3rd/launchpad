@@ -265,11 +265,11 @@ class GenericGitCollection:
         )
         tables = [GitRepository] + list(all_tables)
         expressions = self._getRepositoryExpressions()
-        resultset = (
-            self.store.using(*tables)
-            .find(find_expr, *expressions)
-            .order_by(*self._convertListingSortToOrderBy(sort_by))
-        )
+        resultset = self.store.using(*tables).find(find_expr, *expressions)
+        if sort_by is not None:
+            resultset = resultset.order_by(
+                *self._convertListingSortToOrderBy(sort_by)
+            )
 
         def do_eager_load(rows):
             repository_ids = {repository.id for repository in rows}

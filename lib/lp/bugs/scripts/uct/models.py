@@ -550,12 +550,56 @@ class CVE:
         self.break_fix_data: List[CVE.BreakFix] = break_fix_data or []
 
     @classmethod
-    def make_from_uct_record(cls, uct_record: UCTRecord) -> "CVE":
+    def new_cache(cls) -> Dict[str, Dict[Any, Any]]:
+        return {
+            "distribution": {},
+            "distroseries": {},
+            "product": {},
+        }
+
+    @classmethod
+    def _get_from_cache(
+        cls, cache_entities: Dict[str, Dict[Any, Any]], bucket: str, key: Any
+    ) -> Tuple[bool, Optional[Any]]:
+        cache = cache_entities[bucket]
+        if key in cache:
+            return True, cache[key]
+        return False, None
+
+    @classmethod
+    def _set_in_cache(
+        cls,
+        cache_entities: Dict[str, Dict[Any, Any]],
+        bucket: str,
+        key: Any,
+        value: Any,
+    ) -> None:
+        cache_entities[bucket][key] = value
+
+    @classmethod
+    def _get_product_cache_key(
+        cls,
+        source_package_name: SourcePackageName,
+        distribution_name: Optional[str],
+    ) -> Tuple[Optional[str], str]:
+        # upstream_product is resolved from DistributionSourcePackage, which is
+        # distribution-scoped; series is not needed for this cache key.
+        return (distribution_name, source_package_name.name)
+
+    @classmethod
+    def make_from_uct_record(
+        cls,
+        uct_record: UCTRecord,
+        cache_entities: Optional[Dict[str, Dict[Any, Any]]] = None,
+    ) -> "CVE":
         """
         Create a `CVE` from a `UCTRecord`
 
         This maps UCT CVE information to Launchpad data structures.
         """
+
+        if cache_entities is None:
+            cache_entities = cls.new_cache()
 
         distro_packages = []
         series_packages = []
@@ -604,7 +648,7 @@ class CVE:
                     continue
 
                 distro_series = cls.get_distro_series(
-                    uct_package_status.series
+                    uct_package_status.series, cache_entities=cache_entities
                 )
                 if distro_series is None:
                     continue
@@ -638,18 +682,41 @@ class CVE:
 
         upstream_packages = []
         for source_package_name, upstream_status in upstream_statuses.items():
+
+            product = None
             for distro_package in distro_packages:
                 if source_package_name != distro_package.package_name:
                     continue
-                # This is the `Product` corresponding to the package of this
-                # name with the highest version across any of this
-                # distribution's series that has a packaging link
-                # (it can make a difference if a package name switches to a
-                # different upstream project between series)
-                product = distro_package.target.upstream_product
+
+                product_cache_key = cls._get_product_cache_key(
+                    source_package_name,
+                    distro_package.target.distribution.name,
+                )
+                found, cached_product = cls._get_from_cache(
+                    cache_entities,
+                    "product",
+                    product_cache_key,
+                )
+                if found:
+                    product = cached_product
+                else:
+                    # This is the `Product` corresponding to the package of
+                    # this name with the highest version across any of this
+                    # distribution's series that has a packaging link
+                    # (it can make a difference if a package name switches to a
+                    # different upstream project between series)
+                    product = distro_package.target.upstream_product
+                    cls._set_in_cache(
+                        cache_entities,
+                        "product",
+                        product_cache_key,
+                        product,
+                    )
+
                 if product is not None:
                     break
-            else:
+
+            if product is None:
                 logger.warning(
                     "Could not find the product for: %s",
                     source_package_name.name,
@@ -865,8 +932,15 @@ class CVE:
 
     @classmethod
     def get_distro_series(
-        cls, distro_series_name: str
+        cls,
+        distro_series_name: str,
+        cache_entities: Optional[Dict[str, Dict[Any, Any]]] = None,
     ) -> Optional[DistroSeries]:
+
+        if cache_entities is None:
+            cache_entities = cls.new_cache()
+
+        # Standardize distro series name
         if "/" in distro_series_name:
             if distro_series_name.startswith("esm-"):
                 distro_name = "ubuntu-esm"
@@ -879,10 +953,39 @@ class CVE:
         else:
             distro_name = "ubuntu"
             series_name = distro_series_name
-        distribution = getUtility(IDistributionSet).getByName(distro_name)
+
+        # Try get distro series from cache.
+        distro_series_key = f"{distro_name}/{series_name}"
+        found, distro_series = cls._get_from_cache(
+            cache_entities, "distroseries", distro_series_key
+        )
+        if found:
+            return distro_series
+
+        found, distribution = cls._get_from_cache(
+            cache_entities, "distribution", distro_name
+        )
+        if found and distribution is None:
+            return None
+        elif not found:
+            distribution = getUtility(IDistributionSet).getByName(distro_name)
+            cls._set_in_cache(
+                cache_entities,
+                "distribution",
+                distro_name,
+                distribution,
+            )
+
         if distribution is None:
             logger.warning("Could not find the distribution: %s", distro_name)
-            return
+            cls._set_in_cache(
+                cache_entities,
+                "distroseries",
+                distro_series_key,
+                None,
+            )
+            return None
+
         if series_name == "devel":
             distro_series = cls.get_devel_series(distribution)
         else:
@@ -891,8 +994,16 @@ class CVE:
             )
         if not distro_series:
             logger.warning(
-                "Could not find the distro series: %s", distro_series_name
+                "Could not find the distro series: %s",
+                distro_series_name,
             )
+
+        cls._set_in_cache(
+            cache_entities,
+            "distroseries",
+            distro_series_key,
+            distro_series,
+        )
         return distro_series
 
     @classmethod

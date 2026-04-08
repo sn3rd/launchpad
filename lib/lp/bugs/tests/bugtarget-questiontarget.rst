@@ -44,9 +44,9 @@ canBeAQuestion()
 The canBeAQuestion() method can be used to check if a question can be
 created from a bug (but it will not state why). The most important
 prerequisite for a bug to become a question is that the bugtarget's
-pillar must use Launchpad to track bugs.
+bug_target_parent must use Launchpad to track bugs.
 
-    >>> bug.affected_pillars[0].bug_tracking_usage
+    >>> bug.affected_bug_target_parents[0].bug_tracking_usage
     <DBItem ServiceUsage.LAUNCHPAD, (20) Launchpad>
 
     >>> bug.canBeAQuestion()

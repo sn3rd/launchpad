@@ -516,10 +516,14 @@ class AffectsEmailCommand(EmailCommand):
         """
         path = cls._normalizePath(path)
         name, rest = cls._splitPath(path)
-        pillar = getUtility(IPillarNameSet).getByName(
+
+        # TODO: ilkeremrekoc 2026-03-25: Currently all bug target parents are
+        # pillars, but we will be able to have non-pillar bug target parents
+        # soon. So we should change this by then.
+        bug_target_parent = getUtility(IPillarNameSet).getByName(
             name, ignore_inactive=True
         )
-        if pillar is None:
+        if bug_target_parent is None:
             raise BugTargetNotFound(
                 "There is no project named '%s' registered in Launchpad."
                 % name
@@ -527,48 +531,51 @@ class AffectsEmailCommand(EmailCommand):
 
         # We can't check for IBugTarget, since ProjectGroup is an IBugTarget
         # we don't allow bugs to be filed against.
-        if IProjectGroup.providedBy(pillar):
-            products = ", ".join(product.name for product in pillar.products)
+        if IProjectGroup.providedBy(bug_target_parent):
+            product_list = bug_target_parent.products
+            products = ", ".join(product.name for product in product_list)
             raise BugTargetNotFound(
                 "%s is a group of projects. To report a bug, you need to"
                 " specify which of these projects the bug applies to: %s"
-                % (pillar.name, products)
+                % (bug_target_parent.name, products)
             )
-        assert IDistribution.providedBy(pillar) or IProduct.providedBy(pillar)
+        assert IDistribution.providedBy(
+            bug_target_parent
+        ) or IProduct.providedBy(bug_target_parent)
 
         if not rest:
-            return pillar
-        # Resolve the path that is after the pillar name.
-        if IProduct.providedBy(pillar):
+            return bug_target_parent
+        # Resolve the path that is after the bug_target_parent name.
+        if IProduct.providedBy(bug_target_parent):
             series_name, rest = cls._splitPath(rest)
-            product_series = pillar.getSeries(series_name)
+            product_series = bug_target_parent.getSeries(series_name)
             if product_series is None:
                 raise BugTargetNotFound(
                     "%s doesn't have a series named '%s'."
-                    % (pillar.displayname, series_name)
+                    % (bug_target_parent.displayname, series_name)
                 )
             elif not rest:
                 return product_series
         else:
-            assert IDistribution.providedBy(pillar)
+            assert IDistribution.providedBy(bug_target_parent)
             # The next step can be either a distro series or a source
             # package.
             series_name, rest = cls._splitPath(rest)
             try:
-                series = pillar.getSeries(series_name)
+                series = bug_target_parent.getSeries(series_name)
             except NotFoundError:
                 package_name = series_name
             else:
                 if not rest:
                     return series
                 else:
-                    pillar = series
+                    bug_target_parent = series
                     package_name, rest = cls._splitPath(rest)
-            package = pillar.getSourcePackage(package_name)
+            package = bug_target_parent.getSourcePackage(package_name)
             if package is None:
                 raise BugTargetNotFound(
                     "%s doesn't have a series or source package named '%s'."
-                    % (pillar.displayname, package_name)
+                    % (bug_target_parent.displayname, package_name)
                 )
             elif not rest:
                 return package
@@ -665,8 +672,8 @@ class AffectsEmailCommand(EmailCommand):
             general_task = bug.addTask(user, general_target)
 
         # We know the target is of the right type, and we just created
-        # a pillar task, so if canBeNominatedFor == False then a task or
-        # nomination must already exist.
+        # a bug_target_parent task, so if canBeNominatedFor == False then a
+        # task or nomination must already exist.
         if not bug.canBeNominatedFor(target.series):
             # A nomination has already been created.
             nomination = bug.getNominationFor(target.series)
@@ -731,13 +738,13 @@ class MilestoneEmailCommand(EditEmailCommand):
             # Remove milestone
             return {self.name: None}
         elif context.userHasBugSupervisorPrivileges(user):
-            milestone = context.pillar.getMilestone(milestone_name)
+            milestone = context.bug_target_parent.getMilestone(milestone_name)
             if milestone is None:
                 raise EmailProcessingError(
                     "The milestone %s does not exist for %s. Note that "
                     "milestones are not automatically created from emails; "
                     "they must be created on the website."
-                    % (milestone_name, context.pillar.title)
+                    % (milestone_name, context.bug_target_parent.title)
                 )
             else:
                 return {self.name: milestone}
@@ -745,7 +752,7 @@ class MilestoneEmailCommand(EditEmailCommand):
             raise EmailProcessingError(
                 "You do not have permission to set the milestone for %s. "
                 "Only owners, drivers and bug supervisors may assign "
-                "milestones." % (context.pillar.title,)
+                "milestones." % (context.bug_target_parent.title,)
             )
 
 
@@ -826,7 +833,10 @@ class StatusEmailCommand(DBSchemaEditEmailCommand):
             raise EmailProcessingError(
                 "The status cannot be changed to %s because you are not "
                 "the maintainer, driver or bug supervisor for %s."
-                % (attr_value.name.lower(), context.pillar.displayname)
+                % (
+                    attr_value.name.lower(),
+                    context.bug_target_parent.displayname,
+                )
             )
 
         context.transitionToStatus(attr_value, user)

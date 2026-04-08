@@ -47,7 +47,7 @@ are not included in the report.
 
     >>> bug_two = getUtility(IBugSet).get(2)
     >>> for bugtask in bug_two.bugtasks:
-    ...     if not bugtask.pillar.official_malone:
+    ...     if not bugtask.bug_target_parent.official_malone:
     ...         bugtask.transitionToStatus(
     ...             BugTaskStatus.INVALID, getUtility(ILaunchBag).user
     ...         )

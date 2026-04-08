@@ -54,7 +54,7 @@ def valid_debian_version(version):
     import re
 
     m = re.search(
-        """^(?ix)
+        """(?ix)^
         ([0-9]+:)?
         ([0-9a-z][a-z0-9+:.~-]*?)
         (-[a-z0-9+.~]+)?

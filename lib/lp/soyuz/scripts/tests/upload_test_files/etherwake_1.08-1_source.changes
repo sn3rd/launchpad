@@ -50,7 +50,7 @@ Changes:
  .
    * Removed more typos in description. (Again thanks to Carlos Valdivia
      Yagüe)
-  
+ .
  etherwake (1.05-3) unstable; urgency=low
  .
    * Removed typo in description. (Closes: #95946)

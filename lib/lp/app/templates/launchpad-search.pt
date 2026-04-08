@@ -51,7 +51,7 @@
                 </div>
                 <div class="summary">
                   in
-                    <tal:per_pillar repeat="pillar view/bug/affected_pillars">
+                    <tal:per_pillar repeat="pillar view/bug/affected_bug_target_parents">
                       <b tal:content="pillar/displayname" />,
                     </tal:per_pillar>
                   reported

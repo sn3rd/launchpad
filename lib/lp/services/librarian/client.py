@@ -214,6 +214,7 @@ class FileUploadClient:
             md5_digester = hashlib.md5()  # nosec B324
             sha1_digester = hashlib.sha1()  # nosec B324
             sha256_digester = hashlib.sha256()
+            sha512_digester = hashlib.sha512()
             bytesWritten = 0
 
             # Read in and upload the file 64kb at a time, by using the two-arg
@@ -225,6 +226,7 @@ class FileUploadClient:
                 md5_digester.update(chunk)
                 sha1_digester.update(chunk)
                 sha256_digester.update(chunk)
+                sha512_digester.update(chunk)
 
             assert (
                 bytesWritten == size
@@ -245,6 +247,7 @@ class FileUploadClient:
             content = LibraryFileContent(
                 id=contentID,
                 filesize=size,
+                sha512=sha512_digester.hexdigest(),
                 sha256=sha256_digester.hexdigest(),
                 sha1=sha1_digester.hexdigest(),
                 md5=md5_digester.hexdigest(),

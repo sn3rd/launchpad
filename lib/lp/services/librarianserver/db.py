@@ -155,10 +155,14 @@ class Library:
 
     # the following methods are used for adding to the library
 
-    def add(self, digest, size, md5_digest, sha256_digest):
+    def add(self, digest, size, md5_digest, sha256_digest, sha512_digest):
         store = IStore(LibraryFileContent)
         lfc = LibraryFileContent(
-            filesize=size, sha1=digest, md5=md5_digest, sha256=sha256_digest
+            filesize=size,
+            sha1=digest,
+            md5=md5_digest,
+            sha256=sha256_digest,
+            sha512=sha512_digest,
         )
         store.add(lfc)
         store.flush()

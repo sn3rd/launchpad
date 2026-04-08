@@ -29,6 +29,7 @@ from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
 )
+from lp.registry.interfaces.pillar import IPillar
 from lp.registry.model.teammembership import find_team_participations
 
 
@@ -165,7 +166,8 @@ class BugTaskPillarAffiliation(PillarAffiliation):
         result = []
         bug = self.context.bug
         for bugtask in bug.bugtasks:
-            result.append(bugtask.pillar)
+            if IPillar.providedBy(bugtask.bug_target_parent):
+                result.append(bugtask.bug_target_parent)
         return result
 
     def _getAffiliationTeamRoles(self, pillars):

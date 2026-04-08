@@ -567,7 +567,9 @@ class DistroSeriesView(
 
     @cachedproperty
     def milestone_batch_navigator(self):
-        return BatchNavigator(self.context.all_milestones, self.request)
+        return BatchNavigator(
+            self.context.all_milestones_with_releases(), self.request
+        )
 
     def countDifferences(self, difference_type, needing_attention_only=True):
         """Count the number of differences of a given kind.

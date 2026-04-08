@@ -217,7 +217,7 @@ class RegistryDeleteViewMixin:
         self._remove_series_bugs_and_specifications(series)
         series.branch = None
 
-        for milestone in series.all_milestones:
+        for milestone in series.all_milestones_with_releases():
             self._deleteMilestone(milestone)
         # Series are not deleted because some objects like translations are
         # problematic. The series is assigned to obsolete-junk. They must be

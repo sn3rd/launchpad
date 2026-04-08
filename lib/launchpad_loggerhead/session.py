@@ -3,29 +3,10 @@
 
 """Simple session manager tuned for the needs of launchpad-loggerhead."""
 
-import hashlib
-import pickle
-
-from secure_cookie.cookie import SecureCookie
 from werkzeug.http import dump_cookie, parse_cookie
 
+from launchpad_loggerhead.cookie import LaunchpadSecureCookie
 from lp.services.config import config
-
-
-class LaunchpadSecureCookie(SecureCookie):
-    # The default of sha1 is a bit too weak.
-    hash_method = staticmethod(hashlib.sha256)
-
-    # The OpenID consumer stores non-JSON-encodable objects in the session.
-    class serialization_method:
-        @classmethod
-        def dumps(cls, value):
-            # Use protocol 2 for Python 2 compatibility.
-            return pickle.dumps(value, protocol=2)
-
-        @classmethod
-        def loads(cls, value):
-            return pickle.loads(value)
 
 
 class SessionHandler:

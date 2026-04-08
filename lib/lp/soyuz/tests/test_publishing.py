@@ -2446,3 +2446,245 @@ class TestPublishingHistoryView(TestCaseWithFactory):
 
         self.assertThat(recorder1, HasQueryCount(Equals(26)))
         self.assertThat(recorder2, HasQueryCount.byEquality(recorder1))
+
+
+class TestGetRecentSourceUploads(TestCaseWithFactory):
+    """Tests for IPublishingSet.getRecentSourceUploads."""
+
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.distroseries = self.factory.makeDistroSeries()
+        self.publishing_set = getUtility(IPublishingSet)
+
+    def _makeSpph(self, **kwargs):
+        """Create an SPPH in the test distroseries' main archive."""
+        kwargs.setdefault("distroseries", self.distroseries)
+        kwargs.setdefault("pocket", PackagePublishingPocket.RELEASE)
+        if "archive" not in kwargs:
+            kwargs["archive"] = self.distroseries.main_archive
+        return self.factory.makeSourcePackagePublishingHistory(**kwargs)
+
+    def test_getRecentSourceUploads_empty(self):
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual([], result)
+
+    def test_getRecentSourceUploads_active_only(self):
+        self._makeSpph(status=PackagePublishingStatus.PENDING)
+        self._makeSpph(status=PackagePublishingStatus.PUBLISHED)
+        self._makeSpph(status=PackagePublishingStatus.SUPERSEDED)
+        self._makeSpph(status=PackagePublishingStatus.DELETED)
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(2, len(result))
+
+    def test_getRecentSourceUploads_distro_archive_only(self):
+        self._makeSpph()
+        ppa = self.factory.makeArchive(
+            distribution=self.distroseries.distribution,
+            purpose=ArchivePurpose.PPA,
+        )
+        self._makeSpph(archive=ppa)
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(1, len(result))
+
+    def test_getRecentSourceUploads_limit(self):
+        for _ in range(25):
+            self._makeSpph()
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(20, len(result))
+
+    def test_getRecentSourceUploads_ordering(self):
+        now = datetime.now(timezone.utc)
+        spph_old = self._makeSpph(
+            date_uploaded=now - timedelta(days=2),
+        )
+        spph_new = self._makeSpph(
+            date_uploaded=now,
+        )
+        spph_mid = self._makeSpph(
+            date_uploaded=now - timedelta(days=1),
+        )
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(3, len(result))
+        self.assertEqual(
+            spph_new.sourcepackagerelease.version, result[0]["version"]
+        )
+        self.assertEqual(
+            spph_mid.sourcepackagerelease.version, result[1]["version"]
+        )
+        self.assertEqual(
+            spph_old.sourcepackagerelease.version, result[2]["version"]
+        )
+
+    def test_getRecentSourceUploads_dict_shape(self):
+        self._makeSpph()
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(1, len(result))
+        row = result[0]
+        self.assertIn("name", row)
+        self.assertIn("version", row)
+        self.assertIn("pocket_title", row)
+        self.assertIn("builds", row)
+        self.assertIsInstance(row["builds"], list)
+
+    def test_getRecentSourceUploads_pocket_title(self):
+        self._makeSpph(pocket=PackagePublishingPocket.PROPOSED)
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual("Proposed", result[0]["pocket_title"])
+
+    def test_getRecentSourceUploads_no_builds(self):
+        self._makeSpph()
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual([], result[0]["builds"])
+
+    def test_getRecentSourceUploads_with_builds(self):
+        spph = self._makeSpph()
+        das1 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="amd64"
+        )
+        das2 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="arm64"
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das1,
+            archive=spph.archive,
+            status=BuildStatus.FULLYBUILT,
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das2,
+            archive=spph.archive,
+            status=BuildStatus.FAILEDTOBUILD,
+        )
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(1, len(result))
+        builds = result[0]["builds"]
+        self.assertEqual(2, len(builds))
+        # Ordered by arch_tag ascending.
+        self.assertEqual("amd64", builds[0]["arch_tag"])
+        self.assertEqual(BuildStatus.FULLYBUILT, builds[0]["build_status"])
+        self.assertEqual("arm64", builds[1]["arch_tag"])
+        self.assertEqual(BuildStatus.FAILEDTOBUILD, builds[1]["build_status"])
+
+    def test_getRecentSourceUploads_with_in_progress_builds(self):
+        spph = self._makeSpph()
+        das_amd64 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="amd64"
+        )
+        das_arm64 = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="arm64"
+        )
+        das_riscv = self.factory.makeDistroArchSeries(
+            distroseries=self.distroseries, architecturetag="riscv64"
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_amd64,
+            archive=spph.archive,
+            status=BuildStatus.FULLYBUILT,
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_arm64,
+            archive=spph.archive,
+            status=BuildStatus.BUILDING,
+        )
+        self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=das_riscv,
+            archive=spph.archive,
+            status=BuildStatus.NEEDSBUILD,
+        )
+        result = self.publishing_set.getRecentSourceUploads(self.distroseries)
+        self.assertEqual(1, len(result))
+        builds = result[0]["builds"]
+        self.assertEqual(3, len(builds))
+        # Ordered by arch_tag ascending.
+        self.assertEqual("amd64", builds[0]["arch_tag"])
+        self.assertEqual(BuildStatus.FULLYBUILT, builds[0]["build_status"])
+        self.assertEqual("arm64", builds[1]["arch_tag"])
+        self.assertEqual(BuildStatus.BUILDING, builds[1]["build_status"])
+        self.assertEqual("riscv64", builds[2]["arch_tag"])
+        self.assertEqual(BuildStatus.NEEDSBUILD, builds[2]["build_status"])
+
+    def test_getRecentSourceUploads_person_filter(self):
+        person = self.factory.makePerson()
+        other = self.factory.makePerson()
+        self._makeSpph(creator=person)
+        self._makeSpph(creator=other)
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, creator=person
+        )
+        self.assertEqual(1, len(result))
+
+    def test_getRecentSourceUploads_person_no_uploads(self):
+        person = self.factory.makePerson()
+        self._makeSpph()
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, creator=person
+        )
+        self.assertEqual([], result)
+
+    def test_getRecentSourceUploads_person_none_returns_all(self):
+        self._makeSpph(creator=self.factory.makePerson())
+        self._makeSpph(creator=self.factory.makePerson())
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, creator=None
+        )
+        self.assertEqual(2, len(result))
+
+    def test_getRecentSourceUploads_offset_skips_records(self):
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            self._makeSpph(date_uploaded=now - timedelta(days=i))
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, offset=2
+        )
+        self.assertEqual(3, len(result))
+
+    def test_getRecentSourceUploads_offset_preserves_order(self):
+        now = datetime.now(timezone.utc)
+        spphs = [
+            self._makeSpph(date_uploaded=now - timedelta(days=i))
+            for i in range(4)
+        ]
+        # Full result ordered newest-first: [0, 1, 2, 3]
+        # offset=1 should return [1, 2, 3]
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, offset=1
+        )
+        self.assertEqual(3, len(result))
+        self.assertEqual(
+            spphs[1].sourcepackagerelease.version, result[0]["version"]
+        )
+        self.assertEqual(
+            spphs[3].sourcepackagerelease.version, result[2]["version"]
+        )
+
+    def test_getRecentSourceUploads_offset_beyond_end_returns_empty(self):
+        for _ in range(3):
+            self._makeSpph()
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, offset=10
+        )
+        self.assertEqual([], result)
+
+    def test_getRecentSourceUploads_offset_and_limit(self):
+        now = datetime.now(timezone.utc)
+        spphs = [
+            self._makeSpph(date_uploaded=now - timedelta(days=i))
+            for i in range(6)
+        ]
+        # offset=2, limit=2 should return records [2, 3]
+        result = self.publishing_set.getRecentSourceUploads(
+            self.distroseries, offset=2, limit=2
+        )
+        self.assertEqual(2, len(result))
+        self.assertEqual(
+            spphs[2].sourcepackagerelease.version, result[0]["version"]
+        )
+        self.assertEqual(
+            spphs[3].sourcepackagerelease.version, result[1]["version"]
+        )

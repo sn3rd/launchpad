@@ -606,6 +606,11 @@ class Product(
     security_contact = None
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self

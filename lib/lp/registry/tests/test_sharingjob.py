@@ -504,8 +504,8 @@ class RemoveArtifactSubscriptionsJobTestCase(TestCaseWithFactory):
         )
 
     def _assert_bug_change_unsubscribes(self, change_callback):
-        def get_pillars(concrete_artifact):
-            return concrete_artifact.affected_pillars
+        def get_bug_target_parents(concrete_artifact):
+            return concrete_artifact.affected_bug_target_parents
 
         def get_subscribers(concrete_artifact):
             return removeSecurityProxy(
@@ -528,7 +528,7 @@ class RemoveArtifactSubscriptionsJobTestCase(TestCaseWithFactory):
             bug.subscribe(policy_team_grantee, owner)
             bug.subscribe(policy_indirect_grantee, owner)
             bug.subscribe(artifact_team_grantee, owner)
-            return concrete_artifact, get_pillars, get_subscribers
+            return concrete_artifact, get_bug_target_parents, get_subscribers
 
         self._assert_artifact_change_unsubscribes(
             change_callback, configure_test

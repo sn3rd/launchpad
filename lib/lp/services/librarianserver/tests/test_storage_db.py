@@ -133,12 +133,22 @@ class LibrarianStorageDBTests(TestCase):
         store = IStore(LibraryFileContent)
         store.add(
             LibraryFileContent(
-                filesize=0, sha1="foo", md5="xx", sha256="xx", id=6661
+                filesize=0,
+                sha1="foo",
+                md5="xx",
+                sha256="xx",
+                sha512="xx",
+                id=6661,
             )
         )
         store.add(
             LibraryFileContent(
-                filesize=0, sha1="foo", md5="xx", sha256="xx", id=6662
+                filesize=0,
+                sha1="foo",
+                md5="xx",
+                sha256="xx",
+                sha512="xx",
+                id=6662,
             )
         )
 

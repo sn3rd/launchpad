@@ -362,12 +362,12 @@ class TestBugSubscriptionInfo(TestCaseWithFactory):
         found_assignees = self.getInfo().all_assignees
         self.assertContentEqual([], found_assignees)
         bugtask = self.bug.default_bugtask
-        with person_logged_in(bugtask.pillar.bug_supervisor):
+        with person_logged_in(bugtask.bug_target_parent.bug_supervisor):
             bugtask.transitionToAssignee(self.bug.owner)
         found_assignees = self.getInfo().all_assignees
         self.assertContentEqual([self.bug.owner], found_assignees)
         bugtask2 = self.factory.makeBugTask(bug=self.bug)
-        with person_logged_in(bugtask2.pillar.owner):
+        with person_logged_in(bugtask2.bug_target_parent.owner):
             bugtask2.transitionToAssignee(bugtask2.owner)
         found_assignees = self.getInfo().all_assignees
         self.assertContentEqual(
@@ -383,7 +383,7 @@ class TestBugSubscriptionInfo(TestCaseWithFactory):
         # Add an assignee, a bug supervisor and a structural subscriber.
         bugtask = self.bug.default_bugtask
         assignee = self.factory.makePerson()
-        with person_logged_in(bugtask.pillar.bug_supervisor):
+        with person_logged_in(bugtask.bug_target_parent.bug_supervisor):
             bugtask.transitionToAssignee(assignee)
         supervisor = self.factory.makePerson()
         with person_logged_in(bugtask.target.owner):

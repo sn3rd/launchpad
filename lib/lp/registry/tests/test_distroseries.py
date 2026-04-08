@@ -15,7 +15,9 @@ from zope.component import getUtility
 from zope.security.proxy import removeSecurityProxy
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.registry.errors import NoSuchDistroSeries
+from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distroseries import IDistroSeriesSet
 from lp.registry.interfaces.externalpackage import ExternalPackageType
 from lp.registry.interfaces.pocket import PackagePublishingPocket
@@ -492,6 +494,74 @@ class TestDistroSeries(TestCaseWithFactory):
             externalpackageseries.packagetype, ExternalPackageType.SNAP
         )
         self.assertEqual(externalpackageseries.channel, None)
+
+    def test_bug_target_parent(self):
+        distroseries = self.factory.makeDistroSeries()
+        parent = distroseries.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution of the series.
+        self.assertEqual(distroseries.distribution, parent)
+
+    def test_getArchiveSourcePackageSeries(self):
+        # Test that we get the ArchiveSourcePackageSeries that belongs to the
+        # distroseries with the proper attributes
+        distroseries = self.factory.makeDistroSeries()
+        archive = self.factory.makeArchive(
+            distribution=distroseries.distribution
+        )
+        sourcepackagename = self.factory.getOrMakeSourcePackageName(
+            "my-package"
+        )
+        archivesourcepackageseries = (
+            distroseries.getArchiveSourcePackageSeries(
+                archive=archive, name=sourcepackagename
+            )
+        )
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).distroseries,
+            distroseries,
+        )
+        self.assertEqual(archivesourcepackageseries.name, "my-package")
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).archive, archive
+        )
+
+        # We can pass a string name as well
+        archivesourcepackageseries = (
+            distroseries.getArchiveSourcePackageSeries(
+                archive=archive, name="my-package"
+            )
+        )
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).distroseries,
+            distroseries,
+        )
+        self.assertEqual(archivesourcepackageseries.name, "my-package")
+        self.assertEqual(
+            removeSecurityProxy(archivesourcepackageseries).archive, archive
+        )
+
+        # Returns None if archive is from a different distribution
+        other_archive = self.factory.makeArchive()
+        result = distroseries.getArchiveSourcePackageSeries(
+            archive=other_archive, name="my-package"
+        )
+        self.assertIsNone(result)
+
+        # Returns None if source package name doesn't exist
+        result = distroseries.getArchiveSourcePackageSeries(
+            archive=archive, name="nonexistent-package"
+        )
+        self.assertIsNone(result)
 
 
 class TestDistroSeriesPackaging(TestCaseWithFactory):

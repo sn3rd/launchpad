@@ -729,7 +729,7 @@ value, and see that it gets set to a proper value.
 
     >>> from lp.bugs.interfaces.bugtask import BugTaskImportance
     >>> thunderbird_task.transitionToImportance(
-    ...     BugTaskImportance.HIGH, thunderbird_task.pillar.owner
+    ...     BugTaskImportance.HIGH, thunderbird_task.bug_target_parent.owner
     ... )
 
 We need to create a new ExternalBugtracker for the Mozilla tracker:

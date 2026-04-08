@@ -81,6 +81,7 @@ from lp.bugs.interfaces.bugtarget import (
     IOfficialBugTagTargetPublic,
     IOfficialBugTagTargetRestricted,
 )
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.bugs.interfaces.bugtracker import IHasExternalBugTracker
 from lp.bugs.interfaces.structuralsubscription import (
     IStructuralSubscriptionTarget,
@@ -1161,6 +1162,7 @@ class IProductEditRestricted(
 @exported_as_webservice_entry("project", as_of="beta")
 class IProduct(
     IBugTarget,
+    IBugTargetParent,
     IHasBugSupervisor,
     IHasDrivers,
     IProductEditRestricted,

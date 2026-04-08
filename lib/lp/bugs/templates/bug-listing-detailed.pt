@@ -2,9 +2,9 @@
     <a tal:replace="structure context/fmt:link" />
     <br />
     <span class="registered">in
-        <tal:per_pillar repeat="pillar context/affected_pillars">
-          <pillar tal:replace="structure pillar/fmt:link:bugs" />,
-        </tal:per_pillar>
+        <tal:per_bug_target_parent repeat="bug_target_parent context/affected_bug_target_parents">
+          <bug_target_parent tal:replace="structure bug_target_parent/fmt:link:bugs" />,
+        </tal:per_bug_target_parent>
       reported
       <tal:created
         replace="structure context/datecreated/fmt:displaydatetitle" />

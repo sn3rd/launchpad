@@ -41,7 +41,7 @@ from lp.services.database.interfaces import IStore
 from lp.services.database.stormbase import StormBase
 from lp.services.librarian.interfaces import ILibraryFileAliasSet
 from lp.services.librarian.model import LibraryFileAlias, LibraryFileContent
-from lp.services.propertycache import cachedproperty
+from lp.services.propertycache import cachedproperty, get_property_cache
 from lp.services.webapp.publisher import (
     get_raw_form_value_from_current_request,
 )
@@ -138,6 +138,11 @@ class ProductRelease(StormBase):
             "You can't delete a product release which has files associated "
             "with it."
         )
+        # Mirror the cache invalidation done in Milestone.createProductRelease
+        # so callers always see a consistent product_release cache.
+        cache = get_property_cache(self.milestone)
+        if "product_release" in cache:
+            del cache.product_release
         Store.of(self).remove(self)
 
     def _getFileObjectAndSize(self, file_or_data):

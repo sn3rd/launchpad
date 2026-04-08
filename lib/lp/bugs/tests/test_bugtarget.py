@@ -152,26 +152,26 @@ class BugTargetQuestionTargetTestCase(TestCaseWithFactory):
 
     def test_canBeAQuestion_does_not_use_bugs(self):
         bug = self.factory.makeBug()
-        pillar = bug.bugtasks[0].pillar
-        with person_logged_in(pillar.owner):
-            pillar.official_malone = False
-            pillar.official_answers = True
+        bug_target_parent = bug.bugtasks[0].bug_target_parent
+        with person_logged_in(bug_target_parent.owner):
+            bug_target_parent.official_malone = False
+            bug_target_parent.official_answers = True
         self.assertFalse(bug.canBeAQuestion())
 
     def test_canBeAQuestion_does_not_use_answers(self):
         bug = self.factory.makeBug()
-        pillar = bug.bugtasks[0].pillar
-        with person_logged_in(pillar.owner):
-            pillar.official_malone = True
-            pillar.official_answers = False
+        bug_target_parent = bug.bugtasks[0].bug_target_parent
+        with person_logged_in(bug_target_parent.owner):
+            bug_target_parent.official_malone = True
+            bug_target_parent.official_answers = False
         self.assertFalse(bug.canBeAQuestion())
 
     def test_canBeAQuestion_uses_answers_and_bugs(self):
         bug = self.factory.makeBug()
-        pillar = bug.bugtasks[0].pillar
-        with person_logged_in(pillar.owner):
-            pillar.official_malone = True
-            pillar.official_answers = True
+        bug_target_parent = bug.bugtasks[0].bug_target_parent
+        with person_logged_in(bug_target_parent.owner):
+            bug_target_parent.official_malone = True
+            bug_target_parent.official_answers = True
         self.assertTrue(bug.canBeAQuestion())
 
 

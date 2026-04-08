@@ -130,6 +130,11 @@ class OCIProject(BugTargetBase, StructuralSubscriptionTargetMixin, StormBase):
         )
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self.project if self.project_id else self.distribution
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self.project if self.project_id else self.distribution

@@ -394,9 +394,9 @@ the hoary bugtask.
 
 When a BugTarget is passed as an argument to findExpirableBugTasks(), it
 returns all the target's expirable bugtasks, or an empty list. If the
-target's pillar has not enabled bug expiration, None is always returned.
-Passing ubuntu with 0 min_days_old shows that the distribution has two
-bugtasks that can expire if they are not confirmed.
+target's bug_target_parent has not enabled bug expiration, None is always
+returned. Passing ubuntu with 0 min_days_old shows that the distribution has
+two bugtasks that can expire if they are not confirmed.
 
     >>> expirable_bugtasks = bugtaskset.findExpirableBugTasks(
     ...     0, None, target=ubuntu
@@ -646,7 +646,7 @@ not participate in bug expiration. When uses_bug_expiration is set to
 True for a project, old bugs will be expired the next time the bugs are
 expired.
 
-    >>> no_expiration_bugtask.pillar.enable_bug_expiration = True
+    >>> no_expiration_bugtask.bug_target_parent.enable_bug_expiration = True
 
     >>> no_expiration_bugtask.bug.permits_expiration
     True

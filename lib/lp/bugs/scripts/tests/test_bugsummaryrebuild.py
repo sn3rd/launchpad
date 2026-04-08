@@ -54,8 +54,8 @@ def create_tasks(factory):
     )
 
     # There'll be a target for each task, plus a packageless one for
-    # each package task.
-    # For OCI projects, the pillar (distro or product) is denormalized.
+    # each package task. For OCI projects, the bug_target_parent
+    # (distro or product) is denormalized.
     expected_targets = [
         (ps.product.id, None, None, None, None, None),
         (None, ps.id, None, None, None, None),
@@ -63,12 +63,27 @@ def create_tasks(factory):
         (None, None, sp.distribution.id, None, sp.sourcepackagename.id, None),
         (None, None, None, sp.distroseries.id, None, None),
         (None, None, None, sp.distroseries.id, sp.sourcepackagename.id, None),
-        (None, None, ocip_distro.pillar.id, None, None, ocip_distro.id),
-        (ocip_product.pillar.id, None, None, None, None, ocip_product.id),
+        (
+            None,
+            None,
+            ocip_distro.bug_target_parent.id,
+            None,
+            None,
+            ocip_distro.id,
+        ),
+        (
+            ocip_product.bug_target_parent.id,
+            None,
+            None,
+            None,
+            None,
+            ocip_product.id,
+        ),
         # OCI projects generates 2 rows on bugsummary for each bug task:
-        # 1 for the oci project + pillar, and one only for the pillar.
-        (None, None, ocip_distro.pillar.id, None, None, None),
-        (ocip_product.pillar.id, None, None, None, None, None),
+        # 1 for the oci project + bug_target_parent, and one only for the
+        # bug_target_parent.
+        (None, None, ocip_distro.bug_target_parent.id, None, None, None),
+        (ocip_product.bug_target_parent.id, None, None, None, None, None),
     ]
     return expected_targets
 

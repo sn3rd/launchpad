@@ -74,10 +74,13 @@ class TestBug(TestCaseWithFactory):
         self.assertContentEqual(nominations, bug.getNominations())
 
     def test_getNominations_with_target(self):
-        # The target argument filters the nominations to just one pillar.
+        # The target argument filters the nominations to just one bug target
+        # parent.
         bug, nominations = self.makeManyNominations()
-        pillar = nominations[0].target.pillar
-        self.assertContentEqual([nominations[0]], bug.getNominations(pillar))
+        bug_target_parent = nominations[0].target.bug_target_parent
+        self.assertContentEqual(
+            [nominations[0]], bug.getNominations(bug_target_parent)
+        )
 
     def test_markAsDuplicate_None(self):
         # Calling markAsDuplicate(None) on a bug that is not currently a
@@ -608,13 +611,14 @@ class TestBug(TestCaseWithFactory):
         bug = self.factory.makeBug()
 
         def create_stuff():
-            # Create a new bugtask, set its assignee, set its pillar's
+            # Create a new bugtask, set its assignee, set its bug target
+            # parent's
             # official_malone=True, and subscribe someone to its target.
             bugtask = self.factory.makeBugTask(bug=bug)
             with person_logged_in(bugtask.owner):
                 bugtask.transitionToAssignee(bugtask.owner)
-            with person_logged_in(bugtask.pillar.owner):
-                bugtask.pillar.official_malone = True
+            with person_logged_in(bugtask.bug_target_parent.owner):
+                bugtask.bug_target_parent.official_malone = True
             subscriber = self.factory.makePerson()
             with person_logged_in(subscriber):
                 bugtask.target.addSubscription(subscriber, subscriber)
@@ -805,7 +809,8 @@ class TestBugPrivateAndSecurityRelatedUpdatesProject(TestCaseWithFactory):
         # When a security bug is unembargoed, direct subscribers should
         # include:
         # - the bug reporter
-        # - and bug/pillar owners, drivers if they are already subscribed
+        # - and bug/bug target parent owners, drivers if they are already
+        #   subscribed
 
         (
             bug,
@@ -817,8 +822,8 @@ class TestBugPrivateAndSecurityRelatedUpdatesProject(TestCaseWithFactory):
         initial_subscribers = {
             self.factory.makePerson(),
             bug_owner,
-            bugtask_a.pillar.driver,
-            bugtask_a.pillar.bug_supervisor,
+            bugtask_a.bug_target_parent.driver,
+            bugtask_a.bug_target_parent.bug_supervisor,
         }
 
         with person_logged_in(bug_owner):
@@ -829,7 +834,10 @@ class TestBugPrivateAndSecurityRelatedUpdatesProject(TestCaseWithFactory):
                 InformationType.PUBLICSECURITY, who
             )
             subscribers = bug.getDirectSubscribers()
-        expected_subscribers = {default_bugtask.pillar.driver, bug_owner}
+        expected_subscribers = {
+            default_bugtask.bug_target_parent.driver,
+            bug_owner,
+        }
         expected_subscribers.update(initial_subscribers)
         self.assertContentEqual(expected_subscribers, subscribers)
 
@@ -847,7 +855,7 @@ class TestBugPrivateAndSecurityRelatedUpdatesProject(TestCaseWithFactory):
         initial_subscribers = {
             self.factory.makePerson(name="subscriber"),
             bug_owner,
-            bugtask_a.pillar.driver,
+            bugtask_a.bug_target_parent.driver,
         }
 
         with person_logged_in(bug_owner):
@@ -865,8 +873,8 @@ class TestBugPrivateAndSecurityRelatedUpdatesProject(TestCaseWithFactory):
 class TestBugPrivacy(TestCaseWithFactory):
     layer = DatabaseFunctionalLayer
 
-    def test_multipillar_proprietary_bugs_disallowed(self):
-        # A multi-pillar bug cannot be made proprietary.
+    def test_multi_bug_target_parent_proprietary_bugs_disallowed(self):
+        # A multi-bug-target-parent bug cannot be made proprietary.
         p1 = self.factory.makeProduct(
             bug_sharing_policy=BugSharingPolicy.PUBLIC_OR_PROPRIETARY
         )
@@ -964,7 +972,7 @@ class TestBugPrivacy(TestCaseWithFactory):
         self.assertEqual(InformationType.USERDATA, bug.information_type)
 
     def test__reconcileAccess_handles_all_targets(self):
-        # _reconcileAccess gets the pillar from any task
+        # _reconcileAccess gets the bug target parent from any task
         # type.
         product = self.factory.makeProduct()
         productseries = self.factory.makeProductSeries()
@@ -974,7 +982,7 @@ class TestBugPrivacy(TestCaseWithFactory):
         sp = self.factory.makeSourcePackage()
 
         targets = [product, productseries, distro, distroseries, dsp, sp]
-        pillars = [
+        bug_target_parents = [
             product,
             productseries.product,
             distro,
@@ -993,14 +1001,16 @@ class TestBugPrivacy(TestCaseWithFactory):
         removeSecurityProxy(bug)._reconcileAccess()
         self.assertContentEqual(
             getUtility(IAccessPolicySource).find(
-                (pillar, InformationType.USERDATA) for pillar in pillars
+                (bug_target_parent, InformationType.USERDATA)
+                for bug_target_parent in bug_target_parents
             ),
             get_policies_for_artifact(bug),
         )
 
     def test_getAllowedInformationTypes(self):
         # A bug's information type must be in the intersection of its
-        # pillars' permitted information types. Currently that means
+        # bug target parents' permitted information types. Currently that
+        # means
         # it's just one of the usual four.
         self.assertContentEqual(
             [

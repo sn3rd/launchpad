@@ -192,7 +192,7 @@ BRANCH_NAME_VALIDATION_ERROR_MESSAGE = _(
 
 # This is a copy of the pattern in database/schema/trusted.sql.  Don't
 # change this without changing that.
-valid_branch_name_pattern = re.compile(r"^(?i)[a-z0-9][a-z0-9+\.\-@_]*\Z")
+valid_branch_name_pattern = re.compile(r"(?i)^[a-z0-9][a-z0-9+\.\-@_]*\Z")
 
 
 def valid_branch_name(name):

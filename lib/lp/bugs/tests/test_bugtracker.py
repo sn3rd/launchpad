@@ -58,8 +58,8 @@ class TestBugTrackerSet(TestCaseWithFactory):
         # but not in active.
         self.assertFalse(tracker in trackers.getAllTrackers(active=True))
 
-    def test_inactive_products_in_pillars(self):
-        # the list of pillars should only contain active
+    def test_inactive_products_in_bug_target_parents(self):
+        # the list of bug target parents should only contain active
         # products and projects
         tracker = self.factory.makeBugTracker()
         trackers = BugTrackerSet()
@@ -72,14 +72,21 @@ class TestBugTrackerSet(TestCaseWithFactory):
         product2.bugtracker = tracker
         project1.bugtracker = tracker
         project2.bugtracker = tracker
-        pillars = trackers.getPillarsForBugtrackers(trackers)
+        bug_target_parents = trackers.getBugTargetParentsForBugtrackers(
+            trackers
+        )
         self.assertContentEqual(
-            [product1, product2, project1, project2], pillars[tracker]
+            [product1, product2, project1, project2],
+            bug_target_parents[tracker],
         )
         product1.active = False
         project2.active = False
-        pillars = trackers.getPillarsForBugtrackers(trackers)
-        self.assertContentEqual([product2, project1], pillars[tracker])
+        bug_target_parents = trackers.getBugTargetParentsForBugtrackers(
+            trackers
+        )
+        self.assertContentEqual(
+            [product2, project1], bug_target_parents[tracker]
+        )
 
 
 class BugTrackerTestCase(TestCaseWithFactory):

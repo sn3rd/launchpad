@@ -301,13 +301,13 @@ an alias.
     >>> mozilla_bugzilla.baseurl = "https://bugzilla.mozilla.org/"
 
 
-Pillars for bugtrackers
------------------------
+Bug target parents for bugtrackers
+----------------------------------
 
     >>> trackers = list(bugtracker_set)
-    >>> pillars = bugtracker_set.getPillarsForBugtrackers(trackers)
-    >>> for t in pillars:
-    ...     print(t.name, pretty([p.name for p in pillars[t]]))
+    >>> parents = bugtracker_set.getBugTargetParentsForBugtrackers(trackers)
+    >>> for t in parents:
+    ...     print(t.name, pretty([p.name for p in parents[t]]))
     ...
     gnome-bugzilla ['gnome-terminal', 'gnome']
 

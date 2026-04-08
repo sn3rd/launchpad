@@ -6,6 +6,7 @@
 from datetime import datetime, timedelta, timezone
 from operator import attrgetter
 
+from storm import Undef
 from storm.expr import Asc, Desc
 from storm.store import EmptyResultSet, Store
 from testtools.matchers import Equals
@@ -219,6 +220,20 @@ class TestGitCollectionFilters(TestCaseWithFactory):
                 GitRepository.name
             ),
         )
+
+    def test_getRepositories_sort_by_has_order_by(self):
+        # When sort_by is not None, order_by is applied to the resultset.
+        result = self.all_repositories.getRepositories(
+            sort_by=GitListingSort.DEFAULT
+        )
+        self.assertIsNot(
+            Undef, removeSecurityProxy(result).result_set._order_by
+        )
+
+    def test_getRepositories_no_sort_by_has_no_order_by(self):
+        # When sort_by is None, no order_by is applied.
+        result = self.all_repositories.getRepositories()
+        self.assertIs(Undef, removeSecurityProxy(result).result_set._order_by)
 
     def test_count_respects_visibleByUser_filter(self):
         # IGitCollection.count() returns the number of repositories that

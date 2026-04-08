@@ -246,11 +246,12 @@ class FileBugViewBase(LaunchpadFormView):
         # when an action is invoked.
         cache = IJSONRequestCache(self.request)
         cache.objects["bug_private_by_default"] = (
-            self.context.pillar.getDefaultBugInformationType()
+            self.context.bug_target_parent.getDefaultBugInformationType()
             in PRIVATE_INFORMATION_TYPES
         )
         json_dump_information_types(
-            cache, self.context.pillar.getAllowedBugInformationTypes()
+            cache,
+            self.context.bug_target_parent.getAllowedBugInformationTypes(),
         )
 
         bugtask_status_data = vocabulary_to_choice_edit_items(
@@ -370,7 +371,7 @@ class FileBugViewBase(LaunchpadFormView):
 
     @property
     def default_information_type(self):
-        value = self.context.pillar.getDefaultBugInformationType()
+        value = self.context.bug_target_parent.getDefaultBugInformationType()
         if (
             self.extra_data
             and self.extra_data.private
@@ -523,8 +524,9 @@ class FileBugViewBase(LaunchpadFormView):
         super().setUpFields()
 
         if self.is_bug_supervisor:
+            bug_target_parent = self.context.bug_target_parent
             info_type_vocab = InformationTypeVocabulary(
-                types=self.context.pillar.getAllowedBugInformationTypes()
+                types=bug_target_parent.getAllowedBugInformationTypes()
             )
             information_type_field = copy_field(
                 IBug["information_type"],
@@ -855,7 +857,7 @@ class FileBugViewBase(LaunchpadFormView):
 
     def getProductOrDistroFromContext(self):
         """Return the product or distribution relative to the context."""
-        return self.context.pillar
+        return self.context.bug_target_parent
 
     def showOptionalMarker(self, field_name):
         """See `LaunchpadFormView`."""
@@ -881,7 +883,7 @@ class FileBugViewBase(LaunchpadFormView):
         it finds even if there are other candidates. Be warned!
         """
         for bugtask in bug.bugtasks:
-            if self.context in (bugtask.target, bugtask.pillar):
+            if self.context in (bugtask.target, bugtask.bug_target_parent):
                 return bugtask
         return None
 

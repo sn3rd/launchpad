@@ -715,6 +715,15 @@ class IDistroSeriesPublic(
         object.
         """
 
+    def getArchiveSourcePackageSeries(archive, name):
+        """Return an archive source package series by archive and name.
+
+        The name given may be a string or an ISourcePackageName-providing
+        object. Returns None if the archive's distribution doesn't match
+        this distroseries's distribution, or if the source package name
+        doesn't exist.
+        """
+
     def getTranslatableSourcePackages():
         """Return a list of Source packages in this distribution series
         that can be translated.

@@ -52,7 +52,7 @@ assignee yet:
 
     >>> bug_nine = getUtility(IBugSet).get(9)
     >>> thunderbird_bugtask = bug_nine.bugtasks[0]
-    >>> thunderbird_bugtask.pillar.official_malone
+    >>> thunderbird_bugtask.bug_target_parent.official_malone
     False
     >>> assignee_field = IBugTask["assignee"].bind(thunderbird_bugtask)
     >>> assignee_widget = AssigneeDisplayWidget(assignee_field, None, None)

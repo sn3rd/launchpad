@@ -16,6 +16,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from operator import attrgetter, itemgetter
 from pathlib import Path
+from typing import List
 
 from storm.databases.postgres import JSON
 from storm.expr import (
@@ -83,6 +84,8 @@ from lp.soyuz.interfaces.publishing import (
     ISourcePackagePublishingHistory,
     OverrideError,
     PoolFileOverwriteError,
+    SourceUploadBuildInfo,
+    SourceUploadInfo,
     active_publishing_status,
     name_priority_map,
 )
@@ -2386,6 +2389,61 @@ class PublishingSet:
         return self.getBuildStatusSummariesForSourceIdsAndArchive(
             [source_id], source_publication.archive
         )[source_id]
+
+    def getRecentSourceUploads(
+        self, distroseries, creator=None, offset=0, limit=20
+    ) -> List[SourceUploadInfo]:
+        """See `IPublishingSet`."""
+        clauses = [
+            SourcePackagePublishingHistory.distroseries == distroseries,
+            SourcePackagePublishingHistory.status.is_in(
+                active_publishing_status
+            ),
+            SourcePackagePublishingHistory.archive_id.is_in(
+                distroseries.distribution.all_distro_archive_ids
+            ),
+        ]
+        if creator is not None:
+            clauses.append(SourcePackagePublishingHistory.creator == creator)
+        store = IStore(SourcePackagePublishingHistory)
+        publications = list(
+            store.find(SourcePackagePublishingHistory, *clauses)
+            .order_by(Desc(SourcePackagePublishingHistory.datecreated))
+            .config(offset=offset, limit=limit)
+        )
+
+        if not publications:
+            return []
+
+        # Bulk-load to avoid N+1 queries on .name and .version.
+        releases = bulk.load_related(
+            SourcePackageRelease, publications, ["sourcepackagerelease_id"]
+        )
+        bulk.load_related(
+            SourcePackageName, releases, ["sourcepackagename_id"]
+        )
+
+        # Get builds for all publications in one UNION query.
+        builds_by_publication: defaultdict[
+            int, List[SourceUploadBuildInfo]
+        ] = defaultdict(list)
+        for pub, build, das in self.getBuildsForSources(publications):
+            builds_by_publication[pub.id].append(
+                SourceUploadBuildInfo(
+                    arch_tag=das.architecturetag,
+                    build_status=build.status,
+                )
+            )
+
+        return [
+            SourceUploadInfo(
+                name=pub.source_package_name,
+                version=pub.source_package_version,
+                pocket_title=pub.pocket.title,
+                builds=builds_by_publication.get(pub.id, []),
+            )
+            for pub in publications
+        ]
 
     def setMultipleDeleted(
         self, publication_class, ids, removed_by, removal_comment=None

@@ -38,8 +38,8 @@ class TestBugAttachmentEditView(TestCaseWithFactory):
         login_person(self.bug_owner)
         self.bug = self.factory.makeBug(owner=self.bug_owner)
         # Reassign the bug's default bug task to a target such that the
-        # pillar is different from the immediate target.  This can make a
-        # difference for some security checks.
+        # bug_target_parent is different from the immediate target.  This can
+        # make a difference for some security checks.
         self.bug.default_bugtask.transitionToTarget(
             self.factory.makeDistributionSourcePackage(), self.bug_owner
         )
@@ -88,10 +88,11 @@ class TestBugAttachmentEditView(TestCaseWithFactory):
             "application/whatever", self.bugattachment.libraryfile.mimetype
         )
 
-    def test_pillar_bug_supervisor_changes_any_attachment(self):
+    def test_bug_target_parent_bug_supervisor_changes_any_attachment(self):
         login_admin()
         bug_supervisor = self.factory.makePerson()
-        self.bug.default_bugtask.pillar.bug_supervisor = bug_supervisor
+        parent = self.bug.default_bugtask.bug_target_parent
+        parent.bug_supervisor = bug_supervisor
         login_person(bug_supervisor)
         create_initialized_view(
             self.bugattachment, name="+edit", form=self.CHANGE_FORM_DATA
@@ -138,10 +139,11 @@ class TestBugAttachmentEditView(TestCaseWithFactory):
         )
         self.assertEqual(0, self.bug.attachments.count())
 
-    def test_pillar_bug_supervisor_can_delete_any_attachment(self):
+    def test_bug_target_parent_bug_supervisor_can_delete_any_attachment(self):
         login_admin()
         bug_supervisor = self.factory.makePerson()
-        self.bug.default_bugtask.pillar.bug_supervisor = bug_supervisor
+        parent = self.bug.default_bugtask.bug_target_parent
+        parent.bug_supervisor = bug_supervisor
         login_person(bug_supervisor)
         create_initialized_view(
             self.bugattachment, name="+edit", form=self.DELETE_FORM_DATA

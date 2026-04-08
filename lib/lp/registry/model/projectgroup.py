@@ -557,6 +557,14 @@ class ProjectGroup(
         user = getUtility(ILaunchBag).user
         return self._getMilestones(user, only_active=False)
 
+    def all_milestones_with_releases(self):
+        """See `IHasMilestones`.
+
+        ProjectMilestone objects always have product_release=None, so
+        this is equivalent to all_milestones.
+        """
+        return self.all_milestones
+
     def getMilestone(self, name):
         """See `IProjectGroup`."""
         for milestone in self.all_milestones:

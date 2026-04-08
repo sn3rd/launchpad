@@ -137,6 +137,7 @@ class TestMaloneView(TestCaseWithFactory):
                 "bug_summary": "title",
                 "description": "description",
                 "bug_url": canonical_url(bug.default_bugtask),
+                "different_bug_target_parents": related_bug is not None,
                 "different_pillars": related_bug is not None,
             }
         self.assertEqual([expected_bug_data], bug_data)

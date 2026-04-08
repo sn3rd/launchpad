@@ -158,9 +158,10 @@ class FakeLibrarian(Fixture):
         md5 = hashlib.md5(content).hexdigest()
         sha1 = hashlib.sha1(content).hexdigest()
         sha256 = hashlib.sha256(content).hexdigest()
+        sha512 = hashlib.sha512(content).hexdigest()
 
         content_object = LibraryFileContent(
-            filesize=size, md5=md5, sha1=sha1, sha256=sha256
+            filesize=size, md5=md5, sha1=sha1, sha256=sha256, sha512=sha512
         )
         IStore(LibraryFileContent).add(content_object)
         return content_object

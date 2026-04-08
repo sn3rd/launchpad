@@ -2400,12 +2400,12 @@ class LaunchpadObjectFactory(ObjectFactory):
         if target is None:
             default_bugtask = bug and removeSecurityProxy(bug.default_bugtask)
             if default_bugtask is not None:
-                existing_pillar = default_bugtask.pillar
-                if IProduct.providedBy(existing_pillar):
-                    target = self.makeProductSeries(product=existing_pillar)
-                elif IDistribution.providedBy(existing_pillar):
+                existing_parent = default_bugtask.bug_target_parent
+                if IProduct.providedBy(existing_parent):
+                    target = self.makeProductSeries(product=existing_parent)
+                elif IDistribution.providedBy(existing_parent):
                     target = self.makeDistroSeries(
-                        distribution=existing_pillar
+                        distribution=existing_parent
                     )
             if target is None:
                 target = self.makeProduct()
@@ -3344,6 +3344,7 @@ class LaunchpadObjectFactory(ObjectFactory):
             # This lets us run tests without a librarian server.
             lfc = LibraryFileContent(
                 filesize=len(content),
+                sha512=hashlib.sha512(content).hexdigest(),
                 sha256=hashlib.sha256(content).hexdigest(),
                 sha1=hashlib.sha1(content).hexdigest(),
                 md5=hashlib.md5(content).hexdigest(),
@@ -5696,6 +5697,66 @@ class LaunchpadObjectFactory(ObjectFactory):
         return ProxyFactory(
             distroseries.getExternalPackageSeries(
                 sourcepackagename, packagetype, channel
+            )
+        )
+
+    def makeArchiveSourcePackage(
+        self,
+        sourcepackagename=None,
+        archive=None,
+    ):
+        """Make an ArchiveSourcePackage.
+
+        Creates a publication so the package exists in the archive.
+        """
+        if sourcepackagename is None or isinstance(sourcepackagename, str):
+            sourcepackagename = self.getOrMakeSourcePackageName(
+                sourcepackagename
+            )
+        if archive is None:
+            archive = self.makeArchive()
+
+        # Create a publication so the package exists
+        self.makeSourcePackagePublishingHistory(
+            sourcepackagename=sourcepackagename,
+            archive=archive,
+        )
+
+        return ProxyFactory(archive.getArchiveSourcePackage(sourcepackagename))
+
+    def makeArchiveSourcePackageSeries(
+        self,
+        sourcepackagename=None,
+        archive=None,
+        distroseries=None,
+    ):
+        """Make an ArchiveSourcePackageSeries.
+
+        Creates a publication so the package exists in the archive/series.
+        """
+        if sourcepackagename is None or isinstance(sourcepackagename, str):
+            sourcepackagename = self.getOrMakeSourcePackageName(
+                sourcepackagename
+            )
+        if archive is None:
+            if distroseries is None:
+                distroseries = self.makeDistroSeries()
+            archive = self.makeArchive(distribution=distroseries.distribution)
+        elif distroseries is None:
+            distroseries = self.makeDistroSeries(
+                distribution=archive.distribution
+            )
+
+        # Create a publication so the package exists
+        self.makeSourcePackagePublishingHistory(
+            sourcepackagename=sourcepackagename,
+            archive=archive,
+            distroseries=distroseries,
+        )
+
+        return ProxyFactory(
+            archive.getArchiveSourcePackageSeries(
+                distroseries, sourcepackagename
             )
         )
 

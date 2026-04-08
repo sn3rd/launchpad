@@ -1249,9 +1249,9 @@ class TestBugChanges(TestCaseWithFactory):
             lifecycle_subscriber,
         ]
         expected_recipients.extend(
-            bug_task.pillar.owner
+            bug_task.bug_target_parent.owner
             for bug_task in source_package_bug.bugtasks
-            if bug_task.pillar.official_malone
+            if bug_task.bug_target_parent.official_malone
         )
         expected_notification = {
             "text": "** Package changed: %s => %s"

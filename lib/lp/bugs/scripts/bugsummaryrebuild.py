@@ -115,7 +115,7 @@ def load_target(pid, psid, did, dsid, spnid, ociproject_id):
 
 
 def format_target(target):
-    id = target.pillar.name
+    id = target.bug_target_parent.name
     series = (
         (ISeriesMixin.providedBy(target) and target)
         or getattr(target, "distroseries", None)

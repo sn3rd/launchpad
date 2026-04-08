@@ -38,9 +38,36 @@
     .p-pricing-block--50-50 {
       max-width: 100%;
     }
+    // remove the overflow which is used for text ellipsis, this prevents the tooltip from showing up
+    td,th {
+      overflow: unset;
+    }
+    // small adjustment to the tooltip arrow position to remove the gap
+    .p-tooltip__message::before {
+      bottom: 99%;
+    }
   }
 }
 
 .hidden {
   display: none !important;
+}
+
+.swap-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.p-tabs__link[aria-current="page"] {
+  position: relative;
+
+  &::before {
+    bottom: 0;
+    background-color: var(--vf-color-text-default, #000);
+    content: "";
+    position: absolute;
+    height: 0.1875rem;
+    left: 0;
+    right: 0;
+  }
 }

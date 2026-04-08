@@ -237,7 +237,7 @@ def target_has_expirable_bugs_listing(target):
     """Return True or False if the target has the expirable-bugs listing.
 
     The target must be a Distribution, DistroSeries, Product, or
-    ProductSeries, and the pillar must have enabled bug expiration.
+    ProductSeries, and the bug_target_parent must have enabled bug expiration.
     """
     if IDistribution.providedBy(target) or IProduct.providedBy(target):
         return target.enable_bug_expiration
@@ -352,10 +352,9 @@ class BugsInfoMixin:
     def expirable_bugs_url(self):
         """A URL to a list of bugs that can expire, or None.
 
-        If the bugtarget is not a supported implementation, or its pillar
-        does not have enable_bug_expiration set to True, None is returned.
-        The bugtarget may be an `IDistribution`, `IDistroSeries`, `IProduct`,
-        or `IProductSeries`.
+        If the bugtarget is not a supported implementation, or its
+        bug_target_parent does not have enable_bug_expiration set to True,
+        None is returned.
         """
         if target_has_expirable_bugs_listing(self.context):
             return canonical_url(self.context, view_name="+expirable-bugs")
@@ -497,10 +496,9 @@ class BugsStatsMixin(BugsInfoMixin):
     def expirable_bugs_count(self):
         """A count of bugs that can expire, or None.
 
-        If the bugtarget is not a supported implementation, or its pillar
-        does not have enable_bug_expiration set to True, None is returned.
-        The bugtarget may be an `IDistribution`, `IDistroSeries`, `IProduct`,
-        or `IProductSeries`.
+        If the bugtarget is not a supported implementation, or its
+        bug_target_parent does not have enable_bug_expiration set to True,
+        None is returned.
         """
         if target_has_expirable_bugs_listing(self.context):
             return (
@@ -1638,7 +1636,7 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
     @property
     def structural_subscriber_label(self):
         if IOCIProject.providedBy(self.context):
-            target = self.context.pillar
+            target = self.context.bug_target_parent
         else:
             target = self.context
 
@@ -1663,7 +1661,7 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
         # It doesn't make sense to show the target name when viewing product
         # bugs.
         if IOCIProject.providedBy(self.context):
-            target = self.context.pillar
+            target = self.context.bug_target_parent
         else:
             target = self.context
 

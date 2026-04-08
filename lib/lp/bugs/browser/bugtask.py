@@ -1086,7 +1086,7 @@ def get_prefix(bugtask):
     keeping the field ids unique.
     """
     parts = []
-    parts.append(bugtask.pillar.name)
+    parts.append(bugtask.bug_target_parent.name)
 
     series = bugtask.productseries or bugtask.distroseries
     if series:
@@ -1172,8 +1172,8 @@ class BugTaskBugWatchMixin:
 class BugTaskPrivilegeMixin:
     @cachedproperty
     def user_has_privileges(self):
-        """Is the user privileged? That is, an admin, pillar owner, driver
-        or bug supervisor.
+        """Is the user privileged? That is, an admin, bug target parent
+        owner, driver or bug supervisor.
 
         If yes, return True, otherwise return False.
         """
@@ -1264,7 +1264,7 @@ class BugTaskEditView(
     @cachedproperty
     def editable_field_names(self):
         """Return the names of fields the user has permission to edit."""
-        if self.context.pillar.official_malone:
+        if self.context.bug_target_parent.official_malone:
             # Don't edit self.field_names directly, because it's shared by all
             # BugTaskEditView instances.
             editable_field_names = set(self.default_field_names)
@@ -1440,7 +1440,7 @@ class BugTaskEditView(
                 )
             )
 
-        if self.context.pillar.official_malone:
+        if self.context.bug_target_parent.official_malone:
             self.form_fields = self.form_fields.omit("bugwatch")
 
         elif self.context.bugwatch is not None and self.form_fields.get(
@@ -1471,7 +1471,7 @@ class BugTaskEditView(
 
     def _getReadOnlyFieldNames(self):
         """Return the names of fields that will be rendered read only."""
-        if self.context.pillar.official_malone:
+        if self.context.bug_target_parent.official_malone:
             read_only_field_names = []
 
             if not self.user_has_privileges:
@@ -1554,7 +1554,8 @@ class BugTaskEditView(
         new_target = new_values.pop("target", missing)
         if (
             new_target is not missing
-            and bugtask.target.pillar != new_target.pillar
+            and bugtask.target.bug_target_parent
+            != new_target.bug_target_parent
         ):
             # We clear the milestone value if one was already set. We ignore
             # the milestone value if it was currently None, and the user tried
@@ -1643,11 +1644,12 @@ class BugTaskEditView(
         if new_assignee is not missing and bugtask.assignee != new_assignee:
             if new_assignee is not None and new_assignee != self.user:
                 is_contributor = new_assignee.isBugContributorInTarget(
-                    user=self.user, target=bugtask.pillar
+                    user=self.user, target=bugtask.bug_target_parent
                 )
                 if not is_contributor:
                     # If we have a new assignee who isn't a bug
-                    # contributor in this pillar, we display a warning
+                    # contributor in this bug target parent, we display
+                    # a warning
                     # to the user, in case they made a mistake.
                     self.request.response.addWarningNotification(
                         structured(
@@ -1660,8 +1662,8 @@ class BugTaskEditView(
                         >change the assignment</a>.""",
                             canonical_url(new_assignee),
                             new_assignee.displayname,
-                            canonical_url(bugtask.pillar),
-                            bugtask.pillar.title,
+                            canonical_url(bugtask.bug_target_parent),
+                            bugtask.bug_target_parent.title,
                             canonical_url(bugtask),
                         )
                     )
@@ -1702,17 +1704,17 @@ class BugTaskEditView(
 
             # We clear the known views cache because the bug may not be
             # viewable anymore by the current user. If the bug is not
-            # viewable, then we redirect to the current bugtask's pillar's
-            # bug index page with a message.
+            # viewable, then we redirect to the current bugtask's bug target
+            # parent's bug index page with a message.
             get_property_cache(bugtask.bug)._known_viewers = set()
             if not bugtask.bug.userCanView(self.user):
                 self.request.response.addWarningNotification(
                     "The bug you have just updated is now a private bug for "
                     "%s. You do not have permission to view such bugs."
-                    % bugtask.pillar.displayname
+                    % bugtask.bug_target_parent.displayname
                 )
                 self._next_url_override = canonical_url(
-                    new_target.pillar, rootsite="bugs"
+                    new_target.bug_target_parent, rootsite="bugs"
                 )
 
         if bugtask.sourcepackagename and (
@@ -1905,7 +1907,7 @@ def bugtask_sort_key(bugtask):
         )
     elif IOCIProject.providedBy(bugtask.target):
         ociproject = bugtask.target
-        pillar = ociproject.pillar
+        bug_target_parent = ociproject.bug_target_parent
         key = [
             None,
             None,
@@ -1916,10 +1918,10 @@ def bugtask_sort_key(bugtask):
             None,
             ociproject.displayname,
         ]
-        if IDistribution.providedBy(pillar):
-            key[3] = pillar.displayname
-        elif IProduct.providedBy(pillar):
-            key[5] = pillar.displayname
+        if IDistribution.providedBy(bug_target_parent):
+            key[3] = bug_target_parent.displayname
+        elif IProduct.providedBy(bug_target_parent):
+            key[5] = bug_target_parent.displayname
         key = tuple(key)
     else:
         raise AssertionError("No sort key for %r" % bugtask.target)
@@ -2082,8 +2084,8 @@ def can_add_package_task_to_bug(bug):
     """
     if bug.information_type not in PROPRIETARY_INFORMATION_TYPES:
         return True
-    for pillar in bug.affected_pillars:
-        if IProduct.providedBy(pillar):
+    for bug_target_parent in bug.affected_bug_target_parents:
+        if IProduct.providedBy(bug_target_parent):
             return False
     return True
 
@@ -2270,7 +2272,7 @@ class BugTasksTableView(LaunchpadView):
             if ISeriesBugTarget.providedBy(bugtask.target):
                 parent = bugtask.target.bugtarget_parent
             elif IOCIProject.providedBy(bugtask.target):
-                latest_parent = parent = bugtask.target.pillar
+                latest_parent = parent = bugtask.target.bug_target_parent
             else:
                 latest_parent = parent = bugtask.target
 
@@ -2551,7 +2553,9 @@ class BugTaskTableRowView(
         if not self.user_can_edit:
             return False
         bugtask = self.context
-        edit_allowed = bugtask.pillar.official_malone or bugtask.bugwatch
+        edit_allowed = (
+            bugtask.bug_target_parent.official_malone or bugtask.bugwatch
+        )
         if bugtask.bugwatch:
             bugtracker = bugtask.bugwatch.bugtracker
             edit_allowed = (
@@ -2683,8 +2687,8 @@ class BugTaskCreateQuestionView(LaunchpadFormView):
         will be linked to this bug.
 
         A question will not be created if a question was previously created,
-        the pillar does not use Launchpad to track bugs, or there is more
-        than one valid bugtask.
+        the bug target parent does not use Launchpad to track bugs, or there
+        is more than one valid bugtask.
         """
         if not self.context.bug.canBeAQuestion():
             self.request.response.addNotification(

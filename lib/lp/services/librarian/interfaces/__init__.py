@@ -158,6 +158,7 @@ class ILibraryFileContent(Interface):
     )
     filesize = Int(title=_("File size"), required=True, readonly=True)
     sha256 = TextLine(title=_("SHA-256 hash"), required=True, readonly=True)
+    sha512 = TextLine(title=_("SHA-512 hash"), required=False, readonly=True)
     sha1 = TextLine(title=_("SHA-1 hash"), required=True, readonly=True)
     md5 = TextLine(title=_("MD5 hash"), required=True, readonly=True)
 

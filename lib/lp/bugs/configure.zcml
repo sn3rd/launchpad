@@ -228,6 +228,8 @@
                 attributes="
                     bugtargetname
                     bugtargetdisplayname
+                    bug_target_parent
+                    other_affected_target_parents
                     product
                     productseries
                     sourcepackagename
@@ -246,10 +248,8 @@
                     targetname
                     title
                     related_tasks
-                    other_affected_pillars
                     asEmailHeaderValue
                     getDelta
-                    pillar
                     bugtask_branches
                     conjoined_primary
                     conjoined_replica
@@ -424,7 +424,7 @@
                     watches_needing_update
                     watches_ready_to_check
                     watches_with_unpushed_comments
-                    getRelatedPillars
+                    getRelatedBugTargetParents
                     "/>
             <require
                 permission="launchpad.Edit"

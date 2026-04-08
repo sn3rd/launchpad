@@ -66,6 +66,7 @@ from lp.bugs.interfaces.bugtarget import (
     IOfficialBugTagTargetPublic,
     IOfficialBugTagTargetRestricted,
 )
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.bugs.interfaces.bugtask import BugTaskImportance
 from lp.bugs.interfaces.cve import ICve
 from lp.bugs.interfaces.structuralsubscription import (
@@ -254,6 +255,7 @@ class IDistributionLimitedView(IHasIcon, IHasLogo, IHasOwner, ILaunchpadUsage):
 class IDistributionView(
     IHasMugshot,
     IBugTarget,
+    IBugTargetParent,
     ICanGetMilestonesDirectly,
     IHasAppointedDriver,
     IHasBuildRecords,

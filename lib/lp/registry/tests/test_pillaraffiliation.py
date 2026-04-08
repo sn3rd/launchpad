@@ -192,8 +192,9 @@ class TestBugTaskPillarAffiliation(
     def test_correct_pillars_are_used(self):
         bugtask = self.factory.makeBugTask()
         adapter = IHasAffiliation(bugtask)
-        pillars = [bugtask.pillar for bugtask in bugtask.bug.bugtasks]
-        self.assertEqual(pillars, adapter.getPillars())
+        bugtasks = bugtask.bug.bugtasks
+        parents = [bugtask.bug_target_parent for bugtask in bugtasks]
+        self.assertEqual(parents, adapter.getPillars())
 
     def _check_affiliated_with_distro(self, person, target, role):
         bugtask = self.factory.makeBugTask(target=target)

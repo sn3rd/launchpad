@@ -220,12 +220,14 @@ class LibraryFileUpload:
         self.md5_digester = hashlib.md5()  # nosec B324
         self.sha1_digester = hashlib.sha1()  # nosec B324
         self.sha256_digester = hashlib.sha256()
+        self.sha512_digester = hashlib.sha512()
 
     def append(self, data):
         self.tmpfile.write(data)
         self.md5_digester.update(data)
         self.sha1_digester.update(data)
         self.sha256_digester.update(data)
+        self.sha512_digester.update(data)
 
     @write_transaction
     def store(self):
@@ -275,6 +277,7 @@ class LibraryFileUpload:
                     self.size,
                     self.md5_digester.hexdigest(),
                     self.sha256_digester.hexdigest(),
+                    self.sha512_digester.hexdigest(),
                 )
                 contentID = content.id
                 aliasID = self.storage.library.addAlias(

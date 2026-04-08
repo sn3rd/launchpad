@@ -5,6 +5,8 @@
 
 from zope.security.proxy import removeSecurityProxy
 
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
+from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.externalpackage import ExternalPackageType
 from lp.registry.model.externalpackage import ExternalPackage
 from lp.registry.model.externalpackageseries import ExternalPackageSeries
@@ -259,3 +261,19 @@ class TestExternalPackageSeries(TestCaseWithFactory):
         self.assertTrue(
             self.externalpackageseries.personHasDriverRights(driver)
         )
+
+    def test_bug_target_parent(self):
+        externalpackageseries = self.externalpackageseries
+        parent = externalpackageseries.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution itself.
+        self.assertEqual(self.distribution, parent)

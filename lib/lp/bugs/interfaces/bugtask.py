@@ -757,20 +757,17 @@ class IBugTask(IHasBug, IBugTaskDelete):
             readonly=True,
         )
     )
-    pillar = Choice(
-        title=_("Pillar"),
-        description=_(
-            "The LP pillar (product or distribution) "
-            "associated with this task."
-        ),
-        vocabulary="DistributionOrProduct",
-        readonly=True,
+
+    bug_target_parent = Attribute(
+        "The parent bug target entity of this bug task."
     )
-    other_affected_pillars = Attribute(
-        "The other pillars (products or distributions) affected by this bug. "
-        "This returns a list of pillars OTHER THAN the pillar associated "
-        "with this particular bug."
+
+    other_affected_target_parents = Attribute(
+        "The other bug target parents affected by this bug. This returns a "
+        "list of bug target parents OTHER THAN the bug target parent "
+        "associated with this particular bug."
     )
+
     # This property does various database queries. It is a property so a
     # "snapshot" of its value will be taken when a bugtask is modified, which
     # allows us to compare it to the current value and see if there are any
@@ -816,7 +813,7 @@ class IBugTask(IHasBug, IBugTaskDelete):
     @export_read_operation()
     @operation_for_version("devel")
     def getContributorInfo(user, person):
-        """Is the person a contributor to bugs in this task's pillar?
+        """Is the person a contributor to bugs in this task's target parent?
 
         :param user: The user doing the search. Private bugs that this
             user doesn't have access to won't be included in the search.
@@ -824,13 +821,14 @@ class IBugTask(IHasBug, IBugTaskDelete):
 
         Return a dict with the following values:
         is_contributor: True if the user has any bugs assigned to them in
-        the context of this bug task's pillar, either directly or by team
-        participation.
+        the context of this bug task's target parent, either directly or by
+        team participation.
         person_name: the displayname of the person
-        pillar_name: the displayname of the bug task's pillar
+        bug_target_parent_name: the displayname of the bug task's target parent
 
         This API call is provided for use by the client Javascript where the
-        calling context does not have access to the person or pillar names.
+        calling context does not have access to the person or bug target
+        parent names.
         """
 
     def getConjoinedPrimary(bugtasks, bugtasks_by_package=None):

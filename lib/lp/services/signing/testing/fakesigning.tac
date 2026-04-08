@@ -6,7 +6,6 @@
 import os
 
 from twisted.application import service, strports
-from twisted.python.compat import nativeString
 from twisted.web import server
 
 from lp.services.daemons import readyservice
@@ -21,5 +20,5 @@ readyservice.ReadyService().setServiceParent(svc)
 site = server.Site(SigningServiceResource())
 site.displayTracebacks = False
 
-port = nativeString("tcp:%s" % os.environ["FAKE_SIGNING_PORT"])
+port = "tcp:%s" % os.environ["FAKE_SIGNING_PORT"]
 strports.service(port, site).setServiceParent(svc)

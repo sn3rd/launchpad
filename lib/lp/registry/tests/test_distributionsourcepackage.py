@@ -9,7 +9,8 @@ from testtools.matchers import Equals, MatchesStructure
 from zope.component import getUtility
 from zope.security.proxy import removeSecurityProxy
 
-from lp.registry.interfaces.distribution import IDistributionSet
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
+from lp.registry.interfaces.distribution import IDistribution, IDistributionSet
 from lp.registry.model.distributionsourcepackage import (
     DistributionSourcePackage,
     DistributionSourcePackageInDatabase,
@@ -237,6 +238,26 @@ class TestDistributionSourcePackage(TestCaseWithFactory):
             )
         with person_logged_in(person):
             self.assertFalse(check_permission("launchpad.Edit", dsp))
+
+    def test_bug_target_parent(self):
+        distribution = self.factory.makeDistribution()
+        dsp = self.factory.makeDistributionSourcePackage(
+            distribution=distribution
+        )
+
+        parent = dsp.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution of the DSP.
+        self.assertEqual(distribution, parent)
 
 
 class TestDistributionSourcePackageFindRelatedArchives(TestCaseWithFactory):

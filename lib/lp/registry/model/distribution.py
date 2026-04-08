@@ -392,6 +392,11 @@ class Distribution(
         return self.display_name
 
     @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self
+
+    @property
     def pillar(self):
         """See `IBugTarget`."""
         return self

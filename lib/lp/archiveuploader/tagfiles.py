@@ -9,7 +9,7 @@ __all__ = ["TagFileParseError", "parse_tagfile", "parse_tagfile_content"]
 import tempfile
 from typing import Dict, Optional
 
-import apt_pkg
+from debian import deb822
 
 from lp.services.mail.signedmessage import strip_pgp_signature
 
@@ -37,10 +37,15 @@ def parse_tagfile_content(
     with tempfile.TemporaryFile() as f:
         f.write(strip_pgp_signature(content))
         f.seek(0)
+        # XXX tushar5526 2026-04-06: deb822 can use apt_pkg as its parsing
+        # backend. The segfault bug does not exist in the Noble libapt-pkg
+        # library, so ensure "use_apt_pkg=True" is passed once we migrate to
+        # Noble.
         try:
-            stanzas = list(apt_pkg.TagFile(f, bytes=True))
-        except SystemError as e:
-            raise TagFileParseError("%s: %s" % (filename, e))
+            stanzas = list(deb822.Deb822.iter_paragraphs(f))
+        except Exception as e:
+            raise TagFileParseError("%s: %s" % (filename, e)) from e
+
     if len(stanzas) != 1:
         raise TagFileParseError(
             "%s: multiple stanzas where only one is expected" % filename
@@ -48,15 +53,8 @@ def parse_tagfile_content(
 
     [stanza] = stanzas
 
-    # We can't do this sensibly with dict() or update(), as it has some
-    # keys without values.
-    trimmed_dict = {}
-    for key in stanza.keys():
-        try:
-            trimmed_dict[key] = stanza[key]
-        except KeyError:
-            pass
-    return trimmed_dict
+    # Convert to dict with bytes values (deb822 returns strings).
+    return {k: v.strip().encode("utf-8") for k, v in stanza.items()}
 
 
 def parse_tagfile(filename: str) -> Dict[str, bytes]:

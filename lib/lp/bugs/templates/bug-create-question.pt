@@ -17,13 +17,13 @@
                 A question was already created from this bug.
               </tal:question>
               <tal:uses-malone
-                condition="not: context/pillar/bug_tracking_usage/enumvalue:LAUNCHPAD">
+                condition="not: context/bug_target_parent/bug_tracking_usage/enumvalue:LAUNCHPAD">
                 <tal:target
                   replace="context/target/displayname">Firefox</tal:target>
                 does not use Launchpad to track bugs.
               </tal:uses-malone>
               <tal:uses-answers
-                condition="not: context/pillar/answers_usage/enumvalue:LAUNCHPAD">
+                condition="not: context/bug_target_parent/answers_usage/enumvalue:LAUNCHPAD">
                 <tal:target
                   replace="context/target/displayname">Firefox</tal:target>
                 does not use Launchpad for support questions.

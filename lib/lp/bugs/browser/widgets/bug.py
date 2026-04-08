@@ -167,11 +167,11 @@ class BugTagsWidget(BugTagsWidgetBase, TextWidget):
     def official_tags_js(self):
         """Return the JavaScript of bug tags used by the bug tag completer."""
         bug_target = self.context.context
-        pillar_target = IProduct(bug_target, None) or IDistribution(
+        bug_target_parent = IProduct(bug_target, None) or IDistribution(
             bug_target, None
         )
-        if pillar_target is not None:
-            official_tags = list(pillar_target.official_bug_tags)
+        if bug_target_parent is not None:
+            official_tags = list(bug_target_parent.official_bug_tags)
         else:
             official_tags = []
         return "var official_tags = %s;" % json.dumps(official_tags)

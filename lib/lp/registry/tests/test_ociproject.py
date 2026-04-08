@@ -12,7 +12,9 @@ from zope.schema.vocabulary import getVocabularyRegistry
 from zope.security.interfaces import Unauthorized
 from zope.security.proxy import removeSecurityProxy
 
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.oci.interfaces.ocirecipe import OCI_RECIPE_ALLOW_CREATE
+from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.ociproject import (
     OCI_PROJECT_ALLOW_CREATE,
     CannotDeleteOCIProject,
@@ -20,6 +22,7 @@ from lp.registry.interfaces.ociproject import (
     IOCIProjectSet,
 )
 from lp.registry.interfaces.ociprojectseries import IOCIProjectSeries
+from lp.registry.interfaces.product import IProduct
 from lp.registry.model.ociproject import OCIProject
 from lp.services.database.interfaces import IStore
 from lp.services.features.testing import FeatureFixture
@@ -185,6 +188,39 @@ class TestOCIProject(TestCaseWithFactory):
             .find(OCIProject, OCIProject.id == oci_project.id)
             .one(),
         )
+
+    def test_bug_target_parent_product(self):
+        product = self.factory.makeProduct()
+        oci_project = self.factory.makeOCIProject(pillar=product)
+
+        parent = oci_project.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IProduct interface.
+        self.assertTrue(IProduct.providedBy(parent))
+
+        # The parent should be the product itself.
+        self.assertEqual(product, parent)
+
+    def test_bug_target_parent_distribution(self):
+        distribution = self.factory.makeDistribution()
+        oci_project = self.factory.makeOCIProject(pillar=distribution)
+
+        parent = oci_project.bug_target_parent
+
+        # The parent should not be None.
+        self.assertIsNotNone(parent)
+
+        # The parent should provide the IDistribution interface.
+        self.assertTrue(IDistribution.providedBy(parent))
+
+        # The parent should provide the IBugTargetParent interface.
+        self.assertTrue(IBugTargetParent.providedBy(parent))
+
+        # The parent should be the distribution itself.
+        self.assertEqual(distribution, parent)
 
 
 class TestOCIProjectSet(TestCaseWithFactory):

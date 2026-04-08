@@ -40,8 +40,8 @@ class TestDistribution(
         super().setUp()
         self.bugtarget = self.factory.makeDistribution()
 
-    def test_pillar(self):
-        self.assertEqual(self.bugtarget, self.bugtarget.pillar)
+    def test_bug_target_parent(self):
+        self.assertEqual(self.bugtarget, self.bugtarget.bug_target_parent)
 
 
 class TestDistroSeries(
@@ -61,8 +61,11 @@ class TestDistroSeries(
             self.bugtarget.distribution, self.bugtarget.bugtarget_parent
         )
 
-    def test_pillar(self):
-        self.assertEqual(self.bugtarget.distribution, self.bugtarget.pillar)
+    def test_bug_target_parent_alias(self):
+        self.assertEqual(
+            self.bugtarget.distribution,
+            self.bugtarget.bug_target_parent,
+        )
 
     def test_series(self):
         self.assertEqual(self.bugtarget, self.bugtarget.series)
@@ -108,8 +111,8 @@ class TestProduct(
             bug_supervisor=self.bug_supervisor
         )
 
-    def test_pillar(self):
-        self.assertEqual(self.bugtarget, self.bugtarget.pillar)
+    def test_bug_target_parent(self):
+        self.assertEqual(self.bugtarget, self.bugtarget.bug_target_parent)
 
 
 class TestDistributionSourcePackage(
@@ -129,8 +132,11 @@ class TestDistributionSourcePackage(
             distribution=distribution
         )
 
-    def test_pillar(self):
-        self.assertEqual(self.bugtarget.distribution, self.bugtarget.pillar)
+    def test_bug_target_parent(self):
+        self.assertEqual(
+            self.bugtarget.distribution,
+            self.bugtarget.bug_target_parent,
+        )
 
 
 class BugTargetBugFilingDuplicateSearchInherited:
@@ -173,8 +179,11 @@ class TestProductSeries(
             self.bugtarget.product, self.bugtarget.bugtarget_parent
         )
 
-    def test_pillar(self):
-        self.assertEqual(self.bugtarget.product, self.bugtarget.pillar)
+    def test_bug_target_parent_alias(self):
+        self.assertEqual(
+            self.bugtarget.product,
+            self.bugtarget.bug_target_parent,
+        )
 
     def test_series(self):
         self.assertEqual(self.bugtarget, self.bugtarget.series)
@@ -205,9 +214,10 @@ class TestSourcePackage(
             self.bugtarget.bugtarget_parent,
         )
 
-    def test_pillar(self):
+    def test_bug_target_parent_alias(self):
         self.assertEqual(
-            self.bugtarget.distroseries.distribution, self.bugtarget.pillar
+            self.bugtarget.distroseries.distribution,
+            self.bugtarget.bug_target_parent,
         )
 
     def test_series(self):
