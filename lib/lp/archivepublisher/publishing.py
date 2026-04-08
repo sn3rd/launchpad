@@ -39,6 +39,10 @@ from lp.archivepublisher.indices import (
     build_binary_stanza_fields,
     build_source_stanza_fields,
     build_translations_stanza_fields,
+    generate_packages_index,
+    generate_sources_index,
+    get_overrides_for_arch,
+    read_extra_overrides,
 )
 from lp.archivepublisher.interfaces.archivegpgsigningkey import (
     ISignableArchive,
@@ -864,6 +868,176 @@ class Publisher:
                     self._writeComponentIndexes(
                         distroseries, pocket, component
                     )
+
+    def C_doDirectIndexes(self, is_careful):
+        """Generate indexes directly from DB, with full override support.
+
+        This is the direct-SQL replacement for C_doFTPArchive.
+        Override and file-list generation is kept identical to
+        FTPArchiveHandler.run() so that downstream consumers
+        (30-copy-indices, generate-contents-files) continue to work.
+
+        Instead of running apt-ftparchive, index files are generated
+        by querying the database directly.
+        """
+        self.log.debug("* Step C'': Direct index generation from DB")
+
+        # Reuse FTPArchiveHandler for override and file-list generation.
+        # See FTPArchiveHandler.run for reference.
+        apt_handler = FTPArchiveHandler(
+            self.log, self._config, self._diskpool, self.distro, self
+        )
+        apt_handler.createEmptyPocketRequests(is_careful)
+        self.log.debug("Preparing file lists and overrides.")
+        apt_handler.generateOverrides(is_careful)
+        self.log.debug("Generating overrides for the distro.")
+        apt_handler.generateFileLists(is_careful)
+
+        # Loop structure closely follows C_writeIndexes
+        self.log.debug("Generating index files directly from DB.")
+        store = IStore(SourcePackagePublishingHistory)
+        for distroseries in self.distro.series:
+            for pocket in self.archive.getPockets():
+                if not is_careful:
+                    if not self.isDirty(distroseries, pocket):
+                        self.log.debug(
+                            "Skipping direct index generation for %s/%s"
+                            % (distroseries.name, pocket.name)
+                        )
+                        continue
+                else:
+                    if not self.isAllowed(distroseries, pocket):
+                        continue
+
+                suite = distroseries.getSuite(pocket)
+                self.release_files_needed.add(suite)
+
+                components = self.archive.getComponentsForSeries(distroseries)
+                for component in components:
+                    self._writeDirectComponentIndexes(
+                        store,
+                        distroseries,
+                        pocket,
+                        component,
+                        suite,
+                    )
+
+    def _writeDirectComponentIndexes(
+        self, store, distroseries, pocket, component, suite
+    ):
+        """Generate index files for a single suite/component from SQL.
+
+        Sources and binary Packages are generated via direct SQL queries.
+        """
+        self.log.debug(
+            "Generating direct indexes for %s/%s" % (suite, component.name)
+        )
+
+        self.log.debug(
+            "Generating Sources for %s/%s" % (suite, component.name)
+        )
+
+        extra_override_path = os.path.join(
+            self._config.overrideroot,
+            "override.%s.extra.%s" % (suite, component.name),
+        )
+        extra_overrides = read_extra_overrides(extra_override_path)
+        sources_bytes = generate_sources_index(
+            store,
+            self.archive.id,
+            distroseries.id,
+            pocket.value,
+            component.id,
+        )
+
+        source_index = RepositoryIndexFile(
+            get_sources_path(self._config, suite, component),
+            self._config.temproot,
+            distroseries.index_compressors,
+        )
+        source_index.write(sources_bytes)
+        source_index.close()
+
+        separate_long_descriptions = not distroseries.include_long_descriptions
+        all_translations_bytes = []
+
+        for arch in distroseries.architectures:
+            if not arch.enabled:
+                continue
+
+            arch_path = "binary-%s" % arch.architecturetag
+            self.log.debug("Generating Packages for %s" % arch_path)
+
+            arch_overrides = get_overrides_for_arch(
+                extra_overrides, arch.architecturetag
+            )
+
+            packages_bytes, translations_bytes = generate_packages_index(
+                store,
+                self.archive.id,
+                distroseries.id,
+                pocket.value,
+                component.id,
+                arch.id,
+                arch.architecturetag,
+                arch.underlying_architecturetag,
+                separate_long_descriptions,
+                overrides=arch_overrides,
+                formats=[BinaryPackageFormat.DEB],
+            )
+
+            # Write main Packages index (DEBs)
+            main_index = RepositoryIndexFile(
+                get_packages_path(self._config, suite, component, arch),
+                self._config.temproot,
+                distroseries.index_compressors,
+            )
+            main_index.write(packages_bytes)
+            main_index.close()
+
+            # Write subcomponent indices (debian-installer)
+            for subcomp in self.subcomponents:
+                sub_index = RepositoryIndexFile(
+                    get_packages_path(
+                        self._config, suite, component, arch, subcomp
+                    ),
+                    self._config.temproot,
+                    distroseries.index_compressors,
+                )
+                if subcomp == "debian-installer":
+                    di_bytes, _ = generate_packages_index(
+                        store,
+                        self.archive.id,
+                        distroseries.id,
+                        pocket.value,
+                        component.id,
+                        arch.id,
+                        arch.architecturetag,
+                        arch.underlying_architecturetag,
+                        overrides=arch_overrides,
+                        formats=[BinaryPackageFormat.UDEB],
+                    )
+                    sub_index.write(di_bytes)
+                sub_index.close()
+
+            if translations_bytes:
+                all_translations_bytes.append(translations_bytes)
+
+        if separate_long_descriptions:
+            translation_en = RepositoryIndexFile(
+                os.path.join(
+                    self._config.distsroot,
+                    suite,
+                    component.name,
+                    "i18n",
+                    "Translation-en",
+                ),
+                self._config.temproot,
+                distroseries.index_compressors,
+            )
+            for t_bytes in all_translations_bytes:
+                translation_en.write(t_bytes)
+            translation_en.close()
 
     def C_updateArtifactoryProperties(self, is_careful):
         """Update Artifactory properties to match our database."""
