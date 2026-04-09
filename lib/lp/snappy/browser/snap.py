@@ -1052,8 +1052,8 @@ class SnapEditView(BaseSnapEditView, EnableProcessorsMixin):
         # be removed once we back fill snap.information_type.
         initial_values["information_type"] = self.context.information_type
         if self.context.store_distro_series is None:
-            initial_values["store_distro_series"] = SyntheticSnappyDistroSeries(
-                None, self.context.distro_series
+            initial_values["store_distro_series"] = (
+                SyntheticSnappyDistroSeries(None, self.context.distro_series)
             )
         return initial_values
 
