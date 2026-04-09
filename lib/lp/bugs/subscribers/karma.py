@@ -28,6 +28,11 @@ def _assign_karma_using_bugtask_context(person, bugtask, actionname):
     product = bugtask.product
     if bugtask.productseries is not None:
         product = bugtask.productseries.product
+
+    if bugtask.archive:
+        # Archive bugtasks does not support karma yet, so let's skip karma
+        # assignment.
+        return
     if (
         product is None
         and distribution is None

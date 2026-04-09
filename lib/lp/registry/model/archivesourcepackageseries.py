@@ -150,11 +150,6 @@ class ArchiveSourcePackageSeries(
         """See `IBugTarget`."""
         return self.archive.bug_reported_acknowledgement
 
-    @property
-    def bug_tracking_usage(self):
-        """See `IServiceUsage`."""
-        return self.archive.bug_tracking_usage
-
     def getBugSummaryContextWhereClause(self):
         """See `HasBugsBase`."""
         # Circular import avoidance

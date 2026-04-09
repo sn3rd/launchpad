@@ -11,6 +11,7 @@ __all__ = [
 
 
 from zope.interface import implementer
+from zope.publisher.interfaces import NotFound
 
 from lp.app.interfaces.headings import IHeadingBreadcrumb
 from lp.bugs.browser.bugtask import BugTargetTraversalMixin
@@ -21,6 +22,7 @@ from lp.bugs.browser.structuralsubscription import (
 from lp.registry.browser import add_subscribe_link
 from lp.registry.browser.pillar import BugTargetParentBugsMenu
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
+from lp.services.features import getFeatureFlag
 from lp.services.propertycache import cachedproperty
 from lp.services.webapp import Navigation, StandardLaunchpadFacets
 from lp.services.webapp.breadcrumb import Breadcrumb
@@ -28,6 +30,7 @@ from lp.services.webapp.interfaces import (
     ICanonicalUrlData,
     IMultiFacetedBreadcrumb,
 )
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
 
 
 @implementer(IHeadingBreadcrumb, IMultiFacetedBreadcrumb)
@@ -72,6 +75,14 @@ class ArchiveSourcePackageNavigation(
     """Navigation for `IArchiveSourcePackage`."""
 
     usedfor = IArchiveSourcePackage
+
+    def publishTraverse(self, request, name):
+        """Block +filebug when the feature flag is off."""
+        if name == "+filebug" and not getFeatureFlag(
+            ARCHIVE_BUGS_FEATURE_FLAG
+        ):
+            raise NotFound(self.context, name)
+        return super().publishTraverse(request, name)
 
 
 @implementer(ICanonicalUrlData)
