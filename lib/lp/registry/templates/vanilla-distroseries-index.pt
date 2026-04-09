@@ -7,6 +7,9 @@
       <link type="text/css" rel="stylesheet" tal:attributes="href string:${icingroot}/vanilla/pages/distroseries.css" />
       <script type="module" tal:attributes="src string:${view/combo_url}/?lp/app/vanilla/tabs-min.js"></script>
       <script type="module" tal:attributes="src string:${view/combo_url}/?lp/app/vanilla/swap-min.js"></script>
+      <script type="module" tal:attributes="src string:${icingroot}/d3-path.min.js"></script>
+      <script type="module" tal:attributes="src string:${icingroot}/d3-shape.min.js"></script>
+      <script type="module" tal:attributes="src string:${view/combo_url}/?lp/app/vanilla/donut-chart.js"></script>
     </metal:block>
   </head>
   <body>

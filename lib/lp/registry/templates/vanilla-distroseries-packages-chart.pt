@@ -5,7 +5,8 @@
     <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
          tal:condition="python:view.packages_chart_tabs.active == 'source'">
-      <p class="u-text--muted">Package chart source placeholder</p>
+        <svg chart="donut" chart-radius="120" chart-title="96,008" chart-subtitle="Total" chart-clockwise chart-hover-grow="0" chart-segments='[{"value": 12, "fill": "tomato"}, {"value": 34, "fill": "steelblue"}, {"value": 56, "fill": "limegreen"}]'>
+        </svg>
     </div>
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
          tal:condition="python:view.packages_chart_tabs.active == 'binary'">
