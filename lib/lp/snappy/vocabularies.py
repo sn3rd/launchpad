@@ -9,6 +9,7 @@ __all__ = [
     "SnappySeriesVocabulary",
     "SnapStoreChannel",
     "SnapStoreChannelVocabulary",
+    "SyntheticSnappyDistroSeries",
 ]
 
 from lazr.restful.interfaces import IJSONPublishable

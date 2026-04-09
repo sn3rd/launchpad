@@ -551,8 +551,9 @@ class TestSnapAddView(BaseTestSnapView):
             "Build path:\nsnap/dir\nEdit snap package",
             MatchesTagText(content, "build_path"),
         )
-        snap = getUtility(ISnapSet).getByName(self.person, "snap-name")
-        self.assertEqual("snap/dir", snap.build_path)
+        with person_logged_in(self.person):
+            snap = getUtility(ISnapSet).getByName(self.person, "snap-name")
+            self.assertEqual("snap/dir", snap.build_path)
 
     def test_create_new_snap_auto_build(self):
         # Creating a new snap and asking for it to be automatically built
