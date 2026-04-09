@@ -7,6 +7,7 @@ __all__ = [
     "ArchiveAdminView",
     "ArchiveActivateView",
     "ArchiveBadges",
+    "ArchiveBugsMenu",
     "ArchiveBuildsView",
     "ArchiveDeleteView",
     "ArchiveEditDependenciesView",
@@ -36,6 +37,7 @@ from zope.formlib import form
 from zope.formlib.widget import CustomWidgetFactory
 from zope.formlib.widgets import TextAreaWidget
 from zope.interface import Interface, implementer
+from zope.publisher.interfaces import NotFound
 from zope.schema import Bool, Choice, List, TextLine
 from zope.schema.interfaces import IContextSourceBinder
 from zope.schema.vocabulary import SimpleTerm, SimpleVocabulary
@@ -59,10 +61,18 @@ from lp.app.widgets.itemswidgets import (
     PlainMultiCheckBoxWidget,
 )
 from lp.app.widgets.textwidgets import StrippedTextWidget
+from lp.bugs.browser.bugtask import BugTargetTraversalMixin
+from lp.bugs.browser.structuralsubscription import (
+    StructuralSubscriptionMenuMixin,
+    StructuralSubscriptionTargetTraversalMixin,
+)
+from lp.bugs.publisher import BugsLayer
 from lp.buildmaster.enums import BuildStatus
 from lp.code.interfaces.sourcepackagerecipebuild import (
     ISourcePackageRecipeBuildSource,
 )
+from lp.registry.browser import add_subscribe_link
+from lp.registry.browser.pillar import BugTargetParentBugsMenu
 from lp.registry.enums import PersonVisibility
 from lp.registry.interfaces.distribution import IDistributionSet
 from lp.registry.interfaces.person import IPersonSet
@@ -120,6 +130,7 @@ from lp.soyuz.enums import (
     PackagePublishingStatus,
 )
 from lp.soyuz.interfaces.archive import (
+    ARCHIVE_BUGS_FEATURE_FLAG,
     ARCHIVE_WEBHOOKS_FEATURE_FLAG,
     ArchiveDependencyError,
     CannotCopy,
@@ -220,7 +231,11 @@ class PPAURL:
 
 
 class ArchiveNavigation(
-    WebhookTargetNavigationMixin, Navigation, FileNavigationMixin
+    WebhookTargetNavigationMixin,
+    BugTargetTraversalMixin,
+    StructuralSubscriptionTargetTraversalMixin,
+    Navigation,
+    FileNavigationMixin,
 ):
     """Navigation methods for IArchive."""
 
@@ -485,6 +500,35 @@ class ArchiveNavigation(
             library_file.getURL(include_token=True), self.request
         )
 
+    def publishTraverse(self, request, name):
+        """Block all bugs-site traversal when the feature flag is off."""
+        if BugsLayer.providedBy(request) and not getFeatureFlag(
+            ARCHIVE_BUGS_FEATURE_FLAG
+        ):
+            raise NotFound(self.context, name)
+        return super().publishTraverse(request, name)
+
+    @stepthrough("+source")
+    def traverse_source(self, sourcepackagename):
+        """Traverse to ArchiveSourcePackage or ArchiveSourcePackageSeries."""
+        if not getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG):
+            raise NotFoundError(sourcepackagename)
+        # Check if we have a distroseries in the next step
+        # We need to distinguish between a distroseries name and other
+        # paths like +filebug, +bugs, etc.
+        if self.request.stepstogo:
+            next_segment = self.request.stepstogo.peek()
+            # If the next segment doesn't start with '+', it might be a
+            # distroseries name
+            if next_segment and not next_segment.startswith("+"):
+                distroseries_name = self.request.stepstogo.consume()
+                return self.context.getArchiveSourcePackageSeries(
+                    distroseries_name, sourcepackagename
+                )
+
+        # Default to ArchiveSourcePackage
+        return self.context.getArchiveSourcePackage(sourcepackagename)
+
 
 class ArchiveMenuMixin:
     def ppa(self):
@@ -537,6 +581,15 @@ class ArchiveMenuMixin:
     def builds_building(self):
         text = "View in-progress builds"
         return Link("+builds?build_state=building", text, icon="info")
+
+    def view_bugs(self):
+        return Link(
+            "+bugs",
+            "View bugs",
+            icon="info",
+            site="bugs",
+            enabled=bool(getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG)),
+        )
 
     def packages(self):
         text = "View package details"
@@ -608,9 +661,25 @@ class ArchiveNavigationMenu(NavigationMenu, ArchiveMenuMixin):
         "builds_building",
         "builds_pending",
         "builds_successful",
+        "view_bugs",
         "packages",
         "ppa",
     ]
+
+
+class ArchiveBugsMenu(
+    BugTargetParentBugsMenu, StructuralSubscriptionMenuMixin
+):
+    """Bugs menu for IArchive."""
+
+    usedfor = IArchive
+    facet = "bugs"
+
+    @cachedproperty
+    def links(self):
+        links = ["filebug"]
+        add_subscribe_link(links)
+        return links
 
 
 class IArchiveIndexActionsMenu(Interface):
@@ -627,6 +696,7 @@ class ArchiveIndexActionsMenu(NavigationMenu, ArchiveMenuMixin):
         "edit",
         "edit_dependencies",
         "manage_subscribers",
+        "view_bugs",
         "packages",
         "delete_ppa",
         "webhooks",

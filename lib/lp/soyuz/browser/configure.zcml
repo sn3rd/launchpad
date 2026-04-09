@@ -275,6 +275,7 @@
     <lp:menus
         classes="
             ArchiveNavigationMenu
+            ArchiveBugsMenu
             ArchiveIndexActionsMenu
             ArchivePackagesActionMenu"
         module="lp.soyuz.browser.archive"/>

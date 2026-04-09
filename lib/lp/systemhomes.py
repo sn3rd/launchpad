@@ -23,6 +23,7 @@ from zope.component import getUtility
 from zope.interface import implementer
 
 from lp.app.enums import PRIVATE_INFORMATION_TYPES
+from lp.app.errors import NotFoundError
 from lp.bugs.adapters.bug import convert_to_information_type
 from lp.bugs.interfaces.bug import CreateBugParams, IBugSet
 from lp.bugs.interfaces.bugtask import IBugTaskSet
@@ -48,12 +49,14 @@ from lp.registry.interfaces.mailinglist import IMailingListApplication
 from lp.registry.interfaces.product import IProductSet
 from lp.services.config import config
 from lp.services.database.interfaces import IStore
+from lp.services.features import getFeatureFlag
 from lp.services.feeds.interfaces.application import IFeedsApplication
 from lp.services.statistics.interfaces.statistic import ILaunchpadStatisticSet
 from lp.services.webapp.interfaces import ICanonicalUrlData, ILaunchBag
 from lp.services.webapp.publisher import canonical_url
 from lp.services.webservice.interfaces import IWebServiceApplication
 from lp.services.worlddata.interfaces.language import ILanguageSet
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG, IArchive
 from lp.soyuz.interfaces.archiveapi import IArchiveApplication
 from lp.testopenid.interfaces.server import ITestOpenIDApplication
 from lp.translations.interfaces.translationgroup import ITranslationGroupSet
@@ -176,6 +179,14 @@ class MaloneApplication(HasBugsBase):
             information_type = convert_to_information_type(
                 private, security_related
             )
+
+        if (
+            hasattr(target, "bug_target_parent")
+            and IArchive.providedBy(target.bug_target_parent)
+            and not getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG)
+        ):
+            raise NotFoundError("%r is not a valid bug target." % target)
+
         params = CreateBugParams(
             title=title,
             comment=description,

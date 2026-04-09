@@ -70,6 +70,12 @@ class IArchiveSourcePackageView(
         fields compare not equal.
         """
 
+    def getSeries():
+        """Return the distroseries that have publications for this package.
+
+        :return: A list of `IDistroSeries` sorted by name.
+        """
+
 
 @exported_as_webservice_entry(as_of="beta")
 class IArchiveSourcePackage(

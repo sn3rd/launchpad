@@ -47,7 +47,7 @@ from lp.bugs.interfaces.bugtask import BugTaskStatus
 from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
 from lp.code.browser.vcslisting import TargetDefaultVCSNavigationMixin
 from lp.registry.browser import add_subscribe_link
-from lp.registry.browser.pillar import PillarBugsMenu
+from lp.registry.browser.pillar import BugTargetParentBugsMenu
 from lp.registry.enums import DistributionDefaultTraversalPolicy
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -191,7 +191,7 @@ class DistributionSourcePackageOverviewMenu(
 
 
 class DistributionSourcePackageBugsMenu(
-    PillarBugsMenu,
+    BugTargetParentBugsMenu,
     StructuralSubscriptionMenuMixin,
     DistributionSourcePackageLinksMixin,
 ):

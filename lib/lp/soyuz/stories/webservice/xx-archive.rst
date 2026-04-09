@@ -19,6 +19,9 @@ We publish a subset of their attributes.
     >>> from lazr.restful.testing.webservice import pprint_entry
     >>> pprint_entry(cprov_archive)
     authorized_size: 1024
+    bug_reported_acknowledgement: None
+    bug_reporting_guidelines: None
+    content_templates: None
     dependencies_collection_link:
         'http://.../~cprov/+archive/ubuntu/ppa/dependencies'
     description: 'packages to help my friends.'
@@ -48,7 +51,10 @@ For "devel" additional attributes are available.
     ... ).jsonBody()
     >>> pprint_entry(cprov_archive_devel)
     authorized_size: 1024
+    bug_reported_acknowledgement: None
+    bug_reporting_guidelines: None
     build_debug_symbols: False
+    content_templates: None
     dependencies_collection_link:
       'http://.../~cprov/+archive/ubuntu/ppa/dependencies'
     description: 'packages to help my friends.'
@@ -76,6 +82,7 @@ For "devel" additional attributes are available.
     signing_key_fingerprint: None
     status: 'Active'
     suppress_subscription_notifications: False
+    translations_usage: 'Not Applicable'
     web_link: 'http://launchpad.../~cprov/+archive/ubuntu/ppa'
     webhooks_collection_link: 'http://.../~cprov/+archive/ubuntu/ppa/webhooks'
 
@@ -140,6 +147,9 @@ The archive has the following attributes:
     ... ).jsonBody()
     >>> pprint_entry(ubuntu_main_archive)
     authorized_size: None
+    bug_reported_acknowledgement: None
+    bug_reporting_guidelines: None
+    content_templates: None
     dependencies_collection_link:
         'http://.../ubuntutest/+archive/primary/dependencies'
     description: None
@@ -1500,6 +1510,9 @@ the IArchive context, in this case only Celso has it.
     ...     user_webservice.get("/~cprov/+archive/ubuntu/p3a").jsonBody()
     ... )
     authorized_size: 'tag:launchpad.net:2008:redacted'
+    bug_reported_acknowledgement: 'tag:launchpad.net:2008:redacted'
+    bug_reporting_guidelines: 'tag:launchpad.net:2008:redacted'
+    content_templates: 'tag:launchpad.net:2008:redacted'
     dependencies_collection_link:
         'http://.../~cprov/+archive/ubuntu/p3a/dependencies'
     description: 'tag:launchpad.net:2008:redacted'
@@ -1526,6 +1539,9 @@ the IArchive context, in this case only Celso has it.
     ...     cprov_webservice.get("/~cprov/+archive/ubuntu/p3a").jsonBody()
     ... )
     authorized_size: 8192
+    bug_reported_acknowledgement: None
+    bug_reporting_guidelines: None
+    content_templates: None
     dependencies_collection_link:
         'http://.../~cprov/+archive/ubuntu/p3a/dependencies'
     description: 'packages to help my friends.'
