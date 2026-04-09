@@ -95,6 +95,7 @@ from lp.snappy.interfaces.snapstoreclient import (
     BadRequestPackageUploadResponse,
     SnapNotFoundResponse,
 )
+from lp.snappy.vocabularies import SyntheticSnappyDistroSeries
 from lp.soyuz.browser.archive import EnableProcessorsMixin
 from lp.soyuz.browser.build import get_build_by_id_str
 from lp.soyuz.interfaces.archive import IArchive
@@ -766,6 +767,7 @@ class SnapAddView(
             information_type=data["information_type"],
             processors=data["processors"],
             build_source_tarball=data["build_source_tarball"],
+            build_path=data.get("build_path"),
             store_upload=data["store_upload"],
             store_series=data["store_distro_series"].snappy_series,
             store_name=data["store_name"],
@@ -1049,6 +1051,10 @@ class SnapEditView(BaseSnapEditView, EnableProcessorsMixin):
         # property has a fallback to check "private" property. This should
         # be removed once we back fill snap.information_type.
         initial_values["information_type"] = self.context.information_type
+        if self.context.store_distro_series is None:
+            initial_values["store_distro_series"] = SyntheticSnappyDistroSeries(
+                None, self.context.distro_series
+            )
         return initial_values
 
     def validate_widgets(self, data, names=None):
