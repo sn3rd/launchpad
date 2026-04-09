@@ -29,6 +29,7 @@ We publish a subset of their attributes.
     distribution_link: 'http://.../ubuntu'
     external_dependencies: None
     name: 'ppa'
+    official_bug_tags: []
     owner_link: 'http://.../~cprov'
     private: False
     publish: True
@@ -65,6 +66,7 @@ For "devel" additional attributes are available.
     external_dependencies: None
     metadata_overrides: None
     name: 'ppa'
+    official_bug_tags: []
     owner_link: 'http://.../~cprov'
     permit_obsolete_series_uploads: False
     private: False
@@ -157,6 +159,7 @@ The archive has the following attributes:
     distribution_link: 'http://.../ubuntutest'
     external_dependencies: None
     name: 'primary'
+    official_bug_tags: []
     owner_link: 'http://.../~ubuntu-team'
     private: False
     publish: True
@@ -1520,6 +1523,7 @@ the IArchive context, in this case only Celso has it.
     distribution_link: 'http://.../ubuntu'
     external_dependencies: 'tag:launchpad.net:2008:redacted'
     name: 'p3a'
+    official_bug_tags: 'tag:launchpad.net:2008:redacted'
     owner_link: 'http://.../~cprov'
     private: True
     publish: 'tag:launchpad.net:2008:redacted'
@@ -1549,6 +1553,7 @@ the IArchive context, in this case only Celso has it.
     distribution_link: 'http://.../ubuntu'
     external_dependencies: None
     name: 'p3a'
+    official_bug_tags: []
     owner_link: 'http://.../~cprov'
     private: True
     publish: True
