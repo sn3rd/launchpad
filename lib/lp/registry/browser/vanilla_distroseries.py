@@ -16,6 +16,7 @@ from zope.component import getUtility
 
 from lp.app.browser.vanilla import Tabs
 from lp.bugs.interfaces.bugtask import (
+    DB_UNRESOLVED_BUGTASK_STATUSES,
     BugTaskImportance,
     BugTaskStatus,
     IBugTaskSet,
