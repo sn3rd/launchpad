@@ -16,7 +16,6 @@ from zope.component import getUtility
 
 from lp.app.browser.vanilla import Tabs
 from lp.bugs.interfaces.bugtask import (
-    DB_UNRESOLVED_BUGTASK_STATUSES,
     BugTaskImportance,
     BugTaskStatus,
     IBugTaskSet,
@@ -154,16 +153,24 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         params.setDistroSeries(self.context)
         return getUtility(IBugTaskSet).search(params, _noprejoins=True)
 
-    @property
-    def bugs_summary(self):
+    def get_bugs_summary(self, milestone=None):
         """Return the bugs summary (critical, high, in progress, open counts).
 
         Uses the BugSummary fact table for efficient grouped counts.
         ``countBugs`` already filters to unresolved statuses.
+
+        :param milestone: An optional milestone to restrict the counts to.
         """
+        # circular import
+        from lp.bugs.model.bugsummary import CombineBugSummaryConstraint
+
+        if milestone is not None:
+            context = CombineBugSummaryConstraint(self.context, milestone)
+        else:
+            context = self.context
         counts = getUtility(IBugTaskSet).countBugs(
             self.user,
-            [self.context],
+            [context],
             ("status", "importance"),
         )
 
