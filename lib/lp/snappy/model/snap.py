@@ -348,6 +348,8 @@ class Snap(StormBase, WebhookTargetMixin):
 
     git_path = Unicode(name="git_path", allow_none=True)
 
+    build_path = Unicode(name="build_path", allow_none=True)
+
     auto_build = Bool(name="auto_build", allow_none=False)
 
     auto_build_archive_id = Int(name="auto_build_archive", allow_none=True)
@@ -412,6 +414,7 @@ class Snap(StormBase, WebhookTargetMixin):
         description=None,
         branch=None,
         git_ref=None,
+        build_path=None,
         auto_build=False,
         auto_build_archive=None,
         auto_build_pocket=None,
@@ -450,6 +453,7 @@ class Snap(StormBase, WebhookTargetMixin):
         self.description = description
         self.branch = branch
         self.git_ref = git_ref
+        self.build_path = build_path
         self.auto_build = auto_build
         self.auto_build_archive = auto_build_archive
         self.auto_build_pocket = auto_build_pocket
@@ -1531,6 +1535,7 @@ class SnapSet:
         git_repository_url=None,
         git_path=None,
         git_ref=None,
+        build_path=None,
         auto_build=False,
         auto_build_archive=None,
         auto_build_pocket=None,
@@ -1615,6 +1620,7 @@ class SnapSet:
             description=description,
             branch=branch,
             git_ref=git_ref,
+            build_path=build_path,
             auto_build=auto_build,
             auto_build_archive=auto_build_archive,
             auto_build_pocket=auto_build_pocket,
@@ -1895,17 +1901,23 @@ class SnapSet:
 
     def getSnapcraftYaml(self, context, logger=None):
         """See `ISnapSet`."""
+        build_path = None
         if ISnap.providedBy(context):
+            build_path = context.build_path
             context = context.source
         if context is None:
             raise CannotFetchSnapcraftYaml("Snap source is not defined")
         try:
-            paths = (
+            base_paths = (
                 "snap/snapcraft.yaml",
                 "build-aux/snap/snapcraft.yaml",
                 "snapcraft.yaml",
                 ".snapcraft.yaml",
             )
+            if build_path is not None:
+                paths = tuple("/".join((build_path, p)) for p in base_paths)
+            else:
+                paths = base_paths
             for path in paths:
                 try:
                     blob = context.getBlob(path)

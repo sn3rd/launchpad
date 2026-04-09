@@ -87,6 +87,7 @@ from lp.snappy.interfaces.snap import (
     ISnap,
     ISnapSet,
     ISnapView,
+    MissingSnapcraftYaml,
     NoSourceForSnap,
     SnapBuildAlreadyPending,
     SnapBuildDisallowedArchitecture,
@@ -3162,6 +3163,37 @@ class TestSnapSet(TestCaseWithFactory):
                 getUtility(ISnapSet).getSnapcraftYaml(snap),
             )
 
+    def test_getSnapcraftYaml_snap_build_path(self):
+        # When a snap has build_path set, getSnapcraftYaml looks for
+        # snapcraft.yaml at {build_path}/snapcraft.yaml.
+        def getBlob(path, filename, *args, **kwargs):
+            if filename == "mydir/snapcraft.yaml":
+                return b"name: test-snap"
+            else:
+                raise GitRepositoryBlobNotFound("dummy", filename)
+
+        self.useFixture(GitHostingFixture()).getBlob = getBlob
+        [git_ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=git_ref, build_path="mydir")
+        self.assertEqual(
+            {"name": "test-snap"}, getUtility(ISnapSet).getSnapcraftYaml(snap)
+        )
+
+    def test_getSnapcraftYaml_snap_build_path_missing(self):
+        # When a snap has build_path set but there is no snapcraft.yaml at
+        # that location, MissingSnapcraftYaml is raised.
+        def getBlob(path, filename, *args, **kwargs):
+            raise GitRepositoryBlobNotFound("dummy", filename)
+
+        self.useFixture(GitHostingFixture()).getBlob = getBlob
+        [git_ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=git_ref, build_path="mydir")
+        self.assertRaises(
+            MissingSnapcraftYaml,
+            getUtility(ISnapSet).getSnapcraftYaml,
+            snap,
+        )
+
     @responses.activate
     def test_getSnapcraftYaml_symlink_above_root(self):
         responses.add(
@@ -4128,6 +4160,35 @@ class TestSnapWebservice(TestCaseWithFactory):
             json.dumps({"is_stale": False}),
         )
         self.assertEqual(400, response.status)
+
+    def test_new_with_build_path(self):
+        # Snap creation with build_path set works via the API.
+        snap = self.makeSnap(build_path="snap/dir")
+        self.assertEqual("snap/dir", snap["build_path"])
+
+    def test_build_path_default_none(self):
+        # build_path is None by default when creating a snap via the API.
+        snap = self.makeSnap()
+        self.assertIsNone(snap["build_path"])
+
+    def test_set_build_path(self):
+        # build_path can be set and cleared via the API.
+        snap = self.makeSnap()
+        self.assertIsNone(snap["build_path"])
+        response = self.webservice.patch(
+            snap["self_link"],
+            "application/json",
+            json.dumps({"build_path": "snap/dir"}),
+        )
+        self.assertEqual(209, response.status)
+        self.assertEqual("snap/dir", response.jsonBody()["build_path"])
+        response = self.webservice.patch(
+            snap["self_link"],
+            "application/json",
+            json.dumps({"build_path": None}),
+        )
+        self.assertEqual(209, response.status)
+        self.assertIsNone(response.jsonBody()["build_path"])
 
     def test_getByName(self):
         # lp.snaps.getByName returns a matching Snap.

@@ -6438,6 +6438,7 @@ class LaunchpadObjectFactory(ObjectFactory):
         pro_enable=False,
         use_fetch_service=False,
         fetch_service_policy=FetchServicePolicy.STRICT,
+        build_path=None,
     ):
         """Make a new Snap."""
         assert information_type is None or private is None
@@ -6521,6 +6522,7 @@ class LaunchpadObjectFactory(ObjectFactory):
             pro_enable=pro_enable,
             use_fetch_service=use_fetch_service,
             fetch_service_policy=fetch_service_policy,
+            build_path=build_path,
         )
         if is_stale is not None:
             removeSecurityProxy(snap).is_stale = is_stale

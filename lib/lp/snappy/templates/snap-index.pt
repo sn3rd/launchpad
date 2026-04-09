@@ -77,6 +77,14 @@
         </dd>
       </dl>
 
+      <dl id="build_path" tal:condition="context/build_path">
+        <dt>Build path:</dt>
+        <dd>
+          <span tal:content="context/build_path"/>
+          <a tal:replace="structure view/menu:overview/edit/fmt:icon"/>
+        </dd>
+      </dl>
+
       <dl id="auto_build">
         <dt>Build schedule:
           <a href="/+help-snappy/snap-build-frequency.html" target="help"
