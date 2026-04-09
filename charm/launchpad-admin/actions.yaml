@@ -1,3 +1,15 @@
+analyze-table:
+  description: >
+    Analyze the given table to update its table statistics after a large
+    change to aid creating optimal query plans.
+  params:
+    table-name:
+      type: string
+      description: >
+        Name of the Launchpad database table to analyze. For example,
+        'sourcepackagepublishinghistory'.
+  required:
+    - table-name
 create-bot-account:
   description: >
     Create a bot account.  This is intended mainly for use within
