@@ -65,6 +65,7 @@ lib/canonical/launchpad/icing/combo.css.map
 lib/canonical/launchpad/icing/*-sprites-*.png
 lib/canonical/launchpad/icing/*.positioning
 lib/canonical/launchpad/icing/yui
+lib/canonical/launchpad/icing/d3-*.min.js
 lib/canonical/launchpad/icing/css/base.css
 lib/canonical/launchpad/icing/css/base.css.map
 lib/canonical/launchpad/icing/css/colours.css
