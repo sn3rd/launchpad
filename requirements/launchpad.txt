@@ -181,7 +181,7 @@ statsd==4.0.1
 stevedore==1.32.0
 # lp:~launchpad-committers/storm/lp
 storm==0.26+lp418
-talisker==0.22.0
+talisker==0.18.0
 tenacity==9.0.0
 testresources==0.2.7
 testscenarios==0.4
