@@ -5,7 +5,7 @@
 
 __all__ = [
     "InvolvedMenu",
-    "PillarBugsMenu",
+    "BugTargetParentBugsMenu",
     "PillarInvolvementView",
     "PillarViewMixin",
     "PillarNavigationMixin",
@@ -262,7 +262,9 @@ class PillarInvolvementView(LaunchpadView):
         return None
 
 
-class PillarBugsMenu(ApplicationMenu, StructuralSubscriptionMenuMixin):
+class BugTargetParentBugsMenu(
+    ApplicationMenu, StructuralSubscriptionMenuMixin
+):
     """Base class for pillar bugs menus."""
 
     facet = "bugs"

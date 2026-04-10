@@ -7,6 +7,7 @@ __all__ = [
     "ArchiveSourcePackage",
 ]
 
+from storm.expr import And
 from zope.interface import implementer
 
 from lp.bugs.model.bugtarget import BugTargetBase
@@ -15,6 +16,7 @@ from lp.bugs.model.structuralsubscription import (
 )
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.sourcepackagename import ISourcePackageName
+from lp.services.database.interfaces import IStore
 from lp.services.propertycache import cachedproperty
 from lp.soyuz.interfaces.archive import IArchive
 
@@ -71,9 +73,7 @@ class ArchiveSourcePackage(
     def official_bug_tags(self) -> list:
         """See `IHasBugs`."""
 
-        # Archive doesn't have the bug tag mixin yet
-        # return self.archive.official_bug_tags
-        return None
+        return self.archive.official_bug_tags
 
     @property
     def bug_target_parent(self) -> IArchive:
@@ -89,6 +89,41 @@ class ArchiveSourcePackage(
     def bugtargetname(self) -> str:
         """See `IBugTarget`."""
         return self.display_name
+
+    @property
+    def bug_reporting_guidelines(self):
+        """See `IBugTarget`."""
+        return self.archive.bug_reporting_guidelines
+
+    @property
+    def content_templates(self):
+        """See `IBugTarget`."""
+        return self.archive.content_templates
+
+    @property
+    def bug_reported_acknowledgement(self):
+        """See `IBugTarget`."""
+        return self.archive.bug_reported_acknowledgement
+
+    def getBugSummaryContextWhereClause(self):
+        """See `HasBugsBase`."""
+        # Circular import avoidance
+        from lp.bugs.model.bugsummary import BugSummary
+
+        return (
+            And(
+                BugSummary.sourcepackagename == self.sourcepackagename,
+                BugSummary.archive == self.archive,
+            ),
+        )
+
+    def _getOfficialTagClause(self):
+        """See `IHasOfficialBugTags`."""
+        return self.archive._getOfficialTagClause()
+
+    def _customizeSearchParams(self, search_params):
+        """See `HasBugsBase`."""
+        search_params.setArchiveSourcePackage(self)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} '{self.display_name}'>"
@@ -108,3 +143,22 @@ class ArchiveSourcePackage(
     def __hash__(self) -> int:
         """Return the combined attributes hash."""
         return hash((self.archive, self.sourcepackagename))
+
+    def getSeries(self):
+        """See `IArchiveSourcePackage`."""
+        # Imported locally to avoid circular imports.
+        from lp.registry.model.distroseries import DistroSeries
+        from lp.soyuz.model.publishing import SourcePackagePublishingHistory
+
+        series = (
+            IStore(DistroSeries)
+            .find(
+                DistroSeries,
+                SourcePackagePublishingHistory.distroseries == DistroSeries.id,
+                SourcePackagePublishingHistory.archive_id == self.archive.id,
+                SourcePackagePublishingHistory.sourcepackagename_id
+                == self.sourcepackagename.id,
+            )
+            .config(distinct=True)
+        )
+        return sorted(series, key=lambda s: s.name)

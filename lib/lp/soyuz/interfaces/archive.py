@@ -10,6 +10,7 @@ __all__ = [
     "ArchiveDependencyError",
     "ArchiveDisabled",
     "ArchiveNotPrivate",
+    "ARCHIVE_BUGS_FEATURE_FLAG",
     "ARCHIVE_WEBHOOKS_FEATURE_FLAG",
     "CannotCopy",
     "CannotSwitchPrivacy",
@@ -42,6 +43,7 @@ __all__ = [
     "NamedAuthTokenFeatureDisabled",
     "NoRightsForArchive",
     "NoRightsForComponent",
+    "NoSuchDistroSeriesInArchive",
     "NoSuchPPA",
     "NoTokensForTeams",
     "PocketNotFound",
@@ -98,8 +100,10 @@ from zope.security.interfaces import Unauthorized
 
 from lp import _
 from lp.app.errors import NameLookupFailed
-from lp.app.interfaces.launchpad import IPrivacy
+from lp.app.interfaces.launchpad import IPrivacy, IServiceUsage
 from lp.app.validators.name import name_validator
+from lp.bugs.interfaces.bugtarget import IBugTarget, IHasOfficialBugTags
+from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
 from lp.buildmaster.interfaces.processor import IProcessor
 from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.gpg import IGPGKey
@@ -119,6 +123,7 @@ from lp.soyuz.interfaces.component import IComponent
 
 NAMED_AUTH_TOKEN_FEATURE_FLAG = "soyuz.named_auth_token.allow_new"
 ARCHIVE_WEBHOOKS_FEATURE_FLAG = "archive.webhooks.enabled"
+ARCHIVE_BUGS_FEATURE_FLAG = "archive.bugs.enabled"
 
 
 @error_status(http.client.BAD_REQUEST)
@@ -194,6 +199,13 @@ class NoSuchPPA(NameLookupFailed):
     """Raised when we try to look up an PPA that doesn't exist."""
 
     _message_prefix = "No such ppa"
+
+
+class NoSuchDistroSeriesInArchive(NameLookupFailed):
+    """Raised when we try to look up a distro series in an archive that
+    doesn't exist in that archive."""
+
+    _message_prefix = "No such distro series in archive"
 
 
 @error_status(http.client.BAD_REQUEST)
@@ -884,7 +896,13 @@ class IArchiveSubscriberView(Interface):
         """
 
 
-class IArchiveView(IHasBuildRecords):
+class IArchiveView(
+    IHasBuildRecords,
+    IBugTarget,
+    IBugTargetParent,
+    IServiceUsage,
+    IHasOfficialBugTags,
+):
     """Archive interface for operations restricted by view privilege."""
 
     title = TextLine(title=_("Name"), required=False, readonly=True)
@@ -1133,6 +1151,15 @@ class IArchiveView(IHasBuildRecords):
             ),
         ),
         exported_as="publish",
+    )
+
+    # official_malone is from ILaunchpadUsage, but we need it here without
+    # making Archive inherit from that interface, to avoid inheriting a lot
+    # of other unrelated attributes and operations.
+
+    official_malone = Attribute(
+        "Enum value from ILaunchpadUsage indicating Launchpad tracks bugs "
+        "here."
     )
 
     @call_with(check_permissions=True, user=REQUEST_USER)
@@ -2074,6 +2101,9 @@ class IArchiveView(IHasBuildRecords):
     @operation_for_version("devel")
     def uploadCIBuild(ci_build, person, to_series, to_pocket, to_channel=None):
         """Upload the output of a CI build to this archive."""
+
+    def getSeries(series_name):
+        """Get all the series that packages in the Archive uses."""
 
 
 class IArchiveAppend(Interface):

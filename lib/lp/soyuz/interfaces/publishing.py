@@ -1497,7 +1497,9 @@ class IPublishingSet(Interface):
         Returns active (PENDING or PUBLISHED) source package publishing
         records in the distro's primary archives, across all pockets,
         ordered by ``datecreated`` descending, together with associated
-        builds.
+        builds. This helper is intended for small recent-upload lists, so
+        callers should keep ``limit`` at 100 or lower since larger values
+        may perform poorly.
 
         :param distroseries: An `IDistroSeries`.
         :param creator: If given, only return uploads where this person

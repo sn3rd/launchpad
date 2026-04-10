@@ -41,6 +41,8 @@ class BugTaskFlat(StormBase):
     distroseries = Reference(distroseries_id, "DistroSeries.id")
     sourcepackagename_id = Int(name="sourcepackagename")
     sourcepackagename = Reference(sourcepackagename_id, "SourcePackageName.id")
+    archive_id = Int(name="archive")
+    archive = Reference(archive_id, "Archive.id")
     packagetype = Int(name="packagetype")
     channel = JSON(name="channel")
     ociproject_id = Int(name="ociproject")

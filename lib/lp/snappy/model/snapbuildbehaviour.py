@@ -189,6 +189,8 @@ class SnapBuildBehaviour(BuilderProxyMixin, BuildFarmJobBehaviourBase):
                 % (build.snap.owner.name, build.snap.name)
             )
         args["build_source_tarball"] = build.snap.build_source_tarball
+        if build.snap.build_path is not None:
+            args["build_path"] = build.snap.build_path
         args["private"] = build.is_private
         build_request = build.build_request
         if build_request is not None:

@@ -4,6 +4,7 @@
 """Adapters for registry objects."""
 
 __all__ = [
+    "sourcepackage_to_archive",
     "distroseries_to_distribution",
     "PollSubset",
     "productseries_to_product",
@@ -32,6 +33,15 @@ def sourcepackage_to_distribution(source_package):
     This also supports `IDistributionSourcePackage`
     """
     return source_package.distribution
+
+
+def sourcepackage_to_archive(sourcepackage):
+    """Adapts `IArchiveSourcePackage` and `IArchiveSourcePackageSeries`
+    to `IArchive`.
+
+    This is useful for adapting to `IServiceUsage` or `ILaunchpadUsage`.
+    """
+    return sourcepackage.archive
 
 
 def distroseries_to_distribution(distroseries):

@@ -1209,4 +1209,16 @@
         for="lp.registry.interfaces.sourcepackage.ISourcePackage"
         layer="lp.bugs.publisher.BugsLayer"
         name="+bugs"/>
+    <browser:defaultView
+        for="lp.soyuz.interfaces.archive.IArchive"
+        layer="lp.bugs.publisher.BugsLayer"
+        name="+bugs"/>
+    <browser:defaultView
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        layer="lp.bugs.publisher.BugsLayer"
+        name="+bugs"/>
+    <browser:defaultView
+        for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        layer="lp.bugs.publisher.BugsLayer"
+        name="+bugs"/>
 </configure>

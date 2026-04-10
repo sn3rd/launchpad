@@ -177,11 +177,11 @@ sgmllib3k==1.0.0
 soupmatchers==0.4
 soupsieve==2.6
 stack-data==0.6.3
-statsd==4.0.1
+statsd==3.3.0
 stevedore==1.32.0
 # lp:~launchpad-committers/storm/lp
 storm==0.26+lp418
-talisker==0.22.0
+talisker==0.18.0
 tenacity==9.0.0
 testresources==0.2.7
 testscenarios==0.4
@@ -210,7 +210,7 @@ wcwidth==0.2.6
 webencodings==0.5.1
 WebOb==1.8.9
 WebTest==2.0.35
-Werkzeug==3.0.6
+Werkzeug==1.0.1
 wheel-filename==1.1.0
 wrapt==1.12.1
 wsgi-intercept==1.9.2

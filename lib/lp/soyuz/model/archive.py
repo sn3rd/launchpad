@@ -49,6 +49,12 @@ from zope.interface import alsoProvides, implementer
 from zope.security.interfaces import Unauthorized
 from zope.security.proxy import removeSecurityProxy
 
+from lp.app.enums import (
+    NON_EMBARGOED_INFORMATION_TYPES,
+    PROPRIETARY_INFORMATION_TYPES,
+    InformationType,
+    ServiceUsage,
+)
 from lp.app.errors import (
     IncompatibleArchiveStatus,
     IncompatibleArguments,
@@ -65,6 +71,7 @@ from lp.archiveuploader.utils import (
     re_isadeb,
     re_issource,
 )
+from lp.bugs.model.bugtarget import BugTargetBase
 from lp.buildmaster.enums import BuildQueueStatus, BuildStatus
 from lp.buildmaster.interfaces.buildfarmjob import IBuildFarmJobSet
 from lp.buildmaster.interfaces.processor import IProcessorSet
@@ -157,6 +164,7 @@ from lp.soyuz.interfaces.archive import (
     NamedAuthTokenFeatureDisabled,
     NoRightsForArchive,
     NoRightsForComponent,
+    NoSuchDistroSeriesInArchive,
     NoSuchPPA,
     NoTokensForTeams,
     PocketNotFound,
@@ -225,7 +233,7 @@ def storm_validate_external_dependencies(archive, attr, value):
 
 
 @implementer(IArchive, IHasOwner, IHasBuildRecords)
-class Archive(StormBase, WebhookTargetMixin):
+class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
     __storm_table__ = "Archive"
     __storm_order__ = "id"
 
@@ -3383,6 +3391,99 @@ class Archive(StormBase, WebhookTargetMixin):
     @repository_format.setter
     def repository_format(self, value):
         self._repository_format = value
+
+    @property
+    def bugtargetdisplayname(self):
+        """See `IBugTarget`."""
+        return f"{self.displayname} from {self.owner.displayname}"
+
+    @property
+    def bugtargetname(self):
+        """See `IBugTarget`."""
+        return self.reference
+
+    @property
+    def pillar(self):
+        """See `IBugTarget`."""
+        return NotImplementedError("Archives don't have a pillar")
+
+    @property
+    def bug_target_parent(self):
+        """See `IBugTarget`."""
+        return self
+
+    answers_usage = ServiceUsage.NOT_APPLICABLE
+    blueprints_usage = ServiceUsage.NOT_APPLICABLE
+    codehosting_usage = ServiceUsage.NOT_APPLICABLE
+    translations_usage = ServiceUsage.NOT_APPLICABLE
+    bug_tracking_usage = ServiceUsage.LAUNCHPAD
+    uses_launchpad = True
+
+    @property
+    def official_malone(self):
+        """See `ILaunchpadUsage`.
+
+        Archive bugs won't be supported outside of Launchpad"""
+
+        return True
+
+    def getAllowedBugInformationTypes(self):
+        """See `IBugTarget`."""
+        # Archives use the same information types as their distribution
+
+        if self.private:
+            # Private archives don't have bug information types.
+            return PROPRIETARY_INFORMATION_TYPES
+        return NON_EMBARGOED_INFORMATION_TYPES
+
+    def getDefaultBugInformationType(self):
+        """See `IBugTarget`."""
+        if self.private:
+            return InformationType.PROPRIETARY
+        return InformationType.PUBLIC
+
+    @property
+    def bug_reporting_guidelines(self):
+        """See `IBugTarget`."""
+        return None
+
+    @property
+    def content_templates(self):
+        """See `IBugTarget`."""
+        return None
+
+    @property
+    def bug_reported_acknowledgement(self):
+        """See `IBugTarget`."""
+        return None
+
+    def getBugSummaryContextWhereClause(self):
+        """See `HasBugsBase`."""
+        # Circular import avoidance
+        from lp.bugs.model.bugsummary import BugSummary
+
+        return BugSummary.archive == self
+
+    def _getOfficialTagClause(self):
+        """See `IHasOfficialBugTags`."""
+        return self.distribution._getOfficialTagClause()
+
+    @property
+    def official_bug_tags(self):
+        """See `IHasOfficialBugTags`."""
+        return self.distribution.official_bug_tags
+
+    def _customizeSearchParams(self, search_params):
+        """See `HasBugsBase`."""
+        search_params.setArchive(self)
+
+    def getSeries(self, series_name):
+        """See `IArchive`."""
+
+        for series in self.series_with_sources:
+            if series.name == series_name:
+                return series
+        return NoSuchDistroSeriesInArchive(series_name)
 
 
 def validate_ppa(owner, distribution, proposed_name, private=False):

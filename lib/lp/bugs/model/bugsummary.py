@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 from storm.expr import SQL, And, Or, Select
-from storm.properties import Bool, Int, Unicode
+from storm.properties import JSON, Bool, Int, Unicode
 from storm.references import Reference
 from zope.interface import implementer
 from zope.security.proxy import removeSecurityProxy
@@ -63,6 +63,16 @@ class BugSummary(StormBase):
 
     ociproject_id = Int(name="ociproject")
     ociproject = Reference(ociproject_id, "OCIProject.id")
+
+    ociprojectseries_id = Int(name="ociprojectseries")
+    ociprojectseries = Reference(ociprojectseries_id, "OCIProjectSeries.id")
+
+    packagetype = Int()
+
+    channel = JSON()
+
+    archive_id = Int(name="archive")
+    archive = Reference(archive_id, "Archive.id")
 
     milestone_id = Int(name="milestone")
     milestone = Reference(milestone_id, Milestone.id)

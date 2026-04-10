@@ -192,6 +192,7 @@ class BugTaskSearchParams:
         information_type=None,
         ignore_privacy=False,
         ociproject=None,
+        archive=None,
     ):
         self.bug = bug
         self.searchtext = searchtext
@@ -245,6 +246,7 @@ class BugTaskSearchParams:
             self.information_type = None
         self.ignore_privacy = ignore_privacy
         self.ociproject = ociproject
+        self.archive = archive
 
     def setProduct(self, product):
         """Set the upstream context on which to filter the search."""
@@ -328,6 +330,21 @@ class BugTaskSearchParams:
         self.packagetype = externalpackageseries.packagetype.value
         self.sourcepackagename = externalpackageseries.sourcepackagename
 
+    def setArchive(self, archive):
+        """Set the archive context to filter the search."""
+        self.archive = archive
+
+    def setArchiveSourcePackage(self, archivesourcepackage):
+        """Set the archive source package context to filter the search."""
+        self.archive = archivesourcepackage.archive
+        self.sourcepackagename = archivesourcepackage.sourcepackagename
+
+    def setArchiveSourcePackageSeries(self, archivesourcepackageseries):
+        """Set the archive source package series context to filter."""
+        self.archive = archivesourcepackageseries.archive
+        self.distroseries = archivesourcepackageseries.distroseries
+        self.sourcepackagename = archivesourcepackageseries.sourcepackagename
+
     def setOCIProject(self, ociproject):
         """Set the distribution context on which to filter the search."""
         self.ociproject = ociproject
@@ -345,6 +362,12 @@ class BugTaskSearchParams:
             supported.
         """
         # Yay circular deps.
+        from lp.registry.interfaces.archivesourcepackage import (
+            IArchiveSourcePackage,
+        )
+        from lp.registry.interfaces.archivesourcepackageseries import (
+            IArchiveSourcePackageSeries,
+        )
         from lp.registry.interfaces.distribution import IDistribution
         from lp.registry.interfaces.distributionsourcepackage import (
             IDistributionSourcePackage,
@@ -360,6 +383,7 @@ class BugTaskSearchParams:
         from lp.registry.interfaces.productseries import IProductSeries
         from lp.registry.interfaces.projectgroup import IProjectGroup
         from lp.registry.interfaces.sourcepackage import ISourcePackage
+        from lp.soyuz.interfaces.archive import IArchive
 
         if isinstance(target, (any, all)):
             assert len(
@@ -386,6 +410,12 @@ class BugTaskSearchParams:
             self.setExternalPackage(target)
         elif IExternalPackageSeries.providedBy(instance):
             self.setExternalPackageSeries(target)
+        elif IArchive.providedBy(instance):
+            self.setArchive(target)
+        elif IArchiveSourcePackage.providedBy(instance):
+            self.setArchiveSourcePackage(target)
+        elif IArchiveSourcePackageSeries.providedBy(instance):
+            self.setArchiveSourcePackageSeries(target)
         elif IProjectGroup.providedBy(instance):
             self.setProjectGroup(target)
         elif IOCIProject.providedBy(instance):

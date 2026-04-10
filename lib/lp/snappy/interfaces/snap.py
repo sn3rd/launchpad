@@ -76,6 +76,7 @@ from lp.app.enums import InformationType
 from lp.app.errors import NameLookupFailed
 from lp.app.interfaces.informationtype import IInformationType
 from lp.app.validators.name import name_validator
+from lp.app.validators.path import path_does_not_escape
 from lp.buildmaster.builderproxy import FetchServicePolicy
 from lp.buildmaster.interfaces.processor import IProcessor
 from lp.code.interfaces.branch import IBranch
@@ -986,6 +987,18 @@ class ISnapEditableAttributes(IHasOwner):
         )
     )
 
+    build_path = exported(
+        TextLine(
+            title=_("Build path"),
+            description=_(
+                "Subdirectory within the branch containing snapcraft.yaml."
+            ),
+            constraint=path_does_not_escape,
+            required=False,
+            readonly=False,
+        )
+    )
+
     build_source_tarball = exported(
         Bool(
             title=_("Build source tarball"),
@@ -1265,6 +1278,7 @@ class ISnapSet(Interface):
             "git_repository_url",
             "git_path",
             "git_ref",
+            "build_path",
             "auto_build",
             "auto_build_archive",
             "auto_build_pocket",
@@ -1289,6 +1303,7 @@ class ISnapSet(Interface):
         git_repository_url=None,
         git_path=None,
         git_ref=None,
+        build_path=None,
         auto_build=False,
         auto_build_archive=None,
         auto_build_pocket=None,

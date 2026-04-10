@@ -46,6 +46,7 @@ from lp.code.model.gitsubscription import GitSubscription
 from lp.oci.interfaces.ocirecipe import IOCIRecipe
 from lp.oci.model.ocirecipe import OCIRecipe, get_ocirecipe_privacy_filter
 from lp.oci.model.ocirecipesubscription import OCIRecipeSubscription
+from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.product import IProduct
 from lp.registry.interfaces.sharingjob import (
@@ -141,7 +142,7 @@ class SharingJob(StormBase):
         self.product = self.distro = None
         if IProduct.providedBy(pillar):
             self.product = pillar
-        else:
+        elif IDistribution.providedBy(pillar):
             self.distro = pillar
         # XXX AaronBentley 2009-01-29 bug=322819: This should be a bytestring,
         # but the DB representation is unicode.
@@ -172,8 +173,9 @@ class SharingJobDerived(BaseRunnableJob, metaclass=EnumeratedSubclass):
     def pillar(self):
         if self.product:
             return self.product
-        else:
+        elif self.distro:
             return self.distro
+        return None
 
     @property
     def log_name(self):

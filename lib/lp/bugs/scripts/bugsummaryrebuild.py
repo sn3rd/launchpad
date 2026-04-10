@@ -111,7 +111,7 @@ def load_target(pid, psid, did, dsid, spnid, ociproject_id):
     )
     # enriqueesanchz 2025-07-16 TODO: modify when BugSummary for
     # ExternalPackage implemented
-    return bug_target_from_key(p, ps, d, ds, spn, ociproject, None, None)
+    return bug_target_from_key(p, ps, d, ds, spn, ociproject, None, None, None)
 
 
 def format_target(target):

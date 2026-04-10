@@ -654,6 +654,49 @@
         module="lp.registry.browser.externalpackageseries"
         classes="ExternalPackageSeriesFacets"
         />
+    
+    <!-- ArchiveSourcePackage configuration -->
+    <lp:url
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        urldata="lp.registry.browser.archivesourcepackage.ArchiveSourcePackageURL"
+        />
+    <lp:navigation
+        module="lp.registry.browser.archivesourcepackage"
+        classes="ArchiveSourcePackageNavigation"
+        />
+    <lp:menus
+        module="lp.registry.browser.archivesourcepackage"
+        classes="ArchiveSourcePackageFacets
+                 ArchiveSourcePackageBugsMenu"
+        />
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archivesourcepackage.ArchiveSourcePackageBreadcrumb"
+        permission="zope.Public"
+        />
+
+    <!-- ArchiveSourcePackageSeries configuration -->
+    <lp:url
+        for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        urldata="lp.registry.browser.archivesourcepackageseries.ArchiveSourcePackageSeriesURL"
+        />
+    <lp:navigation
+        module="lp.registry.browser.archivesourcepackageseries"
+        classes="ArchiveSourcePackageSeriesNavigation"
+        />
+    <lp:menus
+        module="lp.registry.browser.archivesourcepackageseries"
+        classes="ArchiveSourcePackageSeriesFacets
+                 ArchiveSourcePackageSeriesBugsMenu"
+        />
+    <adapter
+        for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archivesourcepackageseries.ArchiveSourcePackageSeriesBreadcrumb"
+        permission="zope.Public"
+        />
+    
     <adapter
         name="fmt"
         factory="lp.registry.browser.sourcepackage.SourcePackageFormatterAPI"

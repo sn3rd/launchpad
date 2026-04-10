@@ -898,6 +898,26 @@ class TestAsyncSnapBuildBehaviourBuilderProxy(
         )
 
     @defer.inlineCallbacks
+    def test_extraBuildArgs_build_path(self):
+        # extraBuildArgs includes build_path if set on the snap.
+        [ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=ref, build_path="snap/dir")
+        job = self.makeJob(snap=snap)
+        with dbuser(config.builddmaster.dbuser):
+            args = yield job.extraBuildArgs()
+        self.assertEqual("snap/dir", args["build_path"])
+
+    @defer.inlineCallbacks
+    def test_extraBuildArgs_no_build_path(self):
+        # extraBuildArgs does not include build_path if not set on the snap.
+        [ref] = self.factory.makeGitRefs()
+        snap = self.factory.makeSnap(git_ref=ref)
+        job = self.makeJob(snap=snap)
+        with dbuser(config.builddmaster.dbuser):
+            args = yield job.extraBuildArgs()
+        self.assertNotIn("build_path", args)
+
+    @defer.inlineCallbacks
     def test_extraBuildArgs_git_private(self):
         # extraBuildArgs returns appropriate arguments if asked to build a
         # job for a private Git branch.

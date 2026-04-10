@@ -7,6 +7,7 @@ __all__ = [
     "ArchiveSourcePackageSeries",
 ]
 
+from storm.expr import And
 from zope.interface import implementer
 
 from lp.bugs.interfaces.bugtarget import ISeriesBugTarget
@@ -99,12 +100,15 @@ class ArchiveSourcePackageSeries(
         return self.display_name
 
     @property
+    def owner(self):
+        """See `IHasOwner`."""
+        return self.archive.owner
+
+    @property
     def official_bug_tags(self) -> list:
         """See `IHasBugs`."""
 
-        # Archive doesn't have the bug tag mixin yet
-        # return self.archive.official_bug_tags
-        return None
+        return self.archive.official_bug_tags
 
     @property
     def bug_target_parent(self) -> IArchive:
@@ -130,3 +134,39 @@ class ArchiveSourcePackageSeries(
     def __hash__(self) -> int:
         """Return the combined attributes hash."""
         return hash((self.archive, self.distroseries, self.sourcepackagename))
+
+    @property
+    def bug_reporting_guidelines(self):
+        """See `IBugTarget`."""
+        return self.archive.bug_reporting_guidelines
+
+    @property
+    def content_templates(self):
+        """See `IBugTarget`."""
+        return self.archive.content_templates
+
+    @property
+    def bug_reported_acknowledgement(self):
+        """See `IBugTarget`."""
+        return self.archive.bug_reported_acknowledgement
+
+    def getBugSummaryContextWhereClause(self):
+        """See `HasBugsBase`."""
+        # Circular import avoidance
+        from lp.bugs.model.bugsummary import BugSummary
+
+        return (
+            And(
+                BugSummary.archive == self.archive,
+                BugSummary.distroseries == self.distroseries,
+                BugSummary.sourcepackagename == self.sourcepackagename,
+            ),
+        )
+
+    def _getOfficialTagClause(self):
+        """See `IHasOfficialBugTags`."""
+        return self.archive._getOfficialTagClause()
+
+    def _customizeSearchParams(self, search_params):
+        """See `HasBugsBase`."""
+        search_params.setArchiveSourcePackageSeries(self)

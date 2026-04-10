@@ -3,6 +3,7 @@
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
 import os.path
+import subprocess
 import sys
 import traceback
 from configparser import ConfigParser, NoSectionError
@@ -74,6 +75,17 @@ def disable_cron_all() -> None:
     write_config(config)
 
 
+def get_current_config() -> None:
+    hookenv.log("Getting current cron-control configuration.")
+    subprocess.run(
+        ["/usr/bin/curl", "http://localhost/cron.ini"],
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+    hookenv.action_set({"result": "Current configuration displayed."})
+
+
 def main(argv: Sequence[str]) -> None:
     action = Path(argv[0]).name
     try:
@@ -85,6 +97,8 @@ def main(argv: Sequence[str]) -> None:
             enable_cron()
         elif action == "enable-cron-all":
             enable_cron_all()
+        elif action == "get-current-config":
+            get_current_config()
         else:
             hookenv.action_fail(f"Action {action} not implemented.")
     except Exception:
