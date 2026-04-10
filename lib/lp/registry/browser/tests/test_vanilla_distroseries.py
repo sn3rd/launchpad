@@ -3,6 +3,7 @@
 
 """Tests for `VanillaDistroSeriesView`."""
 
+from lp.bugs.interfaces.bugtask import BugTaskImportance, BugTaskStatus
 from lp.buildmaster.enums import BuildStatus
 from lp.registry.browser.vanilla_distroseries import (
     BUILD_STATUS_ICONS,
@@ -15,7 +16,7 @@ from lp.registry.browser.vanilla_distroseries import (
 )
 from lp.soyuz.enums import PackagePublishingStatus
 from lp.testing import TestCaseWithFactory, person_logged_in
-from lp.testing.layers import DatabaseFunctionalLayer
+from lp.testing.layers import DatabaseFunctionalLayer, LaunchpadFunctionalLayer
 from lp.testing.views import create_initialized_view
 
 
@@ -329,3 +330,128 @@ class TestBuildStatusIcons(TestCaseWithFactory):
                 "BuildStatus.%s has no entry in BUILD_STATUS_ICONS"
                 % status.name,
             )
+
+
+class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
+    """Tests for the bugs_summary view property."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.person = self.factory.makePerson()
+        self.distroseries = self.factory.makeDistroSeries()
+
+    def _makeBugTask(self, distroseries, status, importance):
+        """Create a bug task for the given distroseries."""
+        task = self.factory.makeBugTask(
+            owner=self.person,
+            target=distroseries,
+        )
+
+        # For distroseries targets, conjoined-task sync can leave the
+        # initial values as NEW/UNDECIDED; apply explicit transitions so
+        # BugSummary reflects the intended state in tests.
+        with person_logged_in(self.person):
+            if task.status != status:
+                task.transitionToStatus(status)
+            if task.importance != importance:
+                task.transitionToImportance(importance)
+
+    def _getView(self, distroseries, principal=None):
+        return create_initialized_view(
+            distroseries, "+vanilla", principal=principal
+        )
+
+    def test_bugs_summary_no_bugs(self):
+        """With no bugs, all counts in bugs_summary are zero."""
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.bugs_summary
+        self.assertEqual(summary["critical_bugs_count"], 0)
+        self.assertEqual(summary["high_bugs_count"], 0)
+        self.assertEqual(summary["inprogress_bugs_count"], 0)
+        self.assertEqual(summary["open_bugs_count"], 0)
+
+    def test_bugs_summary_resolved_bugs_not_counted_as_open(self):
+        """Resolved bugs are not counted as open."""
+        # Create an unresolved bug.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.LOW,
+        )
+        # Create a resolved bug.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.FIXRELEASED,
+            importance=BugTaskImportance.LOW,
+        )
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.bugs_summary
+        # Only the unresolved bug should be counted.
+        self.assertEqual(summary["open_bugs_count"], 1)
+
+    def test_bugs_summary_excludes_resolved_from_all_counts(self):
+        """Resolved bugs do not contribute to summary aggregates."""
+        # Unresolved tasks.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.INPROGRESS,
+            importance=BugTaskImportance.HIGH,
+        )
+        # Resolved tasks with the same importances should not contribute.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.FIXRELEASED,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.FIXRELEASED,
+            importance=BugTaskImportance.HIGH,
+        )
+
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.bugs_summary
+
+        self.assertEqual(summary["critical_bugs_count"], 1)
+        self.assertEqual(summary["high_bugs_count"], 1)
+        self.assertEqual(summary["inprogress_bugs_count"], 1)
+        self.assertEqual(summary["open_bugs_count"], 2)
+
+    def test_bugs_summary_mixed_bugs(self):
+        """Verify that bugs with different statuses and importances are counted
+        correctly"""
+        # Create various bugs.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.CONFIRMED,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.HIGH,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.INPROGRESS,
+            importance=BugTaskImportance.MEDIUM,
+        )
+
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.bugs_summary
+        self.assertEqual(summary["critical_bugs_count"], 2)
+        self.assertEqual(summary["high_bugs_count"], 1)
+        self.assertEqual(summary["inprogress_bugs_count"], 1)
+        self.assertEqual(summary["open_bugs_count"], 4)

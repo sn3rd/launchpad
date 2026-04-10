@@ -2371,7 +2371,13 @@ class LaunchpadObjectFactory(ObjectFactory):
         return bug
 
     def makeBugTask(
-        self, bug=None, target=None, owner=None, publish=True, status=None
+        self,
+        bug=None,
+        target=None,
+        owner=None,
+        publish=True,
+        status=None,
+        importance=None,
     ):
         """Create and return a bug task.
 
@@ -2447,7 +2453,11 @@ class LaunchpadObjectFactory(ObjectFactory):
         if owner is None:
             owner = self.makePerson()
         task = getUtility(IBugTaskSet).createTask(
-            removeSecurityProxy(bug), owner, target, status=status
+            removeSecurityProxy(bug),
+            owner,
+            target,
+            status=status,
+            importance=importance,
         )
         removeSecurityProxy(bug).clearBugNotificationRecipientsCache()
         return task
