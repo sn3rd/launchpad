@@ -1954,6 +1954,15 @@ class BugTaskSet:
             get_bugsummary_filter_for_user,
         )
 
+        # group_on entries may be BugSummary column references or plain
+        # strings naming BugSummary attributes (e.g. "status").
+        # Resolve strings here so callers outside the bugs model layer need
+        # not import BugSummary.
+        resolved_group_on = tuple(
+            getattr(BugSummary, col) if isinstance(col, str) else col
+            for col in group_on
+        )
+
         conditions = []
         # Open bug statuses
         conditions.append(
@@ -1973,10 +1982,10 @@ class BugTaskSet:
         # bugsummary by design requires either grouping by tag or excluding
         # non-null tags.
         # This is an awkward way of saying
-        # if BugSummary.tag not in group_on:
+        # if BugSummary.tag not in resolved_group_on:
         # - see bug 799602
         group_on_tag = False
-        for column in group_on:
+        for column in resolved_group_on:
             if column is BugSummary.tag:
                 group_on_tag = True
         if not group_on_tag:
@@ -1992,14 +2001,16 @@ class BugTaskSet:
         conditions.extend(user_where)
 
         sum_count = Sum(BugSummary.count)
-        resultset = store.find(group_on + (sum_count,), *conditions)
-        resultset.group_by(*group_on)
+        resultset = store.find(resolved_group_on + (sum_count,), *conditions)
+        resultset.group_by(*resolved_group_on)
         resultset.having(sum_count != 0)
         # Ensure we have no order clauses.
         resultset.order_by()
         result = {}
         for row in resultset:
-            result[row[:-1]] = row[-1]
+            # Row shape is: (<group columns...>, <sum_count>)
+            *group_values, count = tuple(row)
+            result[tuple(group_values)] = count
         return result
 
     def getPrecachedNonConjoinedBugTasks(self, user, milestone_data):
