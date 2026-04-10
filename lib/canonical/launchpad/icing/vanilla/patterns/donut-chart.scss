@@ -4,9 +4,16 @@ svg[chart='donut'] {
 
   .segment {
     transition: d 150ms ease-out;
+    outline: none;
 
     &:hover {
       d: var(--arc-d-hover);
+    }
+
+    &:focus-visible {
+      stroke: var(--color-border-focus);
+      stroke-width: 2px;
+      stroke-linejoin: round;
     }
 
   }
