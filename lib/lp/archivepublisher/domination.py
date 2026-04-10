@@ -50,7 +50,6 @@ it is performed for each suite using:
 
 __all__ = ["Dominator"]
 
-import json
 from collections import defaultdict
 from datetime import timedelta
 from functools import cmp_to_key
@@ -58,7 +57,8 @@ from itertools import filterfalse
 from operator import attrgetter, itemgetter
 
 import apt_pkg
-from storm.expr import And, Cast, Count, Desc, Not, Select
+from storm.expr import And, Count, Desc, Exists, Not, Select
+from storm.info import ClassAlias
 from zope.component import getUtility
 
 from lp.registry.model.sourcepackagename import SourcePackageName
@@ -554,7 +554,7 @@ class Dominator:
         time provided in the configuration parameter.
         """
         self.logger.debug("Beginning superseded processing...")
-
+        bin_record_count = 0
         for pub_record in binary_records:
             binpkg_release = pub_record.binarypackagerelease
             self.logger.debug(
@@ -567,57 +567,97 @@ class Dominator:
             # XXX cprov 20070820: 'datemadepending' is useless, since it's
             # always equals to "scheduleddeletiondate - quarantine".
             pub_record.datemadepending = UTC_NOW
-            IStore(pub_record).flush()
+            bin_record_count += 1
 
-        for pub_record in source_records:
-            srcpkg_release = pub_record.sourcepackagerelease
-            # Attempt to find all binaries of this
-            # SourcePackageRelease which are/have been in this
-            # distroseries...
-            considered_binaries = IStore(BinaryPackagePublishingHistory).find(
-                BinaryPackagePublishingHistory.distroarchseries
+        if bin_record_count > 0:
+            IStore(BinaryPackagePublishingHistory).flush()
+
+        source_list = list(source_records)
+        if not source_list:
+            return
+
+        source_ids = [sr.id for sr in source_list]
+
+        # Find which spph ids have unremoved
+        # binaries for the same spr/distroseries/pocket/channel.
+        source_ids_with_active_binaries = set(
+            IStore(SourcePackagePublishingHistory)
+            .find(
+                SourcePackagePublishingHistory.id,
+                SourcePackagePublishingHistory.id.is_in(source_ids),
+                BinaryPackagePublishingHistory.distroarchseries_id
                 == DistroArchSeries.id,
+                DistroArchSeries.distroseries_id
+                == SourcePackagePublishingHistory.distroseries_id,
                 BinaryPackagePublishingHistory.scheduleddeletiondate == None,
                 BinaryPackagePublishingHistory.dateremoved == None,
                 BinaryPackagePublishingHistory.archive == self.archive,
-                BinaryPackageBuild.source_package_release == srcpkg_release,
-                DistroArchSeries.distroseries == pub_record.distroseries,
-                BinaryPackagePublishingHistory.binarypackagerelease
+                BinaryPackageBuild.source_package_release_id
+                == SourcePackagePublishingHistory.sourcepackagerelease_id,
+                BinaryPackagePublishingHistory.binarypackagerelease_id
                 == BinaryPackageRelease.id,
-                BinaryPackageRelease.build == BinaryPackageBuild.id,
-                BinaryPackagePublishingHistory.pocket == pub_record.pocket,
+                BinaryPackageRelease.build_id == BinaryPackageBuild.id,
+                BinaryPackagePublishingHistory.pocket
+                == SourcePackagePublishingHistory.pocket,
+                # We need to use IsDistrinctFrom because NULL = NULL is False
+                # in Postgres
                 Not(
                     IsDistinctFrom(
                         BinaryPackagePublishingHistory._channel,
-                        (
-                            Cast(json.dumps(pub_record._channel), "jsonb")
-                            if pub_record._channel is not None
-                            else None
-                        ),
+                        SourcePackagePublishingHistory._channel,
                     )
                 ),
             )
+            .config(distinct=True)
+        )
 
-            # There is at least one non-removed binary to consider
-            if not considered_binaries.is_empty():
-                # However we can still remove *this* record if there's
-                # at least one other PUBLISHED for the spr. This happens
-                # when a package is moved between components.
-                published = IStore(SourcePackagePublishingHistory).find(
-                    SourcePackagePublishingHistory,
-                    distroseries=pub_record.distroseries,
-                    pocket=pub_record.pocket,
-                    channel=pub_record.channel,
-                    status=PackagePublishingStatus.PUBLISHED,
-                    archive=self.archive,
-                    sourcepackagerelease=srcpkg_release,
+        # Among those spphs with binaries, find which have at
+        # least one PUBLISHED source publication for the same spr.
+        if source_ids_with_active_binaries:
+            OtherSPPH = ClassAlias(
+                SourcePackagePublishingHistory, "other_spph"
+            )
+            published_subquery = Select(
+                1,
+                tables=[OtherSPPH],
+                where=And(
+                    OtherSPPH.sourcepackagerelease_id
+                    == SourcePackagePublishingHistory.sourcepackagerelease_id,
+                    OtherSPPH.distroseries_id
+                    == SourcePackagePublishingHistory.distroseries_id,
+                    OtherSPPH.pocket == SourcePackagePublishingHistory.pocket,
+                    Not(
+                        IsDistinctFrom(
+                            OtherSPPH._channel,
+                            SourcePackagePublishingHistory._channel,
+                        )
+                    ),
+                    OtherSPPH.status == PackagePublishingStatus.PUBLISHED,
+                    OtherSPPH.archive_id == self.archive.id,
+                ),
+            )
+            source_ids_with_published_sibling = set(
+                IStore(SourcePackagePublishingHistory).find(
+                    SourcePackagePublishingHistory.id,
+                    SourcePackagePublishingHistory.id.is_in(
+                        source_ids_with_active_binaries
+                    ),
+                    Exists(published_subquery),
                 )
-                # Zero PUBLISHED for this spr, so nothing to take over
-                # for us, so leave it for consideration next time.
-                if published.is_empty():
-                    continue
+            )
+        else:
+            source_ids_with_published_sibling = set()
 
-            # Okay, so there's no unremoved binaries, let's go for it...
+        for pub_record in source_list:
+            # Has unremoved binaries and no published SPPH for the
+            # same SPR
+            if (
+                pub_record.id in source_ids_with_active_binaries
+                and pub_record.id not in source_ids_with_published_sibling
+            ):
+                continue
+
+            srcpkg_release = pub_record.sourcepackagerelease
             self.logger.debug(
                 "%s/%s (%s) source has been judged eligible for removal",
                 srcpkg_release.sourcepackagename.name,
@@ -628,10 +668,8 @@ class Dominator:
             # XXX cprov 20070820: 'datemadepending' is pointless, since it's
             # always equals to "scheduleddeletiondate - quarantine".
             pub_record.datemadepending = UTC_NOW
-            # We have to flush for each source publication, since otherwise
-            # the query above for other PUBLISHED records for the same SPR
-            # might have the effect of discarding these updates.
-            IStore(pub_record).flush()
+
+        IStore(SourcePackagePublishingHistory).flush()
 
     def findBinariesForDomination(self, distroarchseries, pocket):
         """Find binary publications that need dominating.
