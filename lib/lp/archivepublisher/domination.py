@@ -554,9 +554,8 @@ class Dominator:
         time provided in the configuration parameter.
         """
         self.logger.debug("Beginning superseded processing...")
-
-        binary_list = list(binary_records)
-        for pub_record in binary_list:
+        bin_record_count = 0
+        for pub_record in binary_records:
             binpkg_release = pub_record.binarypackagerelease
             self.logger.debug(
                 "%s/%s (%s) has been judged eligible for removal",
@@ -568,8 +567,10 @@ class Dominator:
             # XXX cprov 20070820: 'datemadepending' is useless, since it's
             # always equals to "scheduleddeletiondate - quarantine".
             pub_record.datemadepending = UTC_NOW
-        if binary_list:
-            IStore(binary_list[0]).flush()
+            bin_record_count += 1
+
+        if bin_record_count > 0:
+            IStore(BinaryPackagePublishingHistory).flush()
 
         source_list = list(source_records)
         if not source_list:
@@ -598,6 +599,8 @@ class Dominator:
                 BinaryPackageRelease.build_id == BinaryPackageBuild.id,
                 BinaryPackagePublishingHistory.pocket
                 == SourcePackagePublishingHistory.pocket,
+                # We need to use IsDistrinctFrom because NULL = NULL is False
+                # in Postgres
                 Not(
                     IsDistinctFrom(
                         BinaryPackagePublishingHistory._channel,
@@ -666,7 +669,7 @@ class Dominator:
             # always equals to "scheduleddeletiondate - quarantine".
             pub_record.datemadepending = UTC_NOW
 
-        IStore(source_list[0]).flush()
+        IStore(SourcePackagePublishingHistory).flush()
 
     def findBinariesForDomination(self, distroarchseries, pocket):
         """Find binary publications that need dominating.
