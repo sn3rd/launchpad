@@ -132,6 +132,38 @@ class TestArchiveBugPageAccess(TestCaseWithFactory):
             result = nav.traverse_source("nonexistent")
             self.assertIsNone(result)
 
+    def test_filebug_traverse_blocked_without_flag(self):
+        # publishTraverse raises NotFound for +filebug on any request layer
+        # when the feature flag is off.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        request = LaunchpadTestRequest()
+        nav = ArchiveNavigation(ppa, request=request)
+        self.assertRaises(NotFound, nav.publishTraverse, request, "+filebug")
+
+    def test_filebug_traverse_not_blocked_by_flag_guard_with_flag(self):
+        # With the flag on, publishTraverse passes +filebug through to
+        # super() rather than raising from the flag guard.
+        from unittest.mock import patch
+
+        from lp.services.webapp import Navigation
+
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        request = LaunchpadTestRequest()
+        nav = ArchiveNavigation(ppa, request=request)
+        reached_super = []
+
+        def fake_super_traverse(self_inner, req, nm):
+            reached_super.append(nm)
+            return None
+
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            with patch.object(
+                Navigation, "publishTraverse", fake_super_traverse
+            ):
+                nav.publishTraverse(request, "+filebug")
+
+        self.assertEqual(["+filebug"], reached_super)
+
     def test_archive_navigation_bugs_site_blocked_without_flag(self):
         # publishTraverse raises NotFound on the bugs vhost when flag is off.
         ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)

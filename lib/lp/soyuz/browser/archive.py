@@ -502,6 +502,12 @@ class ArchiveNavigation(
 
     def publishTraverse(self, request, name):
         """Block all bugs-site traversal when the feature flag is off."""
+        # Block +filebug from any subdomain when feature flag is off
+        if name == "+filebug" and not getFeatureFlag(
+            ARCHIVE_BUGS_FEATURE_FLAG
+        ):
+            raise NotFound(self.context, name)
+        # Block all bugs-site traversal when feature flag is off
         if BugsLayer.providedBy(request) and not getFeatureFlag(
             ARCHIVE_BUGS_FEATURE_FLAG
         ):
