@@ -501,6 +501,40 @@ def generate_sources_index(
     return ("\n\n".join(stanzas) + "\n\n").encode("utf-8")
 
 
+_UBUNTU_MAINTAINER = (
+    "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>"
+)
+
+# Prior May 2009 these Maintainers were used:
+_PREVIOUS_UBUNTU_MAINTAINERS = frozenset(
+    [
+        "ubuntu core developers <ubuntu-devel@lists.ubuntu.com>",
+        "ubuntu core developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "ubuntu motu developers <ubuntu-motu@lists.ubuntu.com>",
+    ]
+)
+
+
+def _rewrite_maintainer_for_ubuntu(maintainer):
+    """Apply the Ubuntu Maintainer-field rewriting policy to a binary package.
+
+    Mirrors the logic in ubuntutools.update_maintainer
+
+    * Legacy pre-2009 Ubuntu team addresses are updated to the current
+      canonical value.
+    * If the address already ends with ubuntu.com> it is a current
+      Ubuntu team and is kept verbatim.
+    * Everything else is replaced with the canonical Ubuntu Developers address.
+    """
+    if not maintainer:
+        return maintainer
+    if maintainer.strip().lower() in _PREVIOUS_UBUNTU_MAINTAINERS:
+        return _UBUNTU_MAINTAINER
+    if maintainer.strip().endswith("ubuntu.com>"):
+        return maintainer
+    return _UBUNTU_MAINTAINER
+
+
 def generate_packages_index(
     store,
     archive_id,
@@ -699,7 +733,9 @@ def generate_packages_index(
         fields.append("Priority", priority_str)
         fields.append("Section", section)
         fields.append("Installed-Size", installedsize)
-        fields.append("Maintainer", dsc_maintainer_rfc822)
+        fields.append(
+            "Maintainer", _rewrite_maintainer_for_ubuntu(dsc_maintainer_rfc822)
+        )
         fields.append("Architecture", architecture)
         fields.append("Version", version)
         fields.append("Recommends", recommends)

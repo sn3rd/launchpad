@@ -876,8 +876,18 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
 
     def test_matches_stanza_builder(self):
         """Direct SQL output matches the existing ORM stanza builder
-        (plus SHA512 and Homepage which the ORM path omits)."""
+        (plus SHA512 and Homepage which the ORM path omits).
+
+        Uses an ubuntu.com maintainer address so that both code paths
+        agree: the SQL path rewrites non-ubuntu.com addresses, while the
+        ORM path does not.
+        """
+        pub_source = self.getPubSource(
+            dsc_maintainer_rfc822="Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>",  # noqa: E501
+            status=PackagePublishingStatus.PUBLISHED,
+        )
         pubs = self.getPubBinaries(
+            pub_source=pub_source,
             status=PackagePublishingStatus.PUBLISHED,
         )
         bpph = pubs[0]
@@ -1155,3 +1165,82 @@ class TestExtraOverrides(TestNativePublishingBase):
         """A missing file returns an empty dict."""
         result = read_extra_overrides("/nonexistent/path")
         self.assertEqual({}, result)
+
+
+class TestDirectPackagesIndexMaintainer(TestNativePublishingBase):
+    """Integration tests for Ubuntu Maintainer rewriting in
+    generate_packages_index.
+    """
+
+    def _generate(self, bpph):
+        store = IStore(BinaryPackagePublishingHistory)
+        arch = bpph.distroarchseries
+        packages_bytes, _ = generate_packages_index(
+            store,
+            bpph.archive_id,
+            arch.distroseries.id,
+            bpph.pocket.value,
+            bpph.component_id,
+            arch.id,
+            arch.architecturetag,
+            arch.underlying_architecturetag,
+        )
+        return packages_bytes
+
+    def test_debian_maintainer_rewritten_in_output(self):
+        """A Debian source maintainer is replaced with Ubuntu Developers
+        in the Packages index output.
+        """
+        pub_source = self.getPubSource(
+            dsc_maintainer_rfc822="Person <person@debian.org>",
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs = self.getPubBinaries(
+            pub_source=pub_source,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        packages_bytes = self._generate(pubs[0])
+        decoded = packages_bytes.decode("utf-8")
+        self.assertIn(
+            "Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",  # noqa: E501
+            decoded,
+        )
+        self.assertNotIn("Maintainer: Person", decoded)
+
+    def test_ubuntu_team_maintainer_kept_in_output(self):
+        """A source maintainer with an ubuntu.com address is preserved
+        verbatim in the Packages index output.
+        """
+        pub_source = self.getPubSource(
+            dsc_maintainer_rfc822="Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>",  # noqa: E501
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs = self.getPubBinaries(
+            pub_source=pub_source,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        packages_bytes = self._generate(pubs[0])
+        self.assertIn(
+            b"Maintainer: Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>",
+            packages_bytes,
+        )
+
+    def test_legacy_maintainer_rewritten_in_output(self):
+        """A pre-2009 Ubuntu maintainer address is updated to the
+        current canonical address in the Packages index output.
+        """
+        pub_source = self.getPubSource(
+            dsc_maintainer_rfc822="Ubuntu Core Developers <ubuntu-devel@lists.ubuntu.com>",  # noqa: E501
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        pubs = self.getPubBinaries(
+            pub_source=pub_source,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        packages_bytes = self._generate(pubs[0])
+        decoded = packages_bytes.decode("utf-8")
+        self.assertIn(
+            "Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",  # noqa: E501
+            decoded,
+        )
+        self.assertNotIn("Maintainer: Ubuntu Core Developers", decoded)
