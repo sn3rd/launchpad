@@ -647,6 +647,24 @@ class TestDistroSeries(TestCaseWithFactory):
             (BugTaskStatus.NEW, BugTaskImportance.CRITICAL), counts
         )
 
+    def test_getArchiveSeries(self):
+        # Test that we get the ArchiveSeries that belongs to the
+        # distroseries with the proper attributes
+        distroseries = self.factory.makeDistroSeries()
+        archive = self.factory.makeArchive(
+            distribution=distroseries.distribution
+        )
+        archiveseries = distroseries.getArchiveSeries(archive=archive)
+        self.assertEqual(
+            removeSecurityProxy(archiveseries).distroseries, distroseries
+        )
+        self.assertEqual(removeSecurityProxy(archiveseries).archive, archive)
+
+        # Returns None if archive is from a different distribution
+        other_archive = self.factory.makeArchive()
+        result = distroseries.getArchiveSeries(archive=other_archive)
+        self.assertIsNone(result)
+
 
 class TestDistroSeriesPackaging(TestCaseWithFactory):
     layer = DatabaseFunctionalLayer

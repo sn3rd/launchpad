@@ -535,6 +535,14 @@ class ArchiveNavigation(
         # Default to ArchiveSourcePackage
         return self.context.getArchiveSourcePackage(sourcepackagename)
 
+    @stepthrough("+series")
+    def traverse_series(self, distroseries_name):
+        """Traverse to ArchiveSeries."""
+        if not getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG):
+            raise NotFoundError(distroseries_name)
+
+        return self.context.getArchiveSeries(distroseries_name)
+
 
 class ArchiveMenuMixin:
     def ppa(self):

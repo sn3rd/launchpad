@@ -70,6 +70,7 @@ from lp.registry.interfaces.sourcepackagename import (
     ISourcePackageName,
     ISourcePackageNameSet,
 )
+from lp.registry.model.archiveseries import ArchiveSeries
 from lp.registry.model.archivesourcepackageseries import (
     ArchiveSourcePackageSeries,
 )
@@ -1128,6 +1129,13 @@ class DistroSeries(
             if sourcepackagename is None:
                 return None
         return ArchiveSourcePackageSeries(archive, self, sourcepackagename)
+
+    def getArchiveSeries(self, archive):
+        """See `IDistroSeries`."""
+        if archive.distribution != self.distribution:
+            return None
+
+        return ArchiveSeries(archive, self)
 
     def getBinaryPackage(self, name):
         """See `IDistroSeries`."""

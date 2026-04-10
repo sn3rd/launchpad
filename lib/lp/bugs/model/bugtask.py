@@ -75,6 +75,7 @@ from lp.bugs.interfaces.bugtask import (
     normalize_bugtask_status,
 )
 from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
+from lp.registry.interfaces.archiveseries import IArchiveSeries
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.archivesourcepackageseries import (
     IArchiveSourcePackageSeries,
@@ -209,18 +210,16 @@ def bug_target_from_key(
         # either the distribution or the product column filled too).
         return ociproject
     elif archive:
-        # Import locally to avoid circular imports
-        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
-        from lp.registry.model.archivesourcepackageseries import (
-            ArchiveSourcePackageSeries,
-        )
-
         if sourcepackagename and distroseries:
-            return ArchiveSourcePackageSeries(
-                archive, distroseries, sourcepackagename
+            return archive.getArchiveSourcePackageSeries(
+                distroseries, sourcepackagename, check_publication=False
             )
+        elif distroseries:
+            return archive.getArchiveSeries(distroseries)
         elif sourcepackagename:
-            return ArchiveSourcePackage(archive, sourcepackagename)
+            return archive.getArchiveSourcePackage(
+                sourcepackagename, check_publication=False
+            )
         else:
             return archive
     elif product:
@@ -266,6 +265,9 @@ def bug_target_to_key(target):
         values["archive"] = target.archive
         values["distroseries"] = target.distroseries
         values["sourcepackagename"] = target.sourcepackagename
+    elif IArchiveSeries.providedBy(target):
+        values["archive"] = target.archive
+        values["distroseries"] = target.distroseries
     elif IArchiveSourcePackage.providedBy(target):
         values["archive"] = target.archive
         values["sourcepackagename"] = target.sourcepackagename

@@ -724,6 +724,13 @@ class IDistroSeriesPublic(
         doesn't exist.
         """
 
+    def getArchiveSeries(archive):
+        """Return an archive series for the given archive.
+
+        Returns None if the archive's distribution doesn't match this
+        distroseries's distribution.
+        """
+
     def getTranslatableSourcePackages():
         """Return a list of Source packages in this distribution series
         that can be translated.

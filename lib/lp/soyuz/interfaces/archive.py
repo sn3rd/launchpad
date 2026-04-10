@@ -699,23 +699,41 @@ class IArchiveSubscriberView(Interface):
             name then they are sub-ordered newest first.
         """
 
-    def getArchiveSourcePackage(name):
+    def getArchiveSourcePackage(name, check_publication=True):
         """Return an ArchiveSourcePackage for this archive and package name.
 
         :param name: A source package name string or `ISourcePackageName`.
+        :param check_publication: If True (default), return None if the
+            archive has no publications for this package. If False, return
+            the object regardless (used when reconstructing from stored data).
         :return: An `IArchiveSourcePackage`, or None if the source package
-            name doesn't exist or if this archive has no publications for this
-            package.
+            name doesn't exist or (when check_publication is True) if this
+            archive has no publications for this package.
         """
 
-    def getArchiveSourcePackageSeries(distroseries, name):
+    def getArchiveSourcePackageSeries(
+        distroseries, name, check_publication=True
+    ):
         """Return an ArchiveSourcePackageSeries for this archive.
 
         :param distroseries: A `IDistroSeries` object or name string.
         :param name: A source package name string or `ISourcePackageName`.
+        :param check_publication: If True (default), return None if the
+            archive has no publications for this package in this distroseries.
+            If False, return the object regardless (used when reconstructing
+            from stored data).
         :return: An `IArchiveSourcePackageSeries`, or None if the source
-            package name doesn't exist or if this archive has no publications
-            for this package in this distroseries.
+            package name doesn't exist or (when check_publication is True) if
+            this archive has no publications for this package in this
+            distroseries.
+        """
+
+    def getArchiveSeries(distroseries):
+        """Return an ArchiveSeries for this archive.
+
+        :param distroseries: A `IDistroSeries` object or name string.
+        :return: An `IArchiveSeries`, or None if the distroseries doesn't
+            exist or doesn't match this archive's distribution.
         """
 
     def newAuthToken(person, token=None, date_created=None):

@@ -1938,11 +1938,6 @@ class Bug(StormBase, InformationTypeMixin):
             return None
         [valid_bugtask] = non_invalid_bugtasks
         bug_target_parent = valid_bugtask.bug_target_parent
-        # TODO: ilkeremrekoc 2026-03-25: This part is only for pillars
-        # while adding a non pillar example, then return a none.
-        # Soon we will add the IServiceUsage interface where these
-        # attributes come from, to the bug target parent as well to
-        # ensure we have followable contracts for bug_target_parents.
         if (
             bug_target_parent.bug_tracking_usage == ServiceUsage.LAUNCHPAD
             and bug_target_parent.answers_usage == ServiceUsage.LAUNCHPAD
