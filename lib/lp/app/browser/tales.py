@@ -48,6 +48,7 @@ from lp.buildmaster.enums import BuildStatus
 from lp.code.enums import RevisionStatusResult
 from lp.code.interfaces.branch import IBranch
 from lp.layers import LaunchpadLayer, VanillaLayer
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -746,6 +747,9 @@ class ObjectImageDisplayAPI:
         elif IExternalPackage.providedBy(context):
             # enriqueesanchz 2025-07-15 TODO: create a new sprite for
             # ExternalPackages
+            sprite_string = "package-source"
+        elif IArchiveSourcePackage.providedBy(context):
+            # Use package-source sprite for ArchiveSourcePackage
             sprite_string = "package-source"
         elif ISprint.providedBy(context):
             sprite_string = "meeting"

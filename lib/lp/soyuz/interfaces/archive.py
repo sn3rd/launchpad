@@ -43,6 +43,7 @@ __all__ = [
     "NamedAuthTokenFeatureDisabled",
     "NoRightsForArchive",
     "NoRightsForComponent",
+    "NoSuchDistroSeriesInArchive",
     "NoSuchPPA",
     "NoTokensForTeams",
     "PocketNotFound",
@@ -198,6 +199,13 @@ class NoSuchPPA(NameLookupFailed):
     """Raised when we try to look up an PPA that doesn't exist."""
 
     _message_prefix = "No such ppa"
+
+
+class NoSuchDistroSeriesInArchive(NameLookupFailed):
+    """Raised when we try to look up a distro series in an archive that
+    doesn't exist in that archive."""
+
+    _message_prefix = "No such distro series in archive"
 
 
 @error_status(http.client.BAD_REQUEST)
@@ -2093,6 +2101,9 @@ class IArchiveView(
     @operation_for_version("devel")
     def uploadCIBuild(ci_build, person, to_series, to_pocket, to_channel=None):
         """Upload the output of a CI build to this archive."""
+
+    def getSeries(series_name):
+        """Get all the series that packages in the Archive uses."""
 
 
 class IArchiveAppend(Interface):

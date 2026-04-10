@@ -91,6 +91,20 @@ class SharingJobTestCase(TestCaseWithFactory):
         metadata["a_list"] = list(metadata["a_list"])
         self.assertEqual(metadata, sharing_job.metadata)
 
+    def test_init_with_archive(self):
+        # When an archive is passed as pillar, product and distro are both
+        # None.
+        archive = self.factory.makeArchive()
+        grantee = self.factory.makePerson()
+        sharing_job = SharingJob(
+            SharingJobType.REMOVE_GRANTEE_SUBSCRIPTIONS,
+            archive,
+            grantee,
+            {},
+        )
+        self.assertIsNone(sharing_job.product)
+        self.assertIsNone(sharing_job.distro)
+
 
 class SharingJobDerivedTestCase(TestCaseWithFactory):
     """Test case for the SharingJobDerived class."""
@@ -232,6 +246,17 @@ class SharingJobDerivedTestCase(TestCaseWithFactory):
             oops_vars,
         )
 
+    def test_pillar_with_archive_is_none(self):
+        # When a job is created with an archive as pillar, the pillar
+        # property returns None.
+        requestor = self.factory.makePerson()
+        bug = self.factory.makeBug()
+        archive = self.factory.makeArchive()
+        job = getUtility(IRemoveArtifactSubscriptionsJobSource).create(
+            requestor, artifacts=[bug], pillar=archive
+        )
+        self.assertIsNone(job.pillar)
+
 
 class TestRunViaCron(TestCaseWithFactory):
     """Sharing jobs run via cron."""
@@ -342,6 +367,21 @@ class RemoveArtifactSubscriptionsJobTestCase(TestCaseWithFactory):
             requestor,
             [wrong_object],
         )
+
+    def test_create_with_archive_pillar(self):
+        # A job can be created with an archive as the pillar without error.
+        # The pillar property returns None since archives are neither
+        # products nor distributions.
+        requestor = self.factory.makePerson()
+        archive = self.factory.makeArchive()
+        bug = self.factory.makeBug()
+        job = getUtility(IRemoveArtifactSubscriptionsJobSource).create(
+            requestor, artifacts=[bug], pillar=archive
+        )
+        self.assertIsInstance(job, RemoveArtifactSubscriptionsJob)
+        self.assertIsNone(job.pillar)
+        self.assertIsNone(job.product)
+        self.assertIsNone(job.distro)
 
     def test_getErrorRecipients(self):
         # The pillar owner and job requestor are the error recipients.

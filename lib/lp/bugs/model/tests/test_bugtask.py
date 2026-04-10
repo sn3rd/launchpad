@@ -1236,6 +1236,49 @@ class TestSimilarBugs(TestCaseWithFactory):
 
         self.assertEqual(len(similar_bugs), 2)
 
+    def test_with_archive(self):
+        """findSimilarBugs works when the bug task targets a PPA archive."""
+        firefox, new_ff_bug, ff_bugtask = self._setupFirefoxBugTask()
+        sample_person = getUtility(IPersonSet).getByEmail("test@canonical.com")
+
+        # Create a PPA and a bug on it
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        ppa_bugtask = self.factory.makeBugTask(bug=new_ff_bug, target=ppa)
+
+        # Create another bug on the same PPA with similar title
+        another_ppa_bug = self.factory.makeBug(
+            target=ppa, title="Firefox on PPA"
+        )
+
+        # Find similar bugs
+        similar_bugs = ppa_bugtask.findSimilarBugs(user=sample_person)
+        self.assertEqual(len(similar_bugs), 1)
+        self.assertEqual(similar_bugs[0].id, another_ppa_bug.id)
+
+    def test_with_archive_source_package(self):
+        """findSimilarBugs works when the bug task targets an archive source
+        package."""
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        firefox, new_ff_bug, ff_bugtask = self._setupFirefoxBugTask()
+        sample_person = getUtility(IPersonSet).getByEmail("test@canonical.com")
+
+        # Create a PPA and a source package within it
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        spn = self.factory.makeSourcePackageName(name="firefox-pkg")
+        asp = ArchiveSourcePackage(ppa, spn)
+
+        # Create bugs on the archive source package
+        asp_bug1 = self.factory.makeBug(target=asp, title="Firefox package")
+        asp_bug2 = self.factory.makeBug(target=asp, title="Firefox bug")
+
+        asp_bugtask = asp_bug1.bugtasks[0]
+
+        # Find similar bugs
+        similar_bugs = asp_bugtask.findSimilarBugs(user=sample_person)
+        self.assertEqual(len(similar_bugs), 1)
+        self.assertEqual(similar_bugs[0].id, asp_bug2.id)
+
 
 class TestBugTaskPermissionsToSetAssigneeMixin:
     layer = DatabaseFunctionalLayer
@@ -3332,6 +3375,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 ociproject=None,
                 packagetype=None,
                 channel=None,
+                archive=None,
             ),
         )
 
@@ -3348,6 +3392,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3364,6 +3409,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3380,6 +3426,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3396,6 +3443,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3412,6 +3460,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=externalpackage.packagetype,
                 channel=externalpackage.channel,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3428,6 +3477,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=None,
+                archive=None,
             ),
         )
 
@@ -3445,6 +3495,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=ociproject,
+                archive=None,
             ),
         )
 
@@ -3462,6 +3513,45 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 packagetype=None,
                 channel=None,
                 ociproject=ociproject,
+                archive=None,
+            ),
+        )
+
+    def test_archive(self):
+        archive = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        self.assertTargetKeyWorks(
+            archive,
+            dict(
+                product=None,
+                productseries=None,
+                distribution=None,
+                distroseries=None,
+                sourcepackagename=None,
+                packagetype=None,
+                channel=None,
+                ociproject=None,
+                archive=archive,
+            ),
+        )
+
+    def test_archivesourcepackage(self):
+        archive = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        spn = self.factory.makeSourcePackageName()
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        asp = ArchiveSourcePackage(archive, spn)
+        self.assertTargetKeyWorks(
+            asp,
+            dict(
+                product=None,
+                productseries=None,
+                distribution=None,
+                distroseries=None,
+                sourcepackagename=spn,
+                packagetype=None,
+                channel=None,
+                ociproject=None,
+                archive=archive,
             ),
         )
 
@@ -3474,6 +3564,7 @@ class TestBugTargetKeys(TestCaseWithFactory):
         self.assertRaises(
             AssertionError,
             bug_target_from_key,
+            None,
             None,
             None,
             None,
@@ -3844,6 +3935,54 @@ class TestValidateTarget(TestCaseWithFactory, ValidateTargetMixin):
         with person_logged_in(prod.owner):
             prod.setBugSharingPolicy(BugSharingPolicy.PROPRIETARY)
             validate_target(bug, series)
+
+    def test_ppa_archive_is_allowed(self):
+        # A PPA archive is allowed as a bug target.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        bug = self.factory.makeBug()
+        validate_target(bug, ppa)
+
+    def test_primary_archive_is_forbidden(self):
+        # A primary archive cannot be a bug target.
+        primary = self.factory.makeArchive(purpose=ArchivePurpose.PRIMARY)
+        bug = self.factory.makeBug()
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "Only PPAs can be bug targets. "
+            "Primary and partner archives are covered by distribution "
+            "bug tasks.",
+            validate_target,
+            bug,
+            primary,
+        )
+
+    def test_ppa_source_package_is_allowed(self):
+        # A source package in a PPA is allowed as a bug target.
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        spn = self.factory.makeSourcePackageName()
+        asp = ArchiveSourcePackage(ppa, spn)
+        bug = self.factory.makeBug()
+        validate_target(bug, asp)
+
+    def test_primary_archive_source_package_is_forbidden(self):
+        # A source package in a primary archive cannot be a bug target.
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        primary = self.factory.makeArchive(purpose=ArchivePurpose.PRIMARY)
+        spn = self.factory.makeSourcePackageName()
+        asp = ArchiveSourcePackage(primary, spn)
+        bug = self.factory.makeBug()
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "Only PPAs can be bug targets. "
+            "Primary and partner archives are covered by distribution "
+            "bug tasks.",
+            validate_target,
+            bug,
+            asp,
+        )
 
 
 class TestValidateNewTarget(TestCaseWithFactory, ValidateTargetMixin):
