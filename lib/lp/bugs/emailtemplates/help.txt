@@ -20,7 +20,7 @@ Before you start
 Launchpad only accepts email that is GPG signed. Read our guide
 on adding your GPG key to your Launchpad account for more info:
 
-https://help.launchpad.net/YourAccount/ImportingYourPGPKey
+https://documentation.ubuntu.com/launchpad/user/how-to/import-openpgp-key/
 
 
 Anatomy of an email to the bug tracker

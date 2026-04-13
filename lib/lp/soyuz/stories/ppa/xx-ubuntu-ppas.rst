@@ -512,8 +512,8 @@ link to a repository that doesn't exist yet.
 
 It also contains a link to the 'PPA help page'.
 
-    >>> print(anon_browser.getLink("PPA help page").url)
-    https://help.launchpad.net/Packaging/PPA
+    >>> print(anon_browser.getLink("PPA help page").url)  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/.../ppa/
 
 The "sources list" widget isn't presented for empty PPAs either.
 
@@ -571,8 +571,10 @@ section in the PPA details table.
 
 It also has a link pointing to its corresponding help page.
 
-    >>> print(no_priv_browser.getLink("Read about uploading").url)
-    https://help.launchpad.net/Packaging/PPA/Uploading
+    >>> print(
+    ...     no_priv_browser.getLink("Read about uploading").url
+    ... )  # doctest: +ELLIPSIS
+    https://documentation.ubuntu.com/launchpad/user/.../ppa-package-upload/
 
 Anonymous access or users with no upload permission cannot see the
 upload hint section.
