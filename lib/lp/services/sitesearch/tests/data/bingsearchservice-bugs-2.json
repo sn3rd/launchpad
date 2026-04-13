@@ -18,36 +18,36 @@
         "url": "http://bugs.launchpad.test/ubuntu/hoary/+bug/2",
         "urlPingSuffix": "DevEx,5103.1",
         "isFamilyFriendly": true,
-        "displayUrl": "https://help.launchpad.net/Bugs",
+        "displayUrl": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/",
         "snippet": "Bug tracking ... Search bugs reports ... Launchpad’s bug tracker allows collaboration ...",
         "deepLinks": [
           {
             "name": "Bugs/EmailInterface",
-            "url": "https://help.launchpad.net/Bugs/EmailInterface",
+            "url": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-email-interface/",
             "urlPingSuffix": "DevEx,5093.1",
             "snippet": "Overview. Launchpad's bug tracker sends you email about the bugs you're interested in. If you see something that requires your attention - for example, you want to ..."
           },
           {
             "name": "Bugs/PluginAPISpec",
-            "url": "https://help.launchpad.net/Bugs/PluginAPISpec",
+            "url": "https://documentation.ubuntu.com/launchpad/user/reference/bug-tracker-api/plugin-api/",
             "urlPingSuffix": "DevEx,5094.1",
             "snippet": "Overview. We want Launchpad to share bug reports, comments, statuses and other information with as many bug trackers as possible. We've already produced plugins that ..."
           },
           {
             "name": "Bugs/Subscriptions",
-            "url": "https://help.launchpad.net/Bugs/Subscriptions",
+            "url": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/subscribe-and-unsubscribe-to-bugs/",
             "urlPingSuffix": "DevEx,5095.1",
             "snippet": "Overview. Launchpad uses notification emails and Atom feeds to help you stay on top of the bugs that interest you. Bug mail. There are three ways to get bug ..."
           },
           {
             "name": "Bugs/YourProject",
-            "url": "https://help.launchpad.net/Bugs/YourProject",
+            "url": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/file-a-bug/",
             "urlPingSuffix": "DevEx,5096.1",
             "snippet": "Overview. Launchpad's bug tracker is unique: it can track how one bug affects different communities. When you share free software, you share its bugs."
           },
           {
             "name": "Bugs/Expiry",
-            "url": "https://help.launchpad.net/Bugs/Expiry",
+            "url": "https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/",
             "urlPingSuffix": "DevEx,5097.1",
             "snippet": "This gives you three benefits: you can view a report of all bugs that are due to expiry and so deal with any that need your attention ; once the bug's expired ..."
           }

@@ -38,9 +38,9 @@
                 <strong>Create your own applications that work directly with Launchpad.</strong> Join the beta of our RESTful web services API.
 
 <br /><br />
-We've even done the hard work for you: use our LGPL Python library &mdash; <a href="https://help.launchpad.net/API/launchpadlib/">launchpadlib</a> &mdash; to manipulate data in Launchpad just like any other Python object.
+We've even done the hard work for you: use our LGPL Python library &mdash; <a href="https://documentation.ubuntu.com/launchpad/user/how-to/launchpadlib/using-launchpadlib/">launchpadlib</a> &mdash; to manipulate data in Launchpad just like any other Python object.
             </p>
-            <div id="link-holder"><a href="https://help.launchpad.net/API">Get started with the Launchpad API &gt;</a></div>
+            <div id="link-holder"><a href="https://documentation.ubuntu.com/launchpad/user/how-to/launchpad-api/">Get started with the Launchpad API &gt;</a></div>
         </div>
         <div id="page-intro-bottom"></div>
         <ul id="secondary-navigation">
@@ -96,7 +96,7 @@ We've even done the hard work for you: use our LGPL Python library &mdash; <a hr
                                 <br />
                         </p>
 
-                        <p>You can be up and running in minutes, without having to make any API calls directly. <a href="https://help.launchpad.net/API/launchpadlib">Read more about launchpadlib &gt;</a>.
+                        <p>You can be up and running in minutes, without having to make any API calls directly. <a href="https://documentation.ubuntu.com/launchpad/user/how-to/launchpadlib/using-launchpadlib/">Read more about launchpadlib &gt;</a>.
                         </p>
                     </div>
                     <div class="clear"></div>

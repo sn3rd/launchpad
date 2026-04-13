@@ -704,9 +704,13 @@ class LaunchpadRootNavigation(Navigation):
 
     @stepto("legal")
     def redirect_legal(self):
-        """Redirect /legal to help.launchpad.net/Legal site."""
+        """Redirect /legal to documentation.ubuntu.com/.../Legal site."""
         return self.redirectSubTree(
-            "https://help.launchpad.net/Legal", status=301
+            (
+                "https://documentation.ubuntu.com/launchpad/user/reference/"
+                "launchpad-and-community/legal/launchpad-policies/"
+            ),
+            status=301,
         )
 
     @stepto("faq")
@@ -718,7 +722,9 @@ class LaunchpadRootNavigation(Navigation):
 
     @stepto("feedback")
     def redirect_feedback(self):
-        """Redirect /feedback to help.launchpad.net/Feedback site."""
+        """Redirect /feedback to documentation.ubuntu.com/launchpad/Feedback
+        site.
+        """
         return self.redirectSubTree(
             (
                 "https://documentation.ubuntu.com/launchpad/en/latest/user/"
