@@ -111,7 +111,7 @@
           Start <tal:eta
           replace="eta/fmt:approximatedate">in 3 hours</tal:eta>
           (<span tal:replace="context/buildqueue_record/lastscore"/>)
-          <a href="https://help.launchpad.net/Packaging/BuildScores"
+          <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/build-scores/"
              target="_blank">What's this?</a>
         </li>
       </tal:pending>

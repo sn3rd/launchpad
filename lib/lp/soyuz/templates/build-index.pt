@@ -153,7 +153,7 @@
           <tal:rescore define="link context/menu:context/rescore"
                        condition="link/enabled"
                        replace="structure link/fmt:icon" />
-          (<a href="https://help.launchpad.net/Packaging/BuildScores"
+          (<a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/build-scores/"
              target="_blank">What's this?</a>)
       </li>
       <tal:building condition="context/status/enumvalue:BUILDING">

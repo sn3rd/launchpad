@@ -123,8 +123,8 @@ stating that the bug report will be marked for expiration.
     activity occurs.
     (find out why)
 
-    >>> user_browser.getLink("find out why").url
-    'https://help.launchpad.net/BugExpiry'
+    >>> user_browser.getLink("find out why").url  # doctest: +ELLIPSIS
+    'https://documentation.ubuntu.com/launchpad/user/.../bug-expiry/'
 
 If the time by which a bug should have been expired has passed but the
 bug has not yet been expired, a different message will be displayed,
@@ -153,8 +153,8 @@ date. We alter the date_last_updated field of bug 11 to demonstrate this.
     This bug report was marked for expiration 1 days ago.
     (find out why)
 
-    >>> user_browser.getLink("find out why").url
-    'https://help.launchpad.net/BugExpiry'
+    >>> user_browser.getLink("find out why").url  # doctest: +ELLIPSIS
+    'https://documentation.ubuntu.com/launchpad/.../bugs/bug-expiry/'
 
 The expirable bug search
 ------------------------

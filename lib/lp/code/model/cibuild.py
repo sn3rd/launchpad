@@ -367,7 +367,7 @@ class CIBuild(PackageBuildMixin, StormBase):
         # Low latency is especially useful for CI builds, so score these
         # above bulky things like live filesystem builds, but below
         # important things like builds of proposed Ubuntu stable updates.
-        # See https://help.launchpad.net/Packaging/BuildScores.
+        # See https://documentation.ubuntu.com/launchpad/user/reference/packaging/build-scores/.  # noqa: E501
         return 2600
 
     def getMedianBuildDuration(self):

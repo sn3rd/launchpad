@@ -2258,7 +2258,9 @@ The sent message contains two parts:
 
 The first part is the error message, explaining what went wrong.
 
-    >>> print(failure_msg.get_payload(decode=True).decode("UTF-8"))
+    >>> print(
+    ...     failure_msg.get_payload(decode=True).decode("UTF-8")
+    ... )  # doctest: +ELLIPSIS
     An error occurred while processing a mail you sent to Launchpad's email
     interface.
     <BLANKLINE>
@@ -2271,8 +2273,7 @@ The first part is the error message, explaining what went wrong.
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-
-    email-interface/
+    https://documentation.ubuntu.com/launchpad/user/.../use-email-interface/
     or send an email to help@launchpad.net
 
 The second part is the message that the user sent, which caused the
@@ -2416,7 +2417,9 @@ failure in an email.
     >>> from_addr, to_addrs, raw_message = stub.test_emails[-1]
     >>> sent_msg = email.message_from_bytes(raw_message)
     >>> failure_msg, original_msg = sent_msg.get_payload()
-    >>> print(failure_msg.get_payload(decode=True).decode("UTF-8"))
+    >>> print(
+    ...     failure_msg.get_payload(decode=True).decode("UTF-8")
+    ... )  # doctest: +ELLIPSIS
     An error occurred while processing a mail you sent to Launchpad's email
     interface.
     <BLANKLINE>
@@ -2429,8 +2432,8 @@ failure in an email.
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use
-    -email-interface/ or send an email to help@launchpad.net
+    https://documentation.ubuntu.com/launchpad/user/.../use-email-interface/
+    or send an email to help@launchpad.net
 
 We send another email to the same bug, selecting the same bug task. The
 email has other two commands - 'security maybe', which is guaranteed to
@@ -2468,7 +2471,9 @@ And the sender receives an email to let them know about the failing
     >>> from_addr, to_addrs, raw_message = stub.test_emails[-1]
     >>> sent_msg = email.message_from_bytes(raw_message)
     >>> failure_msg, original_msg = sent_msg.get_payload()
-    >>> print(failure_msg.get_payload(decode=True).decode("UTF-8"))
+    >>> print(
+    ...     failure_msg.get_payload(decode=True).decode("UTF-8")
+    ... )  # doctest: +ELLIPSIS
     An error occurred while processing a mail you sent to Launchpad's email
     interface.
     <BLANKLINE>
@@ -2485,8 +2490,8 @@ And the sender receives an email to let them know about the failing
     <BLANKLINE>
     --
     For more information about using Launchpad by email, see
-    https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-
-    email-interface/ or send an email to help@launchpad.net
+    https://documentation.ubuntu.com/launchpad/user/.../use-email-interface/
+    or send an email to help@launchpad.net
 
 
 Terminating command input
