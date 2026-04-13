@@ -2616,7 +2616,10 @@ class PublishingSet:
             )
             .group_by(SourcePackagePublishingHistory.pocket)
         )
-        return dict(rows)
+
+        counts = {pocket: 0 for pocket in PackagePublishingPocket.items}
+        counts.update(rows)
+        return counts
 
 
 def get_current_source_releases(

@@ -486,7 +486,7 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         """Count builds grouped by status for a Distribution/DS/DAS.
 
         Returns a dict mapping `BuildStatus` values to their count.
-        Only statuses with at least one matching build are included.
+        Statuses with no matching builds are included with a count of 0.
 
         Gina-generated builds (``FULLYBUILT`` with no ``date_finished``)
         are excluded.  Gina is a legacy script that imports packages from
@@ -498,7 +498,8 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         :param date_finished_since: Optional datetime; when given, only
             builds with ``date_finished >= date_finished_since`` are
             counted.
-        :return: ``dict`` of ``{BuildStatus: int}``.
+        :return: ``dict`` of ``{BuildStatus: int}`` containing an entry
+            for every ``BuildStatus`` value.
         """
 
     def getBuildsBySourcePackageRelease(

@@ -1518,10 +1518,12 @@ class IPublishingSet(Interface):
 
         Returns a dict mapping ``PackagePublishingPocket`` values to the
         number of source publications in the distro's archives, across
-        all publication statuses.
+        all publication statuses. Pockets with no publications are
+        included with a count of 0.
 
         :param context: An `IDistribution` or `IDistroSeries`.
-        :return: ``dict`` of ``{PackagePublishingPocket: int}``.
+        :return: ``dict`` of ``{PackagePublishingPocket: int}`` containing
+            an entry for every ``PackagePublishingPocket`` value.
         """
 
 

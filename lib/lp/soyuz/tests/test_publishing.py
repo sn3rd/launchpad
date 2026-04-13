@@ -2740,7 +2740,7 @@ class TestGetPocketCountsForDistro(TestCaseWithFactory):
         )
         self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
         self.assertEqual(1, counts.get(PackagePublishingPocket.UPDATES, 0))
-        self.assertNotIn(PackagePublishingPocket.SECURITY, counts)
+        self.assertEqual(0, counts.get(PackagePublishingPocket.SECURITY))
 
     def test_getPocketCountsForDistro_counts_all_pockets_across_statuses(self):
         self._makeSpph(
@@ -2790,18 +2790,25 @@ class TestGetPocketCountsForDistro(TestCaseWithFactory):
             self.distroseries
         )
         self.assertEqual(1, counts.get(PackagePublishingPocket.RELEASE, 0))
-        self.assertNotIn(PackagePublishingPocket.PROPOSED, counts)
+        self.assertEqual(0, counts.get(PackagePublishingPocket.PROPOSED))
 
     def test_getPocketCountsForDistro_empty(self):
         counts = self.publishing_set.getPocketCountsForDistro(
             self.distroseries
         )
-        self.assertEqual({}, counts)
+        self.assertEqual(
+            {pocket: 0 for pocket in PackagePublishingPocket.items},
+            counts,
+        )
 
-    def test_getPocketCountsForDistro_omits_zero_pockets(self):
+    def test_getPocketCountsForDistro_includes_zero_pockets(self):
         self._makeSpph(pocket=PackagePublishingPocket.RELEASE)
         counts = self.publishing_set.getPocketCountsForDistro(
             self.distroseries
         )
-        self.assertNotIn(PackagePublishingPocket.PROPOSED, counts)
-        self.assertNotIn(PackagePublishingPocket.UPDATES, counts)
+        self.assertEqual(0, counts.get(PackagePublishingPocket.PROPOSED))
+        self.assertEqual(0, counts.get(PackagePublishingPocket.UPDATES))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )

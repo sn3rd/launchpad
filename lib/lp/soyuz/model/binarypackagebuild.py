@@ -1283,7 +1283,10 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
             )
             .group_by(BinaryPackageBuild.status)
         )
-        return dict(rows)
+
+        counts = {status: 0 for status in BuildStatus.items}
+        counts.update(rows)
+        return counts
 
     def _decorate_with_prejoins(self, result_set):
         """Decorate build records with related data prefetch functionality."""
