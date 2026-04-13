@@ -2812,3 +2812,35 @@ class TestGetPocketCountsForDistro(TestCaseWithFactory):
             {pocket for pocket in PackagePublishingPocket.items},
             set(counts.keys()),
         )
+
+    def test_getPocketCountsForDistro_filters_by_statuses(self):
+        self._makeSpph(
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.RELEASE,
+            status=PackagePublishingStatus.PENDING,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.PROPOSED,
+            status=PackagePublishingStatus.SUPERSEDED,
+        )
+        self._makeSpph(
+            pocket=PackagePublishingPocket.UPDATES,
+            status=PackagePublishingStatus.DELETED,
+        )
+        counts = self.publishing_set.getPocketCountsForDistro(
+            self.distroseries,
+            statuses=[
+                PackagePublishingStatus.PUBLISHED,
+                PackagePublishingStatus.PENDING,
+            ],
+        )
+        self.assertEqual(2, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(0, counts.get(PackagePublishingPocket.PROPOSED, 0))
+        self.assertEqual(0, counts.get(PackagePublishingPocket.UPDATES, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )

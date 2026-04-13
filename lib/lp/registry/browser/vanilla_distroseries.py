@@ -27,7 +27,10 @@ from lp.registry.browser import MilestoneOverlayMixin
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
-from lp.soyuz.interfaces.publishing import IPublishingSet
+from lp.soyuz.interfaces.publishing import (
+    IPublishingSet,
+    active_publishing_status,
+)
 
 
 class ChipColor(str, Enum):
@@ -199,7 +202,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def source_packages_summary_all_time(self):
         """Return source package counts by status for all time."""
         return getUtility(IPublishingSet).getPocketCountsForDistro(
-            self.context
+            self.context, statuses=active_publishing_status
         )
 
     @property

@@ -2588,7 +2588,7 @@ class PublishingSet:
             )
 
     def getPocketCountsForDistro(
-        self, context
+        self, context, statuses=None
     ) -> Dict[PackagePublishingPocket, int]:
         """See `IPublishingSet`."""
 
@@ -2607,6 +2607,11 @@ class PublishingSet:
             ]
         else:
             raise AssertionError("Unsupported context: %r" % context)
+
+        if statuses is not None:
+            clauses.append(
+                SourcePackagePublishingHistory.status.is_in(list(statuses))
+            )
 
         rows = (
             IStore(SourcePackagePublishingHistory)

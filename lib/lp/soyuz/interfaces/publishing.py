@@ -1513,15 +1513,18 @@ class IPublishingSet(Interface):
 
     def getPocketCountsForDistro(
         context,
+        statuses=None,
     ) -> Dict[PackagePublishingPocket, int]:
         """Count source publications grouped by pocket for a distro.
 
         Returns a dict mapping ``PackagePublishingPocket`` values to the
-        number of source publications in the distro's archives, across
-        all publication statuses. Pockets with no publications are
-        included with a count of 0.
+        number of source publications in the distro's archives. Pockets
+        with no publications are included with a count of 0.
 
         :param context: An `IDistribution` or `IDistroSeries`.
+        :param statuses: Optional iterable of `PackagePublishingStatus`
+            values to filter by. If ``None`` (the default), publications
+            across all statuses are counted.
         :return: ``dict`` of ``{PackagePublishingPocket: int}`` containing
             an entry for every ``PackagePublishingPocket`` value.
         """
