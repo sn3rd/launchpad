@@ -42,6 +42,7 @@ from lp.blueprints.model.specification import (
 from lp.blueprints.model.specificationsearch import search_specifications
 from lp.bugs.interfaces.bugsummary import IBugSummaryDimension
 from lp.bugs.interfaces.bugtarget import ISeriesBugTarget
+from lp.bugs.interfaces.bugtask import IBugTaskSet
 from lp.bugs.interfaces.bugtaskfilter import OrderedBugTask
 from lp.bugs.model.bugtarget import BugTargetBase
 from lp.bugs.model.structuralsubscription import (
@@ -1612,6 +1613,25 @@ class DistroSeries(
             name=name,
             version=version,
             exact_match=exact_match,
+        )
+
+    def getBugSummaryStatusImportanceCounts(self, user, milestone=None):
+        """See `IDistroSeries`.
+
+        Counts come from the BugSummary fact table via ``IBugTaskSet`` and
+        are grouped by ``("status", "importance")``.
+        """
+        if milestone is not None:
+            # Circular import.
+            from lp.bugs.model.bugsummary import CombineBugSummaryConstraint
+
+            context = CombineBugSummaryConstraint(self, milestone)
+        else:
+            context = self
+        return getUtility(IBugTaskSet).countBugs(
+            user,
+            [context],
+            ("status", "importance"),
         )
 
     def getBugSummaryContextWhereClause(self):

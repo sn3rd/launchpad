@@ -21,7 +21,6 @@ from lp.bugs.interfaces.bugtask import (
     IBugTaskSet,
 )
 from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
-from lp.bugs.model.bugsummary import CombineBugSummaryConstraint
 from lp.buildmaster.enums import BuildStatus
 from lp.layers import VanillaLayer, setAdditionalLayer
 from lp.registry.browser import MilestoneOverlayMixin
@@ -157,19 +156,12 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def get_bugs_summary(self, milestone=None):
         """Return the bugs summary (critical, high, in progress, open counts).
 
-        Uses the BugSummary fact table for efficient grouped counts.
-        ``countBugs`` already filters to unresolved statuses.
+        Uses the DistroSeries BugSummary API grouped by status/importance.
 
         :param milestone: An optional milestone to restrict the counts to.
         """
-        if milestone is not None:
-            context = CombineBugSummaryConstraint(self.context, milestone)
-        else:
-            context = self.context
-        counts = getUtility(IBugTaskSet).countBugs(
-            self.user,
-            [context],
-            ("status", "importance"),
+        counts = self.context.getBugSummaryStatusImportanceCounts(
+            self.user, milestone=milestone
         )
 
         critical = high = inprogress = open_count = 0
