@@ -204,12 +204,12 @@ class PersonSubscriptions:
             duplicates.annotateBugTaskResponsibilities(
                 task,
                 task.bug_target_parent,
-                task.bug_target_parent.bug_supervisor,
+                getattr(task.bug_target_parent, "bug_supervisor", None),
             )
             direct.annotateBugTaskResponsibilities(
                 task,
                 task.bug_target_parent,
-                task.bug_target_parent.bug_supervisor,
+                getattr(task.bug_target_parent, "bug_supervisor", None),
             )
         return (direct, duplicates)
 
@@ -246,7 +246,8 @@ class PersonSubscriptions:
             owner = bugtask.bug_target_parent.owner
             if (
                 person.inTeam(owner)
-                and bugtask.bug_target_parent.bug_supervisor is None
+                and getattr(bugtask.bug_target_parent, "bug_supervisor", None)
+                is None
             ):
                 as_owner.add(owner, bug, bugtask.bug_target_parent, bugtask)
             assignee = bugtask.assignee

@@ -122,6 +122,10 @@ from lp.bugs.interfaces.bugwatch import BugWatchActivityStatus
 from lp.bugs.interfaces.cve import ICveSet
 from lp.bugs.vocabularies import BugTaskMilestoneVocabulary
 from lp.code.interfaces.branchcollection import IAllBranches
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
+from lp.registry.interfaces.archivesourcepackageseries import (
+    IArchiveSourcePackageSeries,
+)
 from lp.registry.interfaces.distribution import IDistribution, IDistributionSet
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -157,6 +161,7 @@ from lp.services.webapp.authorization import (
 from lp.services.webapp.breadcrumb import Breadcrumb
 from lp.services.webapp.escaping import html_escape, structured
 from lp.services.webapp.interfaces import ICanonicalUrlData, ILaunchBag
+from lp.soyuz.interfaces.archive import IArchive
 
 vocabulary_registry = getVocabularyRegistry()
 
@@ -1826,19 +1831,58 @@ def bugtask_sort_key(bugtask):
     """Return a sort key for displaying a set of tasks for a single bug.
 
     Designed to make sense when bugtargetdisplayname is shown.
+
+    Returned key structure is:
+    (
+        source package name or None,
+        distribution name or None,
+        archive reference or None,
+        package type or series name or None,
+        channel or None,
+        version or None,
+        product name or None,
+        product series name or None,
+        ociproject displayname or None,
+    )
     """
+
     # The key is structured so that comparisons between elements are consistent
     # across different types of bug targets.
     # Elements from different sort keys should have the same typing so we can
-    # compare them. That's why the fourth element is a channel or None
-    # and the fifth element is a Version object or None,
+    # compare them. That's why the fifth element is a channel or None
+    # and the sixth element is a Version object or None,
     if IDistribution.providedBy(bugtask.target):
-        key = (None, bugtask.target.displayname, None, None, None, None)
+        key = (
+            None,
+            bugtask.target.displayname,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    elif IArchive.providedBy(bugtask.target):
+        key = (
+            None,
+            bugtask.target.distribution.displayname,
+            bugtask.target.reference,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
     elif IDistroSeries.providedBy(bugtask.target):
         key = (
             None,
             bugtask.target.distribution.displayname,
+            None,
             bugtask.target.name,
+            None,
+            None,
             None,
             None,
             None,
@@ -1851,13 +1895,30 @@ def bugtask_sort_key(bugtask):
             None,
             None,
             None,
+            None,
+            None,
+            None,
         )
     elif IExternalPackage.providedBy(bugtask.target):
         key = (
             bugtask.target.sourcepackagename.name,
             bugtask.target.distribution.displayname,
+            None,
             bugtask.target.packagetype,
             channel_list_to_string(*bugtask.target.channel),
+            None,
+            None,
+            None,
+            None,
+        )
+    elif IArchiveSourcePackage.providedBy(bugtask.target):
+        key = (
+            bugtask.target.sourcepackagename.name,
+            bugtask.target.archive.distribution.displayname,
+            bugtask.target.archive.reference,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -1869,15 +1930,31 @@ def bugtask_sort_key(bugtask):
             bugtask.target.distribution.displayname,
             None,
             None,
+            None,
             Version(bugtask.target.distroseries.version),
+            None,
+            None,
             None,
         )
     elif IExternalPackageSeries.providedBy(bugtask.target):
         key = (
             bugtask.target.sourcepackagename.name,
             bugtask.target.distribution.displayname,
+            None,
             bugtask.target.packagetype,
             channel_list_to_string(*bugtask.target.channel),
+            Version(bugtask.target.distroseries.version),
+            None,
+            None,
+            None,
+        )
+    elif IArchiveSourcePackageSeries.providedBy(bugtask.target):
+        key = (
+            bugtask.target.sourcepackagename.name,
+            bugtask.target.archive.distribution.displayname,
+            bugtask.target.archive.reference,
+            None,
+            None,
             Version(bugtask.target.distroseries.version),
             None,
             None,
@@ -1890,12 +1967,14 @@ def bugtask_sort_key(bugtask):
             None,
             None,
             None,
+            None,
             bugtask.target.displayname,
             None,
             None,
         )
     elif IProductSeries.providedBy(bugtask.target):
         key = (
+            None,
             None,
             None,
             None,
@@ -1916,12 +1995,13 @@ def bugtask_sort_key(bugtask):
             None,
             None,
             None,
+            None,
             ociproject.displayname,
         ]
         if IDistribution.providedBy(bug_target_parent):
-            key[3] = bug_target_parent.displayname
+            key[1] = bug_target_parent.displayname
         elif IProduct.providedBy(bug_target_parent):
-            key[5] = bug_target_parent.displayname
+            key[6] = bug_target_parent.displayname
         key = tuple(key)
     else:
         raise AssertionError("No sort key for %r" % bugtask.target)
