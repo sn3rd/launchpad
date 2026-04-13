@@ -15,6 +15,7 @@
           chart-clockwise="true"
           chart-min-ratio="0.02"
           chart-thickness="20"
+          chart-gap="15"
           chart-segments='[
             {"value": 12, "fill": "#4D4D4D", "label": "12 Failures"},
             {"value": 34, "fill": "#24598F", "label": "34 Builds"},
