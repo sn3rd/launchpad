@@ -29,7 +29,7 @@
       </div>
       <p>
         Read the current version of
-        <a href="https://help.launchpad.net/PPATermsofUse">PPA Terms of
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/launchpad-and-community/legal/launchpad-policies/#personal-package-archive-eligibility">PPA Terms of
         Use</a> before activating a new PPA.
       </p>
       <p tal:condition="view/is_private_team" id="ppa-privacy-statement">

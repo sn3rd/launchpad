@@ -124,7 +124,8 @@ class LicenseNotification:
             return False
         safe_message = structured(
             "%s<br />Learn more about "
-            '<a href="https://help.launchpad.net/CommercialHosting">'
+            '<a href="https://documentation.ubuntu.com/'
+            'launchpad/user/reference/consumer-hosting/">'
             "commercial subscriptions</a>",
             message,
         )

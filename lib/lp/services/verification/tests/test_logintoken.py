@@ -67,7 +67,7 @@ class TestLoginToken(TestCaseWithFactory):
             You can read more about merging accounts in our
             help wiki:
 
-                https://help.launchpad.net/YourAccount/Merging
+                https://documentation.ubuntu.com/launchpad/user/how-to/account-management/merge-accounts/
 
             Thank you,
 

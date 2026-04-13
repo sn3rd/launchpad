@@ -51,7 +51,7 @@
               <label for="cb_pochanged">
                 <span><em id="po-format-only">PO format only:</em>
                   Only strings that differ from imported versions
-                  (<a href="https://help.launchpad.net/Translations/PartialPOExport"
+                  (<a href="https://documentation.ubuntu.com/launchpad/user/explanation/translating-with-launchpad/partial-exports/"
                       target="_blank">What's this?</a>).</span>
               </label>
             </div>

@@ -16,7 +16,7 @@ may also request the setup of private code hosting.
 As the maintainer of a project with a commercial subscription, you
 may create private teams with private mailing lists and private package
 archives. Find out more about this here:
-https://help.launchpad.net/CommercialHosting
+https://documentation.ubuntu.com/launchpad/user/reference/consumer-hosting/
 
 Launchpad is a collaboration site, free to use for projects with an
 approved open source licence.  When you registered your project, you'd

@@ -2995,7 +2995,7 @@ class PersonEditView(PersonRenameFormMixin, BasePersonEditView):
         bypass_check = self.request.form_ng.getOne(
             "i_know_this_is_an_openid_security_issue", 0
         )
-        if not bypass_check:
+        if not bypass_check:  # noqa: E501
             # Warn the user that they might shoot themselves in the foot.
             self.setFieldError(
                 "name",
@@ -3008,14 +3008,14 @@ class PersonEditView(PersonRenameFormMixin, BasePersonEditView):
                   locked out of certain sites where you used it, or that
                   somebody could create a new profile with the same name and
                   log in as you on these third-party sites. See
-                  <a href="https://help.launchpad.net/OpenID#rename-account"
-                    >https://help.launchpad.net/OpenID#rename-account</a>
+                  <a href="https://documentation.ubuntu.com/launchpad/user/how-to/using-openid/"
+                    >the Launchpad OpenID documentation</a>
                   for more information.
               </p>
               <p>If you click 'Save' again, we will rename your account
                  anyway.
               </p>
-            </div>"""
+            </div>"""  # noqa: E501
                     ),
                 ),
             )

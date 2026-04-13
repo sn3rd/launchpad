@@ -43,7 +43,7 @@
         <p>
           <img src="/@@/warning" /> Package deletion can take some time
           before the packages are actually removed.  See more about
-          <a href="https://help.launchpad.net/Packaging/PPA/Deleting">
+          <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/deleting-packages/">
           deleting a package</a>.
         </p>
         <div style="margin-top: 1em;">
