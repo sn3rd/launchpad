@@ -547,6 +547,7 @@ def generate_packages_index(
     separate_long_descriptions=False,
     overrides=None,
     formats=None,
+    seen_translations=None,
 ):
     """Generate a Packages index file directly from the database.
 
@@ -569,6 +570,10 @@ def generate_packages_index(
         each matching stanza before serialisation.
     :param formats: Optional list of BinaryPackageFormat items to
         restrict to.
+    :param seen_translations: Optional set of (package, description_md5)
+        tuples shared across multiple calls (e.g. across architectures)
+        to deduplicate Translation-en entries for arch-all packages.
+        A new set is created internally when not provided.
     :return: A tuple of (packages_bytes, translations_bytes) where
         translations_bytes is non-empty only when separate_long_descriptions
         is True.
@@ -650,7 +655,8 @@ def generate_packages_index(
 
     stanzas = []
     translation_stanzas = []
-    seen_translations = set()
+    if seen_translations is None:
+        seen_translations = set()
 
     for row in rows:
         (

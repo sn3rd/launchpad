@@ -959,7 +959,22 @@ class Publisher:
         source_index.close()
 
         separate_long_descriptions = not distroseries.include_long_descriptions
-        all_translations_bytes = []
+        # shared across all arch calls so arch-all packages produce only
+        # one Translation-en entry regardless of how many arches see them.
+        seen_translations = set() if separate_long_descriptions else None
+
+        if separate_long_descriptions:
+            translation_en = RepositoryIndexFile(
+                os.path.join(
+                    self._config.distsroot,
+                    suite,
+                    component.name,
+                    "i18n",
+                    "Translation-en",
+                ),
+                self._config.temproot,
+                distroseries.index_compressors,
+            )
 
         for arch in distroseries.architectures:
             if not arch.enabled:
@@ -984,6 +999,7 @@ class Publisher:
                 separate_long_descriptions,
                 overrides=arch_overrides,
                 formats=[BinaryPackageFormat.DEB],
+                seen_translations=seen_translations,
             )
 
             # Write main Packages index (DEBs)
@@ -1020,23 +1036,10 @@ class Publisher:
                     sub_index.write(di_bytes)
                 sub_index.close()
 
-            if translations_bytes:
-                all_translations_bytes.append(translations_bytes)
+            if separate_long_descriptions and translations_bytes:
+                translation_en.write(translations_bytes)
 
         if separate_long_descriptions:
-            translation_en = RepositoryIndexFile(
-                os.path.join(
-                    self._config.distsroot,
-                    suite,
-                    component.name,
-                    "i18n",
-                    "Translation-en",
-                ),
-                self._config.temproot,
-                distroseries.index_compressors,
-            )
-            for t_bytes in all_translations_bytes:
-                translation_en.write(t_bytes)
             translation_en.close()
 
     def C_updateArtifactoryProperties(self, is_careful):

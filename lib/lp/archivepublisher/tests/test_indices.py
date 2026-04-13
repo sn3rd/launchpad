@@ -1139,6 +1139,52 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
         self.assertNotIn("Package: my-deb", decoded)
 
 
+class TestDirectPackagesIndexTranslations(TestNativePublishingBase):
+    """Tests for Translation-en deduplication across architectures."""
+
+    def test_arch_all_translation_deduplicated_across_archs(self):
+        """An arch-all package produces only one Translation-en entry
+        even when generate_packages_index is called for multiple arches
+        with a shared seen_translations set."""
+        pubs = self.getPubBinaries(
+            architecturespecific=False,
+            status=PackagePublishingStatus.PUBLISHED,
+        )
+        # Check that we indeed have more than one arch
+        self.assertGreater(len(pubs), 1)
+
+        store = IStore(BinaryPackagePublishingHistory)
+        seen_translations = set()
+        all_translation_stanzas = []
+
+        for bpph in pubs:
+            arch = bpph.distroarchseries
+            _, translations_bytes = generate_packages_index(
+                store,
+                bpph.archive_id,
+                arch.distroseries.id,
+                bpph.pocket.value,
+                bpph.component_id,
+                arch.id,
+                arch.architecturetag,
+                arch.underlying_architecturetag,
+                separate_long_descriptions=True,
+                seen_translations=seen_translations,
+            )
+            if translations_bytes:
+                all_translation_stanzas.append(
+                    translations_bytes.decode("utf-8")
+                )
+
+        combined = "".join(all_translation_stanzas)
+        package_name = pubs[0].binarypackagerelease.binarypackagename.name
+        self.assertEqual(
+            1,
+            combined.count("Package: %s" % package_name),
+            "arch-all package appeared in Translation-en more than once",
+        )
+
+
 class TestExtraOverrides(TestNativePublishingBase):
     """Tests for the extra override reading and application."""
 
