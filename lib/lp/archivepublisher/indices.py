@@ -18,7 +18,7 @@ import os.path
 import re
 from collections import OrderedDict
 
-from lp.soyuz.enums import PackagePublishingPriority
+from lp.soyuz.enums import PackagePublishingPriority, PackagePublishingStatus
 from lp.soyuz.model.publishing import makePoolPath
 
 
@@ -336,7 +336,7 @@ def generate_sources_index(
             WHERE bpph2.archive = %s
                 AND bpph2.pocket = %s
                 AND das2.distroseries = %s
-                AND bpph2.status = 2
+                AND bpph2.status = %s
             GROUP BY bpb2.source_package_release
         )
         SELECT
@@ -394,17 +394,19 @@ def generate_sources_index(
             AND spph.distroseries = %s
             AND spph.pocket = %s
             AND spph.component = %s
-            AND spph.status = 2
+            AND spph.status = %s
         ORDER BY spn.name, spr.version
         """,
         (
             archive_id,
             pocket,
             distroseries_id,
+            PackagePublishingStatus.PUBLISHED.value,
             archive_id,
             distroseries_id,
             pocket,
             component_id,
+            PackagePublishingStatus.PUBLISHED.value,
         ),
     ).get_all()
 
@@ -636,7 +638,7 @@ def generate_packages_index(
             AND bpph.distroarchseries = %s
             AND bpph.pocket = %s
             AND bpph.component = %s
-            AND bpph.status = 2
+            AND bpph.status = %s
             AND (%s IS NULL OR bpr.binpackageformat = ANY(%s))
         ORDER BY bpn.name, bpr.version
         """,
@@ -645,6 +647,7 @@ def generate_packages_index(
             distroarchseries_id,
             pocket,
             component_id,
+            PackagePublishingStatus.PUBLISHED.value,
             format_list,
             format_list,
         ),
@@ -759,7 +762,8 @@ def generate_packages_index(
         fields.append("MD5sum", md5)
         fields.append("SHA1", sha1)
         fields.append("SHA256", sha256)
-        fields.append("SHA512", sha512)
+        if sha512 is not None:
+            fields.append("SHA512", sha512)
         fields.append("Phased-Update-Percentage", phased_update_percentage)
         fields.append("Homepage", homepage)
         fields.append("Description", display_description)
