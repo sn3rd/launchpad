@@ -333,7 +333,7 @@ class TestBuildStatusIcons(TestCaseWithFactory):
 
 
 class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
-    """Tests for the bugs_summary view property."""
+    """Tests for the get_bugs_summary view property."""
 
     layer = LaunchpadFunctionalLayer
 
@@ -357,7 +357,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         # BugSummary reflects the intended state in tests.
         with person_logged_in(self.person):
             if milestone is not None:
-                task.transitionToMilestone(milestone, self.person)
+                task.transitionToMilestone(milestone, milestone.target.owner)
             if task.status != status:
                 task.transitionToStatus(status)
             if task.importance != importance:
@@ -422,7 +422,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         )
 
         view = self._getView(self.distroseries, principal=self.person)
-        summary = view.bugs_summary
+        summary = view.get_bugs_summary()
 
         self.assertEqual(summary["critical_bugs_count"], 1)
         self.assertEqual(summary["high_bugs_count"], 1)

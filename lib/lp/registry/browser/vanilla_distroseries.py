@@ -21,6 +21,7 @@ from lp.bugs.interfaces.bugtask import (
     IBugTaskSet,
 )
 from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
+from lp.bugs.model.bugsummary import CombineBugSummaryConstraint
 from lp.buildmaster.enums import BuildStatus
 from lp.layers import VanillaLayer, setAdditionalLayer
 from lp.registry.browser import MilestoneOverlayMixin
@@ -161,9 +162,6 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
 
         :param milestone: An optional milestone to restrict the counts to.
         """
-        # circular import
-        from lp.bugs.model.bugsummary import CombineBugSummaryConstraint
-
         if milestone is not None:
             context = CombineBugSummaryConstraint(self.context, milestone)
         else:
