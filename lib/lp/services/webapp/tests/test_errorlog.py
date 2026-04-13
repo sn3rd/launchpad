@@ -13,6 +13,7 @@ import testtools
 from fixtures import TempDir
 from lazr.batchnavigator.interfaces import InvalidBatchSizeError
 from lazr.restful.declarations import error_status
+from talisker.context import Context
 from talisker.logs import logging_context
 from timeline.timeline import Timeline
 from zope.interface import directlyProvides
@@ -50,6 +51,10 @@ class TestErrorReportingUtility(TestCaseWithFactory):
 
     def setUp(self):
         super().setUp()
+        # Talisker now requires an active context for logging_context.push()
+        # to persist data; without one it uses NullContextStack and discards.
+        Context.new()
+        self.addCleanup(Context.clear)
         # ErrorReportingUtility reads the global config to get the
         # current error directory.
         tempdir = self.useFixture(TempDir()).path
