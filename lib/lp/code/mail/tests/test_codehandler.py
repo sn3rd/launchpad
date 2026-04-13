@@ -244,7 +244,7 @@ class TestCodeHandler(TestCaseWithFactory):
 
         --\x20
         For more information about using Launchpad by email, see
-        https://help.launchpad.net/EmailInterface
+        https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-email-interface/
         or send an email to help@launchpad.net"""  # noqa: E501
         )
         self.assertEqual(

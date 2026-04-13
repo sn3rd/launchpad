@@ -41,7 +41,7 @@
             <p class="intro-text">
                 <strong><a href="https://launchpad.net/projects/+new">Register your project</a> to collaborate with a community of thousands.</strong> Join <a href="https://launchpad.net/ubuntu">Ubuntu</a> in choosing Launchpad for your project.
 <br /><br />
-Launchpad is free to use for <a href="https://help.launchpad.net/Legal/ProjectLicensing">open source</a> software projects.</p>
+Launchpad is free to use for <a href="https://documentation.ubuntu.com/launchpad/user/reference/launchpad-and-community/legal/project-licenses/">open source</a> software projects.</p>
             <div id="link-holder"><a href="https://launchpad.net/projects/+new">Add your project to Launchpad &gt;</a></div>
         </div>
         <div id="page-intro-bottom"></div>

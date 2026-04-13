@@ -226,7 +226,7 @@ tr#package-counters p{
         <p tal:condition="not: archive_active">
           This <tal:archive_label replace="archive_label" /> does not contain
           any packages yet. Find more information about how to upload
-          packages in the <a href="https://help.launchpad.net/Packaging/PPA"
+          packages in the <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/"
           >PPA help page</a>
         </p>
 

@@ -196,7 +196,8 @@ def send_direct_contact_email(
             "%s (%s)" % (sender_name, canonical_url(sender)),
             "%s.",
             "For more information see",
-            "https://help.launchpad.net/YourAccount/ContactingPeople",
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "collaborating-using-launchpad/",
         ]
     )
     # Craft and send one message per recipient.

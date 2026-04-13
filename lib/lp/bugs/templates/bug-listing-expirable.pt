@@ -14,7 +14,7 @@
           This project has not enabled bug expiration. No bugs can expire.
           Project administrator's may choose to enable bug expiration by
           updating the project's details. See
-          <a href="https://help.launchpad.net/Bugs/Expiry">Bugs/Expiry.</a>
+          <a href="https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/">Bugs/Expiry.</a>
         </p>
 
         <tal:expirable-bugs condition="view/can_show_expirable_bugs">
@@ -23,7 +23,7 @@
             inactive. These bugs are not confirmed, or in a status that
             indicates they were confirmed. An Incomplete bug can remain
             in this list indefinitely, so long as the bug is regularly updated.
-            See <a href="https://help.launchpad.net/Bugs/Expiry">Bugs/Expiry.
+            See <a href="https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/">Bugs/Expiry.
             </a>
           </p>
 

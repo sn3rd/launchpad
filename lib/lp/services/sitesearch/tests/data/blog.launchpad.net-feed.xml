@@ -53,7 +53,7 @@
 
     import httplib2
    [...]]]></description>
-			<content:encoded><![CDATA[<p>Three tips from <a href="http://launchpad.net/~leonardr">Leonard&#8217;s</a> lightning talk in Prague about writing faster <a href="https://help.launchpad.net/API/launchpadlib#preview">Launchpadlib</a> API clients:</p>
+			<content:encoded><![CDATA[<p>Three tips from <a href="http://launchpad.net/~leonardr">Leonard&#8217;s</a> lightning talk in Prague about writing faster <a href="https://documentation.ubuntu.com/launchpad/user/how-to/launchpadlib/using-launchpadlib/#preview">Launchpadlib</a> API clients:</p>
 <p><b>1. Use the latest launchpadlib.</b> It gets faster from one release to the next.  (The versions in the current Ubuntu release should be fine; otherwise run from the <a href="https://code.launchpad.net/~lazr-developers/launchpadlib/trunk">branch</a> or the latest <a href="https://launchpad.net/launchpadlib/+download">tarball</a>.)</p>
 <p><b>2. Profile:</b></p>
 <pre>
@@ -123,7 +123,7 @@ If you&#8217;re new to PPAs, but already know how to create packages for Ubuntu,
 method = sftp<br />
 login = &lt;your Launchpad account name&gt;<br />
 </code></p>
-<p>If you&#8217;re new to PPAs, but already know how to create packages for Ubuntu, <a href="https://help.launchpad.net/Packaging/PPA">take a look at our guide</a>.</p>
+<p>If you&#8217;re new to PPAs, but already know how to create packages for Ubuntu, <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/">take a look at our guide</a>.</p>
 ]]></content:encoded>
 			<wfw:commentRss>http://blog.launchpad.net/cool-new-stuff/sftp-uploads/feed</wfw:commentRss>
 		<slash:comments>4</slash:comments>

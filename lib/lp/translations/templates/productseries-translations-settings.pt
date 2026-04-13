@@ -48,7 +48,7 @@
 
             <p>
               When preparing the translation files in your Bazaar branch, you must
-              follow our <a href="https://help.launchpad.net/Translations/YourProject/ImportPolicy"
+              follow our <a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/translation-import-policy/"
               >translations import policy</a>. At a minimum, your branch must:
             </p>
 

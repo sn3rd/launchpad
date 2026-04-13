@@ -870,7 +870,8 @@ class TestPPAUploadProcessor(TestPPAUploadProcessorBase):
                 "It is likely that you have a configuration problem with "
                 "dput/dupload.",
                 "Please check the documentation at "
-                "https://help.launchpad.net/Packaging/PPA/Uploading "
+                "https://documentation.ubuntu.com/launchpad/user/how-to/"
+                "packaging/ppa-package-upload/ "
                 "and update your configuration.",
                 "",
                 "Further error processing not possible because of a critical "
@@ -882,7 +883,8 @@ class TestPPAUploadProcessor(TestPPAUploadProcessorBase):
         contents = [
             "Subject: [~cprov/ubuntu/ppa] bar_1.0-1_source.changes (Rejected)",
             "Could not find person or team named 'boing'",
-            "https://help.launchpad.net/Packaging/PPA/Uploading",
+            "https://documentation.ubuntu.com/launchpad/user/how-to/"
+            "packaging/ppa-package-upload/",
             "If you don't understand why your files were rejected please "
             "send an email",
             (
@@ -1084,11 +1086,13 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in unicode PPA name: "
             "áří, but uploaded version has different "
             "contents. See more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\n"
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/\n"
             "File bar_1.0-1.diff.gz already exists in unicode PPA name: "
             "áří, but uploaded version has different contents. See more "
             "information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\n"
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/\n"
             "Files specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1128,7 +1132,8 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "It is likely that you have a configuration problem with "
             "dput/dupload.\n"
             "Please check the documentation at "
-            "https://help.launchpad.net/Packaging/PPA/Uploading and update "
+            "https://documentation.ubuntu.com/launchpad/user/how-to/"
+            "packaging/ppa-package-upload/ and update "
             "your configuration.\n\n"
             "Further error processing not possible because of a critical "
             "previous error." in body
@@ -1157,7 +1162,8 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in Primary Archive "
             "for Ubuntu Linux, but uploaded version has different "
             "contents. See more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\nFiles "
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/\nFiles "
             "specified in DSC are broken or missing, skipping package "
             "unpack verification.",
         )
@@ -1172,7 +1178,8 @@ class TestPPAUploadProcessorFileLookups(TestPPAUploadProcessorBase):
             "File bar_1.0.orig.tar.gz already exists in Primary Archive for "
             "Ubuntu Linux, but uploaded version has different contents. See "
             "more information about this error in "
-            "https://help.launchpad.net/Packaging/UploadErrors.\nFiles "
+            "https://documentation.ubuntu.com/launchpad/user/explanation/"
+            "packaging/package-upload-errors/\nFiles "
             "specified in DSC are broken or missing, skipping package unpack "
             "verification.",
         )

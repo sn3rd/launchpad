@@ -108,9 +108,10 @@ class BugTaskTargetNameCachesTunableLoop:
                 for cls, id in zip(target_classes, target_bits)
             )
 
-            # We don't need packagetype and channel to get items from
-            # target_classes, as there is no ExternalPackage class there
-            target = bug_target_from_key(*target_objects, None, None)
+            # We don't need packagetype, channel and archive to get items from
+            # target_classes, as there is no ExternalPackage class or
+            # ArchiveSourcePackage class there.
+            target = bug_target_from_key(*target_objects, None, None, None)
             new_name = target.bugtargetdisplayname
             cached_names.discard(new_name)
             # If there are any outdated names cached, update them all in

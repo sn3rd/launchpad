@@ -75,6 +75,10 @@ from lp.bugs.interfaces.bugtask import (
     normalize_bugtask_status,
 )
 from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
+from lp.registry.interfaces.archivesourcepackageseries import (
+    IArchiveSourcePackageSeries,
+)
 from lp.registry.interfaces.distribution import IDistribution, IDistributionSet
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -123,6 +127,7 @@ from lp.services.searchbuilder import any
 from lp.services.webapp.interfaces import ILaunchBag
 from lp.services.webapp.snapshot import notify_modified
 from lp.services.xref.interfaces import IXRefSet
+from lp.soyuz.interfaces.archive import IArchive
 
 
 def bugtask_sort_key(bugtask):
@@ -140,6 +145,7 @@ def bugtask_sort_key(bugtask):
     ociproject = ""
     packagetype = ""
     channel = ""
+    archive_name = ""
 
     if bugtask.product:
         product_name = bugtask.product.name
@@ -163,6 +169,9 @@ def bugtask_sort_key(bugtask):
     if bugtask.channel:
         channel = channel_list_to_string(*bugtask.channel)
 
+    if bugtask.archive:
+        archive_name = bugtask.archive.name
+
     # Move ubuntu to the top.
     if distribution_name == "ubuntu":
         distribution_name = "-"
@@ -177,6 +186,7 @@ def bugtask_sort_key(bugtask):
         ociproject,
         packagetype,
         channel,
+        archive_name,
     )
 
 
@@ -189,6 +199,7 @@ def bug_target_from_key(
     ociproject,
     packagetype,
     channel,
+    archive,
 ):
     """Returns the IBugTarget defined by the given DB column values."""
     if ociproject:
@@ -197,6 +208,21 @@ def bug_target_from_key(
         # in the database table (that is, ociproject-based BugTask will have
         # either the distribution or the product column filled too).
         return ociproject
+    elif archive:
+        # Import locally to avoid circular imports
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+        from lp.registry.model.archivesourcepackageseries import (
+            ArchiveSourcePackageSeries,
+        )
+
+        if sourcepackagename and distroseries:
+            return ArchiveSourcePackageSeries(
+                archive, distroseries, sourcepackagename
+            )
+        elif sourcepackagename:
+            return ArchiveSourcePackage(archive, sourcepackagename)
+        else:
+            return archive
     elif product:
         return product
     elif productseries:
@@ -234,8 +260,18 @@ def bug_target_to_key(target):
         ociproject=None,
         packagetype=None,
         channel=None,
+        archive=None,
     )
-    if IProduct.providedBy(target):
+    if IArchiveSourcePackageSeries.providedBy(target):
+        values["archive"] = target.archive
+        values["distroseries"] = target.distroseries
+        values["sourcepackagename"] = target.sourcepackagename
+    elif IArchiveSourcePackage.providedBy(target):
+        values["archive"] = target.archive
+        values["sourcepackagename"] = target.sourcepackagename
+    elif IArchive.providedBy(target):
+        values["archive"] = target
+    elif IProduct.providedBy(target):
         values["product"] = target
     elif IProductSeries.providedBy(target):
         values["productseries"] = target
@@ -393,7 +429,25 @@ def validate_target(
             % target.displayname
         )
 
-    if IDistributionSourcePackage.providedBy(
+    if IArchive.providedBy(target):
+        # Only PPAs can be bug targets, not primary/partner/copy archives
+        if not target.is_ppa:
+            raise IllegalTarget(
+                "Only PPAs can be bug targets. "
+                "Primary and partner archives are covered by distribution "
+                "bug tasks."
+            )
+    elif IArchiveSourcePackage.providedBy(
+        target
+    ) or IArchiveSourcePackageSeries.providedBy(target):
+        # Only PPAs can be bug targets, not primary/partner/copy archives
+        if not target.archive.is_ppa:
+            raise IllegalTarget(
+                "Only PPAs can be bug targets. "
+                "Primary and partner archives are covered by distribution "
+                "bug tasks."
+            )
+    elif IDistributionSourcePackage.providedBy(
         target
     ) or ISourcePackage.providedBy(target):
         # If the distribution has at least one series and has published
@@ -564,6 +618,9 @@ class BugTask(StormBase):
     distroseries_id = Int(name="distroseries", allow_none=True)
     distroseries = Reference(distroseries_id, "DistroSeries.id")
 
+    archive_id = Int(name="archive", allow_none=True)
+    archive = Reference(archive_id, "Archive.id")
+
     milestone_id = Int(
         name="milestone",
         allow_none=True,
@@ -727,6 +784,7 @@ class BugTask(StormBase):
             self.ociproject,
             self.packagetype,
             self.channel,
+            self.archive,
         )
 
     @property
@@ -835,16 +893,17 @@ class BugTask(StormBase):
         """See `IBugTask`."""
         if self.product is not None:
             context_params = {"product": self.product}
-        elif (
-            self.sourcepackagename is not None
-            and self.distribution is not None
-        ):
-            context_params = {
-                "distribution": self.distribution,
-                "sourcepackagename": self.sourcepackagename,
-            }
         elif self.distribution is not None:
             context_params = {"distribution": self.distribution}
+
+            if self.sourcepackagename is not None:
+                context_params["sourcepackagename"] = self.sourcepackagename
+
+        elif self.archive is not None:
+            context_params = {"archive": self.archive}
+
+            if self.sourcepackagename is not None:
+                context_params["sourcepackagename"] = self.sourcepackagename
         else:
             raise AssertionError("BugTask doesn't have a searchable target.")
 
@@ -927,6 +986,7 @@ class BugTask(StormBase):
                     and bugtask.sourcepackagename == self.sourcepackagename
                     and bugtask.packagetype == self.packagetype
                     and bugtask.channel == self.channel
+                    and bugtask.archive == self.archive
                 )
             ]
             # Return early, so that we don't have to get currentseries,
@@ -979,6 +1039,7 @@ class BugTask(StormBase):
                     and bugtask.sourcepackagename == self.sourcepackagename
                     and bugtask.packagetype == self.packagetype
                     and bugtask.channel == self.channel
+                    and bugtask.archive == self.archive
                 ):
                     conjoined_replica = bugtask
                     break
@@ -1277,7 +1338,7 @@ class BugTask(StormBase):
         """See `IBugTask`."""
         if user is None:
             return False
-        elif self.bug_target_parent.bug_supervisor is None:
+        elif getattr(self.bug_target_parent, "bug_supervisor", None) is None:
             return True
         else:
             return self.userHasBugSupervisorPrivileges(user)
@@ -1533,6 +1594,20 @@ class BugTask(StormBase):
                 "componentname": component_name,
             }
         elif self.distroseries:
+
+            if self.archive:
+                header_value = (
+                    "archive=%(archivename)s; "
+                    "distroseries=%(distroseriesname)s; "
+                    "sourcepackage=%(sourcepackagename)s; "
+                    "component=%(componentname)s;"
+                ) % {
+                    "archivename": self.archive.name,
+                    "distroseriesname": self.distroseries.name,
+                    "sourcepackagename": sourcepackagename_value,
+                    "componentname": component_name,
+                }
+
             header_value = (
                 "distribution=%(distroname)s; "
                 "distroseries=%(distroseriesname)s; "
@@ -1541,6 +1616,17 @@ class BugTask(StormBase):
             ) % {
                 "distroname": self.distroseries.distribution.name,
                 "distroseriesname": self.distroseries.name,
+                "sourcepackagename": sourcepackagename_value,
+                "componentname": component_name,
+            }
+        elif self.archive:
+
+            header_value = (
+                "archive=%(archivename)s; "
+                "sourcepackage=%(sourcepackagename)s; "
+                "component=%(componentname)s;"
+            ) % {
+                "archivename": self.archive.name,
                 "sourcepackagename": sourcepackagename_value,
                 "componentname": component_name,
             }
@@ -1785,6 +1871,7 @@ class BugTaskSet:
         product=None,
         distribution=None,
         sourcepackagename=None,
+        archive=None,
     ):
         """See `IBugTaskSet`."""
         if not summary:
@@ -1794,19 +1881,29 @@ class BugTaskSet:
 
         search_params = BugTaskSearchParams(user)
         constraint_clauses = [BugTask.bug == Bug.id]
+
+        if not (product or distribution or archive):
+            raise AssertionError(
+                "Need either a product, distribution, or archive."
+            )
+
         if product:
             search_params.setProduct(product)
             constraint_clauses.append(BugTask.product == product)
-        elif distribution:
-            search_params.setDistribution(distribution)
-            constraint_clauses.append(BugTask.distribution == distribution)
+        else:
+
             if sourcepackagename:
                 search_params.sourcepackagename = sourcepackagename
                 constraint_clauses.append(
                     BugTask.sourcepackagename == sourcepackagename
                 )
-        else:
-            raise AssertionError("Need either a product or distribution.")
+
+            if distribution:
+                search_params.setDistribution(distribution)
+                constraint_clauses.append(BugTask.distribution == distribution)
+            else:
+                search_params.setArchive(archive)
+                constraint_clauses.append(BugTask.archive == archive)
 
         search_params.fast_searchtext = nl_phrase_search(
             summary, Bug, constraint_clauses
@@ -1857,6 +1954,15 @@ class BugTaskSet:
             get_bugsummary_filter_for_user,
         )
 
+        # group_on entries may be BugSummary column references or plain
+        # strings naming BugSummary attributes (e.g. "status").
+        # Resolve strings here so callers outside the bugs model layer need
+        # not import BugSummary.
+        resolved_group_on = tuple(
+            getattr(BugSummary, col) if isinstance(col, str) else col
+            for col in group_on
+        )
+
         conditions = []
         # Open bug statuses
         conditions.append(
@@ -1876,10 +1982,10 @@ class BugTaskSet:
         # bugsummary by design requires either grouping by tag or excluding
         # non-null tags.
         # This is an awkward way of saying
-        # if BugSummary.tag not in group_on:
+        # if BugSummary.tag not in resolved_group_on:
         # - see bug 799602
         group_on_tag = False
-        for column in group_on:
+        for column in resolved_group_on:
             if column is BugSummary.tag:
                 group_on_tag = True
         if not group_on_tag:
@@ -1895,14 +2001,16 @@ class BugTaskSet:
         conditions.extend(user_where)
 
         sum_count = Sum(BugSummary.count)
-        resultset = store.find(group_on + (sum_count,), *conditions)
-        resultset.group_by(*group_on)
+        resultset = store.find(resolved_group_on + (sum_count,), *conditions)
+        resultset.group_by(*resolved_group_on)
         resultset.having(sum_count != 0)
         # Ensure we have no order clauses.
         resultset.order_by()
         result = {}
         for row in resultset:
-            result[row[:-1]] = row[-1]
+            # Row shape is: (<group columns...>, <sum_count>)
+            *group_values, count = tuple(row)
+            result[tuple(group_values)] = count
         return result
 
     def getPrecachedNonConjoinedBugTasks(self, user, milestone_data):
@@ -1968,6 +2076,7 @@ class BugTaskSet:
                 key["packagetype"],
                 key["channel"],
                 key["ociproject"],
+                key["archive"],
                 status,
                 importance,
                 assignee,
@@ -1988,6 +2097,7 @@ class BugTaskSet:
                 BugTask.packagetype,
                 BugTask.channel,
                 BugTask.ociproject,
+                BugTask.archive,
                 BugTask._status,
                 BugTask.importance,
                 BugTask.assignee,

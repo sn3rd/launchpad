@@ -60,7 +60,11 @@ class PersonRoles:
     def isDriver(self, obj):
         """See IPersonRoles."""
         if not IHasDrivers.providedBy(obj):
-            return self.inTeam(obj.driver)
+            # Some objects may not have a driver attribute at all
+            driver = getattr(obj, "driver", None)
+            if driver is None:
+                return False
+            return self.inTeam(driver)
         for driver in obj.drivers:
             if self.inTeam(driver):
                 return True

@@ -444,7 +444,8 @@ class GettextPOChangedExporter(GettextPOExporterBase):
         "structure.\n"
         "# DO NOT attempt to import this file back into Launchpad.\n\n"
         "# This file is a partial export from Launchpad.net.\n"
-        "# See https://help.launchpad.net/Translations/PartialPOExport\n"
+        "# See https://documentation.ubuntu.com/launchpad/user/"
+        "explanation/translating-with-launchpad/partial-exports/\n"
         "# for more information."
     )
 

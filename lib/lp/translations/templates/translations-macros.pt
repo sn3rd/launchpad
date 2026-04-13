@@ -65,7 +65,7 @@
       <td colspan="3"></td>
       <td class="icon left right">
         <tal:legal-warning condition="submission/legal_warning">
-          <a href="https://help.launchpad.net/Translations/ReusingPackagedTranslations"
+          <a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/reusing-packaged-translations/"
              class="legal-warning">
             <img alt="Legal warning" title="Do not use this translation before checking for licence compatibility" src="/@@/warning" /></a>
         </tal:legal-warning>

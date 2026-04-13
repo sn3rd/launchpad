@@ -320,8 +320,8 @@ class QuestionStatus(DBEnumeratedType):
     This enum tells us the current status of the question.
 
     The lifecycle of a question is documented in
-    https://help.launchpad.net/QuestionLifeCycle, so remember
-    to update that document for any pertinent changes.
+    https://documentation.ubuntu.com/launchpad/user/reference/question-life-cycle/,
+    so remember to update that document for any pertinent changes.
     """
 
     OPEN = DBItem(

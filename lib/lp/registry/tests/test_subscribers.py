@@ -240,7 +240,8 @@ class LicenseNotificationTestCase(TestCaseWithFactory):
             html_escape(message), request.response.notifications[0].message
         )
         self.assertIn(
-            '<a href="https://help.launchpad.net/CommercialHosting">',
+            '<a href="https://documentation.ubuntu.com/'
+            'launchpad/user/reference/consumer-hosting/">',
             request.response.notifications[0].message,
         )
 

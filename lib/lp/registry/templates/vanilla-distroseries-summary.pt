@@ -186,16 +186,16 @@
             </dd>
           </div>
           <div class="description-list__item">
-            <dt>In progress</dt>
-            <dd
-              tal:content="view/bugs_summary/inprogress_bugs_count/fmt:intcomma"
-            >
+            <dt>Open bugs</dt>
+            <dd tal:content="view/bugs_summary/open_bugs_count/fmt:intcomma">
               0
             </dd>
           </div>
           <div class="description-list__item">
-            <dt>Triaged</dt>
-            <dd tal:content="view/bugs_summary/triaged_bugs_count/fmt:intcomma">
+            <dt>In progress bugs</dt>
+            <dd
+              tal:content="view/bugs_summary/inprogress_bugs_count/fmt:intcomma"
+            >
               0
             </dd>
           </div>

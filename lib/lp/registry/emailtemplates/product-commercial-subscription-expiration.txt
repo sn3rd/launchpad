@@ -15,7 +15,7 @@ may also request the setup of private code hosting.
 As the maintainer of a project with a commercial subscription, you
 may create private teams with private mailing lists and private package
 archives. Find out more about this here:
-https://help.launchpad.net/CommercialHosting
+https://documentation.ubuntu.com/launchpad/user/reference/consumer-hosting/
 
 If '%(product_name)s' possessed an Other/Proprietary licence at the time
 of expiration, the project will be deactivated. Otherwise, the
@@ -30,7 +30,7 @@ automatically recognise.
 
 If you have a different licence to one on the approved list, it must
 follow the guidelines we list on the following page in order to be
-approved: https://help.launchpad.net/Legal/ProjectLicensing
+approved: https://documentation.ubuntu.com/launchpad/user/reference/launchpad-and-community/legal/project-licenses/
 
 Want to know more?
 Further information is on our FAQ "Can closed-source or proprietary

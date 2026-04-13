@@ -155,21 +155,36 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
 
     @property
     def bugs_summary(self):
-        """Return the bugs summary (critical, in progress, triaged counts)."""
-        critical_bugs = self._search_bug_tasks(
-            importance=BugTaskImportance.CRITICAL,
-        )
-        inprogress_bugs = self._search_bug_tasks(
-            status=BugTaskStatus.INPROGRESS,
-        )
-        triaged_bugs = self._search_bug_tasks(
-            status=BugTaskStatus.TRIAGED,
+        """Return the bugs summary (critical, high, in progress, open counts).
+
+        Uses the BugSummary fact table for efficient grouped counts.
+        ``countBugs`` already filters to unresolved statuses.
+        """
+        counts = getUtility(IBugTaskSet).countBugs(
+            self.user,
+            [self.context],
+            ("status", "importance"),
         )
 
+        critical = high = inprogress = open_count = 0
+        for (status, importance), count in counts.items():
+            open_count += count
+
+            # Counts by importance
+            if importance == BugTaskImportance.CRITICAL:
+                critical += count
+            elif importance == BugTaskImportance.HIGH:
+                high += count
+
+            # Counts by status
+            if status == BugTaskStatus.INPROGRESS:
+                inprogress += count
+
         return {
-            "critical_bugs_count": critical_bugs.count(),
-            "inprogress_bugs_count": inprogress_bugs.count(),
-            "triaged_bugs_count": triaged_bugs.count(),
+            "critical_bugs_count": critical,
+            "high_bugs_count": high,
+            "inprogress_bugs_count": inprogress,
+            "open_bugs_count": open_count,
         }
 
     @property

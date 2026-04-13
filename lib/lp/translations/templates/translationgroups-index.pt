@@ -16,7 +16,7 @@
         who have each taken responsibility for reviewing translations
         in a particular language. Projects and distributions select
         the translation group best suited to their translation
-        policies. (<a href="https://help.launchpad.net/Translations/YourProject/ChoosingAGroup">More
+        policies. (<a href="https://documentation.ubuntu.com/launchpad/user/explanation/translating-with-launchpad/translation-groups/">More
           about translation groups</a>)
       </p>
 
@@ -25,7 +25,7 @@
         project, we recommend
         <a href="launchpad-translators">Launchpad Translators</a> — read
         more about
-        <a href="https://help.launchpad.net/Translations/LaunchpadTranslators">
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/translators-group/">
           what that group is about</a>.
       </p>
 

@@ -24,12 +24,13 @@ from lp.registry.interfaces.archivesourcepackageseries import (
     IArchiveSourcePackageSeries,
 )
 from lp.services.propertycache import cachedproperty
-from lp.services.webapp import Navigation, StandardLaunchpadFacets
+from lp.services.webapp import Navigation, StandardLaunchpadFacets, stepto
 from lp.services.webapp.breadcrumb import Breadcrumb
 from lp.services.webapp.interfaces import (
     ICanonicalUrlData,
     IMultiFacetedBreadcrumb,
 )
+from lp.services.webapp.publisher import canonical_url
 
 
 @implementer(IHeadingBreadcrumb, IMultiFacetedBreadcrumb)
@@ -62,6 +63,8 @@ class ArchiveSourcePackageSeriesBugsMenu(
 
     @cachedproperty
     def links(self):
+        # Filebug link redirects to parent package (bugs can't be filed
+        # directly on series).
         links = ["filebug"]
         add_subscribe_link(links)
         return links
@@ -75,6 +78,19 @@ class ArchiveSourcePackageSeriesNavigation(
     """Navigation for `IArchiveSourcePackageSeries`."""
 
     usedfor = IArchiveSourcePackageSeries
+
+    @stepto("+filebug")
+    def filebug(self):
+        """Redirect +filebug to the parent package's +filebug page.
+
+        Bugs cannot be filed directly on series. Redirect to the source
+        package's +filebug page so the user can file on the package and
+        target to series afterward.
+        """
+        package_url = canonical_url(
+            self.context.archive_sourcepackage, rootsite="bugs"
+        )
+        return self.redirectSubTree(f"{package_url}/+filebug", status=303)
 
 
 @implementer(ICanonicalUrlData)

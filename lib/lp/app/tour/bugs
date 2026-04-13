@@ -64,7 +64,7 @@ You can even share a comment history across project boundaries and tools, and us
                         In Launchpad, you can share a bug report and its comment history with other communities interested in finding a fix.
                         Each project &mdash; or even different releases within a project &mdash; can track its own status, importance and assignee for that same bug report.
                         <br /><br />
-                        Even if the bug is tracked elsewhere &mdash; such as in Trac, Sourceforge or Bugzilla &mdash; Launchpad can monitor its status. Using our <a href="https://help.launchpad.net/Bugs/PluginAPISpec">bug tracker plugins</a> for Bugzilla and Trac you can share a comment history for the same bug tracked both in Launchpad and an external tracker.<br /><br />
+                        Even if the bug is tracked elsewhere &mdash; such as in Trac, Sourceforge or Bugzilla &mdash; Launchpad can monitor its status. Using our <a href="https://documentation.ubuntu.com/launchpad/user/reference/bug-tracker-api/plugin-api/">bug tracker plugins</a> for Bugzilla and Trac you can share a comment history for the same bug tracked both in Launchpad and an external tracker.<br /><br />
 And to help find low-hanging fruit, there&rsquo;s a &ldquo;Bugs fixed elsewhere&rdquo; report that shows which of your bugs are marked fixed in other communities.
 
                         </p>
@@ -96,7 +96,7 @@ And to help find low-hanging fruit, there&rsquo;s a &ldquo;Bugs fixed elsewhere&
                         <p>
                         Manage bug reports entirely through your email client.
 <br /><br />
-						You can use email to report, subscribe, comment on, assign, prioritise and make just about any other update to bugs tracked in Launchpad. Launchpad will also mail you with updates on any bug you're interested in, whether an individual bug or all the bugs associated with a particular project or package. Read more about <a href="https://help.launchpad.net/Bugs/EmailInterface">the bug tracker's email interface &gt;</a><br /><br />
+						You can use email to report, subscribe, comment on, assign, prioritise and make just about any other update to bugs tracked in Launchpad. Launchpad will also mail you with updates on any bug you're interested in, whether an individual bug or all the bugs associated with a particular project or package. Read more about <a href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-bugs/use-email-interface/">the bug tracker's email interface &gt;</a><br /><br />
 						And, if you prefer, you can also subscribe to bug information in your feed reader with our Atom feeds. <img src="https://launchpad.net/@@/rss" alt="Feed logo" />
                         </p>
                     </div>

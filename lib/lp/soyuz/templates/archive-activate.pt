@@ -18,7 +18,7 @@
         packages, and can be built for any
         <a tal:attributes="href view/ubuntu/fmt:url">supported version of Ubuntu</a>.
         For more information, please see the
-        <a href="https://help.launchpad.net/Packaging/PPA">PPA help page</a>.
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/packaging/ppas/ppa/">PPA help page</a>.
       </p>
       <div tal:condition="context/ppas" id="ppas"
           style="padding-top: .3em; padding-bottom: .3em;">
@@ -29,7 +29,7 @@
       </div>
       <p>
         Read the current version of
-        <a href="https://help.launchpad.net/PPATermsofUse">PPA Terms of
+        <a href="https://documentation.ubuntu.com/launchpad/user/reference/launchpad-and-community/legal/launchpad-policies/#personal-package-archive-eligibility">PPA Terms of
         Use</a> before activating a new PPA.
       </p>
       <p tal:condition="view/is_private_team" id="ppa-privacy-statement">

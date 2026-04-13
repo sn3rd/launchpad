@@ -37,10 +37,10 @@
       {
         "id": "https://api.bing.microsoft.com/api/v7/#WebPages.2",
         "name": "Bugs related to Sample Person",
-        "url": "https://help.launchpad.net/BugExpiry",
+        "url": "https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/",
         "urlPingSuffix": "DevEx,5110.1",
         "isFamilyFriendly": true,
-        "displayUrl": "https://help.launchpad.net/BugExpiry",
+        "displayUrl": "https://documentation.ubuntu.com/launchpad/user/reference/bugs/bug-expiry/",
         "snippet": "Want to know more about Bug Statuses? Check out our BugStatuses page. What is bug expiry? Today, projects and distributions have the option of allowing old ...",
         "dateLastCrawled": "2018-01-13T13:58:00.0000000Z",
         "fixedPosition": false
@@ -170,10 +170,10 @@
       {
         "id": "https://api.bing.microsoft.com/api/v7/#WebPages.14",
         "name": "Code/BugAndBlueprintLinks - Launchpad Help",
-        "url": "https://help.launchpad.net/Code/BugAndBlueprintLinks",
+        "url": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/linking-code-to-bug-reports-and-blueprints/",
         "urlPingSuffix": "DevEx,5275.1",
         "isFamilyFriendly": true,
-        "displayUrl": "https://help.launchpad.net/Code/BugAndBlueprintLinks",
+        "displayUrl": "https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/linking-code-to-bug-reports-and-blueprints/",
         "snippet": "Linking code to bug reports and blueprints. Launchpad is much like a fancy china dinner service: you can get a great deal of use and contentment from just one or two ...",
         "dateLastCrawled": "2018-01-26T14:46:00.0000000Z",
         "fixedPosition": false

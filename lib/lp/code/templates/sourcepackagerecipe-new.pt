@@ -36,7 +36,7 @@
         </ul>
 
         <p>We strongly recommend that you test your recipe locally first.
-        <a href="https://help.launchpad.net/Packaging/SourceBuilds/GettingStarted">Read more...</a></p>
+        <a href="https://documentation.ubuntu.com/launchpad/user/how-to/source-package-recipe/">Read more...</a></p>
 
       </div>
 

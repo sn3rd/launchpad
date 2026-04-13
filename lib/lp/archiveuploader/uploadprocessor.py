@@ -378,7 +378,8 @@ class UploadHandler:
                     path_error=e.args[0],
                     extra_info=(
                         "Please check the documentation at "
-                        "https://help.launchpad.net/Packaging/PPA/Uploading "
+                        "https://documentation.ubuntu.com/launchpad/user/"
+                        "how-to/packaging/ppa-package-upload/ "
                         "and update your configuration."
                     ),
                 )

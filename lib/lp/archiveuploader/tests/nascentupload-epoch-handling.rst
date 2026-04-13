@@ -69,11 +69,13 @@ Upload 'epoched' bar version:
     ...     "suite/bar_1.0-1_epoched/bar_1.0-1_source.changes"
     ... )
     >>> bar_src_upload.process()
-    >>> print(bar_src_upload.rejection_message)
+    >>> print(
+    ...     bar_src_upload.rejection_message
+    ... )  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     File bar_1.0-1.diff.gz already exists in Primary Archive for Ubuntu
         Linux, but uploaded version has different contents. See more
         information about this error in
-        https://help.launchpad.net/Packaging/UploadErrors.
+        https://documentation.ubuntu.com/launchpad/.../package-upload-errors/
     Files specified in DSC are broken or missing, skipping package
         unpack verification.
 

@@ -323,6 +323,7 @@ def _build_query(params):
         BugTaskFlat.productseries: params.productseries,
         BugTaskFlat.assignee: params.assignee,
         BugTaskFlat.sourcepackagename: params.sourcepackagename,
+        BugTaskFlat.archive: params.archive,
         BugTaskFlat.packagetype: params.packagetype,
         BugTaskFlat.owner: params.owner,
         BugTaskFlat.date_closed: params.date_closed,

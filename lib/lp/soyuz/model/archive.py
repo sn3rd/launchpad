@@ -164,6 +164,7 @@ from lp.soyuz.interfaces.archive import (
     NamedAuthTokenFeatureDisabled,
     NoRightsForArchive,
     NoRightsForComponent,
+    NoSuchDistroSeriesInArchive,
     NoSuchPPA,
     NoTokensForTeams,
     PocketNotFound,
@@ -3475,6 +3476,14 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
     def _customizeSearchParams(self, search_params):
         """See `HasBugsBase`."""
         search_params.setArchive(self)
+
+    def getSeries(self, series_name):
+        """See `IArchive`."""
+
+        for series in self.series_with_sources:
+            if series.name == series_name:
+                return series
+        return NoSuchDistroSeriesInArchive(series_name)
 
 
 def validate_ppa(owner, distribution, proposed_name, private=False):

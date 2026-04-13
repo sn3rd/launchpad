@@ -32,7 +32,7 @@
 	    <strong><tal:series replace="structure view/series_title">
 		Evolution Series:trunk</tal:series>'s</strong>
             official Bazaar branch.
-	    (<a href="https://help.launchpad.net/Translations/ImportPolicy"
+	    (<a href="https://documentation.ubuntu.com/launchpad/user/reference/translations/translation-import-policy/"
                 >Read the translations import policy</a>)
 	  </p>
 	</tal:rosetta>

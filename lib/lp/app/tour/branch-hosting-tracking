@@ -77,7 +77,7 @@
 
                         <p>Don't lose code reviews in amongst a hundred mailing list threads. Use Launchpad and each review is instantly accessible from both the proposed and target branch.</p><br />
                         <p>On one page, Launchpad gives you a diff of the proposed change, a threaded discussion and the clarity of standard voting options along with the flexibility of tags to add nuance to your selection.</p><br />
-                        <p>And each review becomes a mini-mailing list, automatically involving those most likely to have an interest in the change. <a href="https://help.launchpad.net/Code/Review">More about code review &gt;</a></p><br />
+                        <p>And each review becomes a mini-mailing list, automatically involving those most likely to have an interest in the change. <a href="https://documentation.ubuntu.com/launchpad/user/how-to/work-with-code-hosted-on-launchpad/create-and-manage-a-merge-proposal/">More about code review &gt;</a></p><br />
                         <a href="https://code.launchpad.net/~tmaesaka/drizzle/drizzle-fix-drizzleslap/+merge/6668"><img src="images/see-it-action-button.png" alt="See it in action" Title="See a live code review on Launchpad" style="float: right;" /></a>
 
 

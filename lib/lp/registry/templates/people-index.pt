@@ -117,7 +117,7 @@
           <div id="application-summary"
                tal:define="menu view/menu:overview">
             <p>Launchpad creates
-            <a href="https://help.launchpad.net/YourAccount">profiles</a> for
+            <a href="https://documentation.ubuntu.com/launchpad/user/explanation/your-launchpad-account/">profiles</a> for
             people based on Launchpad usage, as well as information collected
             from public sources such as bug trackers, mailing lists, public
             key servers, and published application translations.
@@ -133,7 +133,7 @@
             a new project</a> in Launchpad.</p>
 
             <p>Launchpad may create
-            <a href="https://help.launchpad.net/YourAccount/Merging">duplicate
+            <a href="https://documentation.ubuntu.com/launchpad/user/how-to/account-management/merge-accounts/">duplicate
             profiles</a> for you as it automatically collects information from
             public sources.  If you find you have more than one profile on
             Launchpad, you can

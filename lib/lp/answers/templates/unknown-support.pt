@@ -32,7 +32,7 @@
         <p id="configure-support"
           tal:condition="view/can_configure_answers">
           <a class="sprite maybe"
-            href="https://help.launchpad.net/Answers">Getting started
+            href="https://documentation.ubuntu.com/launchpad/user/explanation/answers/answer-tracker/">Getting started
           tracking questions and FAQs in Launchpad</a>.
           <br /><a tal:replace="structure context/menu:overview/configure_answers/fmt:link" />
         </p>

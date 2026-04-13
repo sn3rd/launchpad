@@ -155,7 +155,7 @@ Page Footers
     ...
     None http://launchpad.test/
     Take the tour http://launchpad.test/+tour
-    Read the guide https://help.launchpad.net/
+    Read the guide https://documentation.ubuntu.com/launchpad/
     Canonical Ltd. http://canonical.com/
     Terms of use https://ubuntu.com/legal/launchpad-terms-of-service
     Data privacy https://www.ubuntu.com/legal/dataprivacy

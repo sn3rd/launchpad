@@ -128,6 +128,15 @@ class TestPersonRoles(TestCaseWithFactory):
         roles = IPersonRoles(self.person)
         self.assertTrue(roles.isDriver(productseries))
 
+    def test_isDriver_no_driver_attribute(self):
+        # An object that does not implement IHasDrivers and has no
+        # driver attribute is not considered to be driven by anyone.
+        class NoDriverObj:
+            pass
+
+        roles = IPersonRoles(self.person)
+        self.assertFalse(roles.isDriver(NoDriverObj()))
+
     def test_isBugSupervisor(self):
         # The person can be the bug supervisor of something, e.g. a product.
         product = self.factory.makeProduct(bug_supervisor=self.person)

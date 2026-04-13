@@ -633,6 +633,62 @@ class TargetTests:
         )
         self.assertEqual(expected, actual)
 
+    def _group_on_columns_to_strings(self, group_on):
+        names = []
+        for column in group_on:
+            # BugSummary Int columns use DB names (e.g. "product") while
+            # countBugs accepts BugSummary attribute names (e.g. "product_id").
+            for candidate in ("%s_id" % column.name, column.name):
+                if hasattr(BugSummary, candidate):
+                    names.append(candidate)
+                    break
+            else:
+                self.fail(
+                    f"Could not map BugSummary column {column} to an "
+                    "attribute name"
+                )
+        return tuple(names)
+
+    def test_aggregate_by_target_group_on_as_strings(self):
+        if self.group_on is None:
+            # Not a useful/valid permutation.
+            return
+        self.getBugTaskSearchParams(user=None, multitarget=True)
+        user = self.factory.makePerson()
+
+        expected = self.bugtask_set.countBugs(
+            user,
+            (self.searchtarget, self.searchtarget2),
+            group_on=self.group_on,
+        )
+        actual = self.bugtask_set.countBugs(
+            user,
+            (self.searchtarget, self.searchtarget2),
+            group_on=self._group_on_columns_to_strings(self.group_on),
+        )
+        self.assertEqual(expected, actual)
+
+    def test_countBugs_invalid_column_string_raises_error(self):
+        # If an invalid column string is passed to countBugs, an AttributeError
+        # should be raised with a clear message when trying to resolve the
+        # string to a BugSummary attribute.
+        if self.group_on is None:
+            # Not a useful/valid permutation.
+            return
+        self.getBugTaskSearchParams(user=None, multitarget=True)
+        user = self.factory.makePerson()
+
+        # Try to use an invalid column name that doesn't exist on BugSummary
+        invalid_name = "nonexistent_column_that_does_not_exist"
+        self.assertRaisesWithContent(
+            AttributeError,
+            f"type object 'BugSummary' has no attribute '{invalid_name}'",
+            self.bugtask_set.countBugs,
+            user,
+            (self.searchtarget, self.searchtarget2),
+            group_on=(invalid_name,),
+        )
+
     def test_search_all_bugtasks_for_target(self):
         # BugTaskSet.search() returns all bug tasks for a given bug
         # target, if only the bug target is passed as a search parameter.
