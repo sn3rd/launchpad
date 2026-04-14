@@ -333,7 +333,7 @@ class TestBuildStatusIcons(TestCaseWithFactory):
 
 
 class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
-    """Tests for the bugs_summary view property."""
+    """Tests for the get_bugs_summary view property."""
 
     layer = LaunchpadFunctionalLayer
 
@@ -342,8 +342,11 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         self.person = self.factory.makePerson()
         self.distroseries = self.factory.makeDistroSeries()
 
-    def _makeBugTask(self, distroseries, status, importance):
-        """Create a bug task for the given distroseries."""
+    def _makeBugTask(self, distroseries, status, importance, milestone=None):
+        """Create a bug task for the given distroseries.
+
+        If provided, assign the task to ``milestone``.
+        """
         task = self.factory.makeBugTask(
             owner=self.person,
             target=distroseries,
@@ -353,6 +356,8 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         # initial values as NEW/UNDECIDED; apply explicit transitions so
         # BugSummary reflects the intended state in tests.
         with person_logged_in(self.person):
+            if milestone is not None:
+                task.transitionToMilestone(milestone, milestone.target.owner)
             if task.status != status:
                 task.transitionToStatus(status)
             if task.importance != importance:
@@ -366,7 +371,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
     def test_bugs_summary_no_bugs(self):
         """With no bugs, all counts in bugs_summary are zero."""
         view = self._getView(self.distroseries, principal=self.person)
-        summary = view.bugs_summary
+        summary = view.get_bugs_summary()
         self.assertEqual(summary["critical_bugs_count"], 0)
         self.assertEqual(summary["high_bugs_count"], 0)
         self.assertEqual(summary["inprogress_bugs_count"], 0)
@@ -387,7 +392,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
             importance=BugTaskImportance.LOW,
         )
         view = self._getView(self.distroseries, principal=self.person)
-        summary = view.bugs_summary
+        summary = view.get_bugs_summary()
         # Only the unresolved bug should be counted.
         self.assertEqual(summary["open_bugs_count"], 1)
 
@@ -417,7 +422,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         )
 
         view = self._getView(self.distroseries, principal=self.person)
-        summary = view.bugs_summary
+        summary = view.get_bugs_summary()
 
         self.assertEqual(summary["critical_bugs_count"], 1)
         self.assertEqual(summary["high_bugs_count"], 1)
@@ -450,8 +455,101 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         )
 
         view = self._getView(self.distroseries, principal=self.person)
-        summary = view.bugs_summary
+        summary = view.get_bugs_summary()
         self.assertEqual(summary["critical_bugs_count"], 2)
         self.assertEqual(summary["high_bugs_count"], 1)
         self.assertEqual(summary["inprogress_bugs_count"], 1)
         self.assertEqual(summary["open_bugs_count"], 4)
+
+    # -- milestone filter --
+
+    def test_get_bugs_summary_no_milestone_returns_all(self):
+        """Without a milestone filter all distroseries bugs are counted."""
+        milestone = self.factory.makeMilestone(distroseries=self.distroseries)
+        # One bug on the milestone, one not.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.HIGH,
+            milestone=milestone,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.get_bugs_summary()
+        # Both bugs should be counted.
+        self.assertEqual(summary["open_bugs_count"], 2)
+        self.assertEqual(summary["high_bugs_count"], 1)
+        self.assertEqual(summary["critical_bugs_count"], 1)
+
+    def test_get_bugs_summary_milestone_counts_only_milestone_bugs(self):
+        """With a milestone filter only bugs on that milestone are counted."""
+        milestone = self.factory.makeMilestone(distroseries=self.distroseries)
+        # Bug assigned to the milestone.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+            milestone=milestone,
+        )
+        # Bug NOT assigned to the milestone.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.HIGH,
+        )
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.get_bugs_summary(milestone=milestone)
+        self.assertEqual(summary["open_bugs_count"], 1)
+        self.assertEqual(summary["critical_bugs_count"], 1)
+        self.assertEqual(summary["high_bugs_count"], 0)
+
+    def test_get_bugs_summary_milestone_no_bugs(self):
+        """A milestone with no bugs returns all-zero counts."""
+        milestone = self.factory.makeMilestone(distroseries=self.distroseries)
+        # Bug is NOT on the milestone.
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        view = self._getView(self.distroseries, principal=self.person)
+        summary = view.get_bugs_summary(milestone=milestone)
+        self.assertEqual(summary["critical_bugs_count"], 0)
+        self.assertEqual(summary["high_bugs_count"], 0)
+        self.assertEqual(summary["inprogress_bugs_count"], 0)
+        self.assertEqual(summary["open_bugs_count"], 0)
+
+    def test_get_bugs_summary_milestone_excludes_other_milestone(self):
+        """Bugs on a different milestone are not counted."""
+        milestone_a = self.factory.makeMilestone(
+            distroseries=self.distroseries
+        )
+        milestone_b = self.factory.makeMilestone(
+            distroseries=self.distroseries
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+            milestone=milestone_a,
+        )
+        self._makeBugTask(
+            self.distroseries,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.HIGH,
+            milestone=milestone_b,
+        )
+        view = self._getView(self.distroseries, principal=self.person)
+        summary_a = view.get_bugs_summary(milestone=milestone_a)
+        self.assertEqual(summary_a["critical_bugs_count"], 1)
+        self.assertEqual(summary_a["high_bugs_count"], 0)
+        self.assertEqual(summary_a["open_bugs_count"], 1)
+
+        summary_b = view.get_bugs_summary(milestone=milestone_b)
+        self.assertEqual(summary_b["critical_bugs_count"], 0)
+        self.assertEqual(summary_b["high_bugs_count"], 1)
+        self.assertEqual(summary_b["open_bugs_count"], 1)

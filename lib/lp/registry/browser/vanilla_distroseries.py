@@ -156,17 +156,15 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         params.setDistroSeries(self.context)
         return getUtility(IBugTaskSet).search(params, _noprejoins=True)
 
-    @property
-    def bugs_summary(self):
+    def get_bugs_summary(self, milestone=None):
         """Return the bugs summary (critical, high, in progress, open counts).
 
-        Uses the BugSummary fact table for efficient grouped counts.
-        ``countBugs`` already filters to unresolved statuses.
+        Uses the DistroSeries BugSummary API grouped by status/importance.
+
+        :param milestone: An optional milestone to restrict the counts to.
         """
-        counts = getUtility(IBugTaskSet).countBugs(
-            self.user,
-            [self.context],
-            ("status", "importance"),
+        counts = self.context.getBugSummaryStatusImportanceCounts(
+            self.user, milestone=milestone
         )
 
         critical = high = inprogress = open_count = 0
