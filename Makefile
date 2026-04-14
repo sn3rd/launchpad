@@ -200,6 +200,7 @@ css_combine: jsbuild_widget_css
 	ln -sfn ../../../../yarn/node_modules/yui $(ICING)/yui
 	ln -sfn ../../../../yarn/node_modules/d3-path/dist/d3-path.min.js $(ICING)/d3-path.min.js
 	ln -sfn ../../../../yarn/node_modules/d3-shape/dist/d3-shape.min.js $(ICING)/d3-shape.min.js
+	ln -sfn ../../../../yarn/node_modules/d3-selection/dist/d3-selection.min.js $(ICING)/d3-selection.min.js
 	# Compile the base.css file separately for tests
 	$(YARN) run sass --load-path $(WD)/$(ICING) $(WD)/$(ICING)/css/base.scss $(WD)/$(ICING)/base.css
 	# Compile the combo.css for the main site
