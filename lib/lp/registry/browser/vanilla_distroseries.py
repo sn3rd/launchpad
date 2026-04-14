@@ -27,7 +27,10 @@ from lp.registry.browser import MilestoneOverlayMixin
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
-from lp.soyuz.interfaces.publishing import IPublishingSet
+from lp.soyuz.interfaces.publishing import (
+    IPublishingSet,
+    active_publishing_status,
+)
 
 
 class ChipColor(str, Enum):
@@ -209,6 +212,20 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             "failed_to_build_packages_count": failed_to_build,
             "failed_to_upload_packages_count": failed_to_upload,
         }
+
+    @property
+    def source_packages_summary_all_time(self):
+        """Return source package counts by status for all time."""
+        return getUtility(IPublishingSet).getPocketCountsForDistro(
+            self.context, statuses=active_publishing_status
+        )
+
+    @property
+    def binary_packages_summary_all_time(self):
+        """Return the packages build status summary of all time."""
+        return getUtility(IBinaryPackageBuildSet).getCountsForDistro(
+            self.context
+        )
 
     def _build_packages_list_data(
         self, creator=None, empty_message="No recent package uploads found."

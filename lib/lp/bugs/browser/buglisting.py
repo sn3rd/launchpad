@@ -88,6 +88,10 @@ from lp.bugs.interfaces.bugtasksearch import (
 from lp.bugs.interfaces.bugtracker import IHasExternalBugTracker
 from lp.bugs.interfaces.malone import IMaloneApplication
 from lp.layers import FeedsLayer
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
+from lp.registry.interfaces.archivesourcepackageseries import (
+    IArchiveSourcePackageSeries,
+)
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -120,6 +124,7 @@ from lp.services.webapp.batching import (
     get_batch_properties_for_json_cache,
 )
 from lp.services.webapp.interfaces import ILaunchBag
+from lp.soyuz.interfaces.archive import IArchive
 
 vocabulary_registry = getVocabularyRegistry()
 
@@ -1151,6 +1156,11 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
         distrosourcepackage_context = self._distroSourcePackageContext()
         externalpackage_context = self._externalPackageContext()
         externalpackageseries_context = self._externalPackageSeriesContext()
+        archive_context = self._archiveContext()
+        archivesourcepackage_context = self._archiveSourcePackageContext()
+        archivesourcepackageseries_context = (
+            self._archiveSourcePackageSeriesContext()
+        )
         sourcepackage_context = self._sourcePackageContext()
         ociproject_context = self._ociprojectContext()
 
@@ -1161,9 +1171,11 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
             or sourcepackage_context
             or externalpackage_context
             or externalpackageseries_context
+            or archivesourcepackage_context
+            or archivesourcepackageseries_context
         ):
             return ["id", "summary", "importance", "status", "heat"]
-        elif distribution_context or distroseries_context:
+        elif distribution_context or distroseries_context or archive_context:
             return [
                 "id",
                 "summary",
@@ -1781,6 +1793,27 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
         Return the IExternalPackageSeries if yes, otherwise return None.
         """
         return IExternalPackageSeries(self.context, None)
+
+    def _archiveSourcePackageContext(self):
+        """Is this page being viewed in an archive source package context?
+
+        Return the IArchiveSourcePackage if yes, otherwise return None.
+        """
+        return IArchiveSourcePackage(self.context, None)
+
+    def _archiveSourcePackageSeriesContext(self):
+        """Is this page being viewed in an archive source package series?
+
+        Return the IArchiveSourcePackageSeries if yes, otherwise return None.
+        """
+        return IArchiveSourcePackageSeries(self.context, None)
+
+    def _archiveContext(self):
+        """Is this page being viewed in an archive context?
+
+        Return the IArchive if yes, otherwise return None.
+        """
+        return IArchive(self.context, None)
 
     def _ociprojectContext(self):
         """Is this page being viewed in an OCI project context?

@@ -12,7 +12,7 @@ svg[chart='donut'] {
 
     &:focus-visible {
       stroke: var(--color-border-focus);
-      stroke-width: 2px;
+      stroke-width: var(--dimension-stroke-thickness-large);
       stroke-linejoin: round;
     }
 

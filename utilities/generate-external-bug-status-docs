@@ -8,7 +8,7 @@
 # update the online documentation each time the status mappings are
 # updated.
 #
-# See https://help.launchpad.net/BugStatuses
+# See https://documentation.ubuntu.com/launchpad/user/reference/bug-tracker-api/bug-statuses/  # noqa: E501
 #
 
 # XXX: GavinPanella 2008-12-03 bug=235434: This script is a temporary
