@@ -1250,10 +1250,7 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
             DecoratedResultSet(result_set, result_decorator=itemgetter(0))
         )
 
-    def getCountsForDistro(
-        self, context, date_finished_since=None
-    ) -> Dict[BuildStatus, int]:
-        """See `IBinaryPackageBuildSet`."""
+    def _getCountsForDistroClauses(self, context, date_finished_since):
         if IDistribution.providedBy(context):
             col = BinaryPackageBuild.distribution_id
         elif IDistroSeries.providedBy(context):
@@ -1275,6 +1272,13 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
             clauses.append(
                 BinaryPackageBuild.date_finished >= date_finished_since
             )
+        return clauses
+
+    def getCountsForDistro(
+        self, context, date_finished_since=None
+    ) -> Dict[BuildStatus, int]:
+        """See `IBinaryPackageBuildSet`."""
+        clauses = self._getCountsForDistroClauses(context, date_finished_since)
         rows = (
             IStore(BinaryPackageBuild)
             .find(
@@ -1285,6 +1289,24 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
         )
 
         counts = {status: 0 for status in BuildStatus.items}
+        counts.update(rows)
+        return counts
+
+    def getPocketCountsForDistro(
+        self, context, date_finished_since=None
+    ) -> Dict[PackagePublishingPocket, int]:
+        """See `IBinaryPackageBuildSet`."""
+        clauses = self._getCountsForDistroClauses(context, date_finished_since)
+        rows = (
+            IStore(BinaryPackageBuild)
+            .find(
+                (BinaryPackageBuild.pocket, Count()),
+                *clauses,
+            )
+            .group_by(BinaryPackageBuild.pocket)
+        )
+
+        counts = {pocket: 0 for pocket in PackagePublishingPocket.items}
         counts.update(rows)
         return counts
 
