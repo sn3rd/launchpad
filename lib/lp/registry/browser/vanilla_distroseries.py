@@ -141,12 +141,32 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             ChipColor.INFORMATION,
         )
 
-    def _search_bug_tasks(self, **kwargs):
-        """Search bug tasks with eager loading disabled.
+    def list_bugs_subscriptions(self, limit=None, offset=None):
+        """Return the bug subscriptions for this series."""
+        return self._search_bug_tasks(
+            subscriber=self.user,
+            limit=limit,
+            offset=offset,
+        )
 
-        Since we only need counts, we use ``_noprejoins`` to skip the
-        expensive eager loading that ``searchTasks`` performs by default.
-        """
+    def list_bugs_important(self, limit=None, offset=None):
+        """Return the important bug tasks for this series."""
+        return self._search_bug_tasks(
+            importance=BugTaskImportance.CRITICAL,
+            limit=limit,
+            offset=offset,
+        )
+
+    def list_bugs_new(self, limit=None, offset=None):
+        """Return the new bug tasks for this series."""
+        return self._search_bug_tasks(
+            status=BugTaskStatus.NEW,
+            limit=limit,
+            offset=offset,
+        )
+
+    def _search_bug_tasks(self, limit=10, offset=0, **kwargs):
+        """Search bug tasks for this series with the given criteria."""
         params = BugTaskSearchParams(
             orderby="-datecreated",
             omit_dupes=True,
@@ -154,7 +174,12 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             **kwargs,
         )
         params.setDistroSeries(self.context)
-        return getUtility(IBugTaskSet).search(params, _noprejoins=True)
+        result = getUtility(IBugTaskSet).search(params)
+        if limit is not None:
+            result = result.config(limit=limit)
+        if offset is not None:
+            result = result.config(offset=offset)
+        return result
 
     def get_bugs_summary(self, milestone=None):
         """Return the bugs summary (critical, high, in progress, open counts).

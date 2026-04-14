@@ -42,6 +42,133 @@ class TestVanillaDistroSeriesPackagesList(TestCaseWithFactory):
             distroseries, "+vanilla", principal=principal
         )
 
+    # -- bugs list methods --
+
+    def test_list_bugs_subscriptions(self):
+        """Subscriptions are fetched from IBugTaskSet for series and user."""
+        distroseries = self._makeDistroSeries()
+        other_distroseries = self._makeDistroSeries()
+        person = self.factory.makePerson()
+
+        subscribed_task = self.factory.makeBugTask(target=distroseries)
+        other_series_task = self.factory.makeBugTask(target=other_distroseries)
+        with person_logged_in(person):
+            subscribed_task.bug.subscribe(person, subscribed_by=person)
+            other_series_task.bug.subscribe(person, subscribed_by=person)
+
+        view = self._getView(distroseries, principal=person)
+        subscriptions = list(view.list_bugs_subscriptions())
+
+        self.assertIn(subscribed_task, subscriptions)
+        self.assertNotIn(other_series_task, subscriptions)
+
+    def test_list_bugs_subscriptions_limit_and_offset(self):
+        """Bugs with subscriptions are paginated with limit and offset."""
+        distroseries = self._makeDistroSeries()
+        person = self.factory.makePerson()
+
+        for _ in range(3):
+            bugtask = self.factory.makeBugTask(target=distroseries)
+            with person_logged_in(person):
+                bugtask.bug.subscribe(person, subscribed_by=person)
+
+        view = self._getView(distroseries, principal=person)
+        all_subscriptions = list(view.list_bugs_subscriptions())
+        paged_subscriptions = list(
+            view.list_bugs_subscriptions(limit=1, offset=1)
+        )
+
+        self.assertEqual(3, len(all_subscriptions))
+        self.assertEqual(all_subscriptions[1:2], paged_subscriptions)
+
+    def test_list_bugs_important(self):
+        """Important bugs list delegates to _search_bug_tasks as CRITICAL."""
+        distroseries = self._makeDistroSeries()
+        other_distroseries = self._makeDistroSeries()
+
+        critical_task = self.factory.makeBugTask(target=distroseries)
+        non_critical_task = self.factory.makeBugTask(target=distroseries)
+        other_series_critical = self.factory.makeBugTask(
+            target=other_distroseries
+        )
+        with person_logged_in(critical_task.target.owner):
+            critical_task.transitionToImportance(
+                BugTaskImportance.CRITICAL, critical_task.target.owner
+            )
+            non_critical_task.transitionToImportance(
+                BugTaskImportance.HIGH, non_critical_task.target.owner
+            )
+            other_series_critical.transitionToImportance(
+                BugTaskImportance.CRITICAL, other_series_critical.target.owner
+            )
+
+        view = self._getView(distroseries)
+        important_tasks = list(view.list_bugs_important())
+
+        self.assertIn(critical_task, important_tasks)
+        self.assertNotIn(non_critical_task, important_tasks)
+        self.assertNotIn(other_series_critical, important_tasks)
+        for bugtask in important_tasks:
+            self.assertEqual(BugTaskImportance.CRITICAL, bugtask.importance)
+
+    def test_list_bugs_important_limit_and_offset(self):
+        """Important bugs are paginated with limit and offset."""
+        distroseries = self._makeDistroSeries()
+        for _ in range(3):
+            bugtask = self.factory.makeBugTask(target=distroseries)
+            with person_logged_in(bugtask.target.owner):
+                bugtask.transitionToImportance(
+                    BugTaskImportance.CRITICAL, bugtask.target.owner
+                )
+
+        view = self._getView(distroseries)
+        all_important = list(view.list_bugs_important())
+        paged_important = list(view.list_bugs_important(limit=1, offset=1))
+
+        self.assertEqual(3, len(all_important))
+        self.assertEqual(all_important[1:2], paged_important)
+
+    def test_list_bugs_new(self):
+        """New bugs list delegates to _search_bug_tasks with NEW status."""
+        distroseries = self._makeDistroSeries()
+        other_distroseries = self._makeDistroSeries()
+
+        new_task = self.factory.makeBugTask(
+            target=distroseries, status=BugTaskStatus.NEW
+        )
+        non_new_task = self.factory.makeBugTask(target=distroseries)
+        with person_logged_in(non_new_task.target.owner):
+            non_new_task.transitionToStatus(
+                BugTaskStatus.TRIAGED, non_new_task.target.owner
+            )
+        other_series_new = self.factory.makeBugTask(
+            target=other_distroseries, status=BugTaskStatus.NEW
+        )
+
+        view = self._getView(distroseries)
+        new_tasks = list(view.list_bugs_new())
+
+        self.assertIn(new_task, new_tasks)
+        self.assertNotIn(non_new_task, new_tasks)
+        self.assertNotIn(other_series_new, new_tasks)
+        for bugtask in new_tasks:
+            self.assertEqual(BugTaskStatus.NEW, bugtask.status)
+
+    def test_list_bugs_new_limit_and_offset(self):
+        """New bugs are paginated with limit and offset."""
+        distroseries = self._makeDistroSeries()
+        for _ in range(3):
+            self.factory.makeBugTask(
+                target=distroseries, status=BugTaskStatus.NEW
+            )
+
+        view = self._getView(distroseries)
+        all_new = list(view.list_bugs_new())
+        paged_new = list(view.list_bugs_new(limit=1, offset=1))
+
+        self.assertEqual(3, len(all_new))
+        self.assertEqual(all_new[1:2], paged_new)
+
     # -- packages_list_data --
 
     def test_packages_list_data_empty_state(self):
