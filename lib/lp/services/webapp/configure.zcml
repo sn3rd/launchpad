@@ -331,6 +331,17 @@
       permission="zope.Public"
       />
 
+    <!-- Define the widget used by fields that use
+         ArchiveSourcePackageVocabulary. -->
+    <view
+      type="zope.publisher.interfaces.browser.IBrowserRequest"
+      for="zope.schema.interfaces.IChoice
+        lp.registry.vocabularies.ArchiveSourcePackageVocabulary"
+      provides="zope.formlib.interfaces.IInputWidget"
+      factory="lp.app.widgets.popup.ArchiveSourcePackagePickerWidget"
+      permission="zope.Public"
+      />
+
     <!-- A simple view used by the page tests. -->
     <browser:page
         for="lp.services.webapp.interfaces.ILaunchpadRoot"

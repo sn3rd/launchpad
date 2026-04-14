@@ -162,7 +162,7 @@ from lp.services.webapp.authorization import (
 from lp.services.webapp.breadcrumb import Breadcrumb
 from lp.services.webapp.escaping import html_escape, structured
 from lp.services.webapp.interfaces import ICanonicalUrlData, ILaunchBag
-from lp.soyuz.interfaces.archive import IArchive
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG, IArchive
 
 vocabulary_registry = getVocabularyRegistry()
 
@@ -431,6 +431,18 @@ class BugTaskNavigation(Navigation):
     @redirection("references")
     def redirect_references(self):
         return ".."
+
+    def publishTraverse(self, request, name):
+        if not getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG):
+            if name == "+ppatask":
+                raise NotFoundError
+            target = self.context.target
+            if name == "+editstatus" and (
+                IArchive.providedBy(target)
+                or IArchiveSourcePackage.providedBy(target)
+            ):
+                raise NotFoundError
+        return super().publishTraverse(request, name)
 
 
 class BugTaskContextMenu(BugContextMenu):
@@ -1723,8 +1735,13 @@ class BugTaskEditView(
                     new_target.bug_target_parent, rootsite="bugs"
                 )
 
-        if bugtask.sourcepackagename and (
-            self.widgets.get("target") or self.widgets.get("sourcepackagename")
+        if (
+            bugtask.sourcepackagename
+            and not IArchiveSourcePackage.providedBy(bugtask.target)
+            and (
+                self.widgets.get("target")
+                or self.widgets.get("sourcepackagename")
+            )
         ):
             real_package_name = bugtask.sourcepackagename.name
 

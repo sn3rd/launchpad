@@ -4,6 +4,7 @@
 __all__ = [
     "BugAlsoAffectsProductMetaView",
     "BugAlsoAffectsDistroMetaView",
+    "BugAlsoAffectsPPAMetaView",
     "BugAlsoAffectsProductWithProductCreationView",
 ]
 
@@ -29,7 +30,10 @@ from lp.app.enums import ServiceUsage
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.app.validators.email import email_validator
 from lp.app.widgets.itemswidgets import LaunchpadRadioWidget
-from lp.app.widgets.popup import SearchForUpstreamPopupWidget
+from lp.app.widgets.popup import (
+    ArchiveSourcePackagePickerWidget,
+    SearchForUpstreamPopupWidget,
+)
 from lp.app.widgets.textwidgets import StrippedTextWidget
 from lp.bugs.browser.widgets.bugtask import (
     BugTaskAlsoAffectsSourcePackageNameWidget,
@@ -78,6 +82,14 @@ class BugAlsoAffectsDistroMetaView(MultiStepView):
     @property
     def first_step(self):
         return DistroBugTaskCreationStep
+
+
+class BugAlsoAffectsPPAMetaView(MultiStepView):
+    page_title = "Record as affecting a PPA/package"
+
+    @property
+    def first_step(self):
+        return PPABugTaskCreationStep
 
 
 class AlsoAffectsStep(StepView):
@@ -426,11 +438,11 @@ class DistroBugTaskCreationStep(BugTaskCreationStep):
         return super().main_action(data)
 
     def validateStep(self, data):
-        """Check that
+        """Validate the distribution, package, and bug URL data.
 
-        1. there's no bug_url if the target uses malone;
-        2. there is a package with the given name;
-        3. it's possible to create a new task for the given package/distro.
+        Checks that there's no bug_url if the target uses Launchpad, that
+        there is a package with the given name, and that it's possible to
+        create a new task for the given package/distro.
         """
         target = self.getTarget(data)
         bug_url = data.get("bug_url")
@@ -497,6 +509,101 @@ class DistroBugTaskCreationStep(BugTaskCreationStep):
                 )
                 break
         return super().render()
+
+
+class IAddPPABugTaskForm(IAddBugTaskForm):
+    """Form schema for adding a PPA bug task."""
+
+    ppa = Choice(
+        title=_("PPA"),
+        required=True,
+        description=_("The PPA in which the bug occurs."),
+        vocabulary="PPA",
+    )
+    sourcepackagename = Choice(
+        title=_("Source Package Name"),
+        required=False,
+        description=_(
+            "The source package in which the bug occurs. "
+            "Leave blank if you are not sure."
+        ),
+        vocabulary="ArchiveSourcePackageName",
+    )
+
+
+class PPABugTaskCreationStep(BugTaskCreationStep):
+    """
+    Specialized BugTaskCreationStep for reporting a bug in a PPA.
+    """
+
+    schema = IAddPPABugTaskForm
+    custom_widget_sourcepackagename = ArchiveSourcePackagePickerWidget
+
+    template = ViewPageTemplateFile("../templates/bugtask-requestfix.pt")
+
+    label = "Also affects PPA/package"
+    target_field_names = ("ppa", "sourcepackagename")
+
+    def getTarget(self, data=None):
+        if data is not None:
+            return data.get("ppa")
+        else:
+            return self.widgets["ppa"].getInputValue()
+
+    def main_action(self, data):
+        """Create the new bug task for the PPA target."""
+        archive = data.get("ppa")
+        sourcepackagename = data.get("sourcepackagename")
+        if sourcepackagename is not None:
+            task_target = sourcepackagename
+        else:
+            task_target = archive
+        self.task_added = self.context.bug.addTask(
+            getUtility(ILaunchBag).user, task_target, validate_target=False
+        )
+        notify(ObjectCreatedEvent(self.task_added))
+        self.next_url = canonical_url(self.task_added)
+
+    def validateStep(self, data):
+        """Validate the archive and package data for the new bug task.
+
+        Checks that there is a package with the given name in the archive,
+        and that it's possible to create a new task for the given
+        package/archive.
+        """
+        archive = data.get("ppa")
+        sourcepackagename = data.get("sourcepackagename")
+        entered_package = self.request.form.get(
+            self.widgets["sourcepackagename"].name
+        )
+
+        if sourcepackagename is None and entered_package:
+            # The entered package doesn't exist.
+            error = structured(
+                'There is no package in %s named "%s".',
+                archive.displayname,
+                entered_package,
+            )
+            self.setFieldError("sourcepackagename", error)
+        else:
+            try:
+                if sourcepackagename:
+                    # Get the ArchiveSourcePackage for validation
+                    target = archive.getArchiveSourcePackage(sourcepackagename)
+                else:
+                    target = archive
+                validate_new_target(
+                    self.context.bug, target, check_source_package=False
+                )
+                if sourcepackagename:
+                    data["sourcepackagename"] = target
+            except IllegalTarget as e:
+                if sourcepackagename:
+                    self.setFieldError("sourcepackagename", e.args[0])
+                else:
+                    self.setFieldError("ppa", e.args[0])
+
+        super().validateStep(data)
 
 
 class LinkUpstreamHowOptions(EnumeratedType):

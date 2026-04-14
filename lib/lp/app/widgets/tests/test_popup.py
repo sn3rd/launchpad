@@ -9,6 +9,7 @@ from zope.schema import Choice
 from zope.schema.vocabulary import getVocabularyRegistry
 
 from lp.app.widgets.popup import (
+    ArchiveSourcePackagePickerWidget,
     DistributionSourcePackagePickerWidget,
     PersonPickerWidget,
     VocabularyPickerWidget,
@@ -28,6 +29,9 @@ class TestMetaClass(InterfaceClass):
             "test_valid.item": Choice(vocabulary="ValidTeamOwner"),
             "test_filtered.item": Choice(vocabulary="DistributionOrProduct"),
             "test_target": Choice(vocabulary="DistributionSourcePackage"),
+            "test_archive_target": Choice(
+                vocabulary="ArchiveSourcePackageName"
+            ),
         }
         super().__init__(
             name,
@@ -268,3 +272,60 @@ class TestVocabularyPickerWidget(TestCaseWithFactory):
         dsp_picker_widget.setPrefix("field.target")
         markup = dsp_picker_widget()
         self.assertIn("distribution_id = 'field.target.distribution'", markup)
+
+    def test_archive_source_package_widget_ppa_id(self):
+        # The archive source package picker refers to the correct sibling
+        # PPA field via ppa_id.
+        field = ITest["test_archive_target"]
+        bound_field = field.bind(self.context)
+        vocabulary = self.vocabulary_registry.get(
+            self.context, "ArchiveSourcePackageName"
+        )
+        widget = ArchiveSourcePackagePickerWidget(
+            bound_field, vocabulary, self.request
+        )
+        widget.setPrefix("field.target")
+        self.assertEqual("field.target.ppa", widget.ppa_id)
+
+    def test_archive_source_package_widget_toFieldValue_scopes_archive(self):
+        # _toFieldValue scopes the vocabulary to the archive from the
+        # sibling PPA form field before resolving the package name.
+        ppa = self.factory.makeArchive()
+        spn = self.factory.makeSourcePackageName(name="mypkg")
+        # Publish the package in the archive so the vocabulary can find it.
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=ppa, sourcepackagename=spn
+        )
+        request = LaunchpadTestRequest(
+            form={"field.target.ppa": ppa.reference}
+        )
+        field = ITest["test_archive_target"]
+        bound_field = field.bind(self.context)
+        vocabulary = self.vocabulary_registry.get(
+            self.context, "ArchiveSourcePackageName"
+        )
+        widget = ArchiveSourcePackagePickerWidget(
+            bound_field, vocabulary, request
+        )
+        widget.setPrefix("field.target")
+        result = widget._toFieldValue("mypkg")
+        self.assertEqual(spn, result)
+
+    def test_archive_source_package_widget_toFieldValue_unknown_package(self):
+        # _toFieldValue raises ConversionError for a package not in the PPA.
+        from zope.formlib.interfaces import ConversionError
+
+        ppa = self.factory.makeArchive()
+        request = LaunchpadTestRequest(
+            form={"field.target.ppa": ppa.reference}
+        )
+        field = ITest["test_archive_target"]
+        bound_field = field.bind(self.context)
+        vocabulary = self.vocabulary_registry.get(
+            self.context, "ArchiveSourcePackageName"
+        )
+        widget = ArchiveSourcePackagePickerWidget(
+            bound_field, vocabulary, request
+        )
+        widget.setPrefix("field.target")
+        self.assertRaises(ConversionError, widget._toFieldValue, "nosuchpkg")

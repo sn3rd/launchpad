@@ -29,6 +29,7 @@ __all__ = [
     "CommercialProjectsVocabulary",
     "DistributionOrProductOrProjectGroupVocabulary",
     "DistributionOrProductVocabulary",
+    "ArchiveSourcePackageVocabulary",
     "DistributionSourcePackageVocabulary",
     "DistributionVocabulary",
     "DistroSeriesDerivationVocabulary",
@@ -181,6 +182,7 @@ from lp.services.webapp.vocabulary import (
     StormVocabularyBase,
     VocabularyFilter,
 )
+from lp.soyuz.interfaces.publishing import active_publishing_status
 from lp.soyuz.model.archive import Archive
 from lp.soyuz.model.binaryandsourcepackagename import (
     BinaryAndSourcePackageNameVocabulary,
@@ -189,6 +191,84 @@ from lp.soyuz.model.distributionsourcepackagecache import (
     DistributionSourcePackageCache,
 )
 from lp.soyuz.model.distroarchseries import DistroArchSeries
+from lp.soyuz.model.publishing import SourcePackagePublishingHistory
+
+
+@implementer(IHugeVocabulary)
+class ArchiveSourcePackageVocabulary(StormVocabularyBase):
+    """Source packages published in a specific archive.
+
+    Call `setArchive` to scope the vocabulary to a particular archive
+    before searching or iterating.
+    """
+
+    _table = SourcePackageName
+    _order_by = "name"
+    displayname = "Select a package"
+    step_title = "Search by name"
+
+    def __init__(self, context=None):
+        super().__init__(context)
+        try:
+            from lp.soyuz.interfaces.archive import IArchive
+
+            self.archive = IArchive(context, None)
+        except TypeError:
+            self.archive = None
+
+    def setArchive(self, archive):
+        """Scope the vocabulary to the given archive."""
+        self.archive = archive
+
+    @property
+    def _clauses(self):
+        if self.archive is None:
+            return [False]
+        return [
+            SourcePackageName.id.is_in(
+                Select(
+                    SourcePackagePublishingHistory.sourcepackagename_id,
+                    And(
+                        SourcePackagePublishingHistory.archive == self.archive,
+                        SourcePackagePublishingHistory.status.is_in(
+                            active_publishing_status
+                        ),
+                    ),
+                )
+            )
+        ]
+
+    def toTerm(self, spn):
+        return SimpleTerm(spn, spn.name, spn.name)
+
+    def getTermByToken(self, token):
+        if self.archive is None:
+            raise LookupError(token)
+        spn = (
+            IStore(SourcePackageName)
+            .find(
+                SourcePackageName,
+                SourcePackageName.name == token,
+                *self._clauses,
+            )
+            .one()
+        )
+        if spn is None:
+            raise LookupError(token)
+        return self.toTerm(spn)
+
+    def search(self, query, vocab_filter=None):
+        if not query or self.archive is None:
+            return self.emptySelectResults()
+        return (
+            IStore(SourcePackageName)
+            .find(
+                SourcePackageName,
+                SourcePackageName.name.contains_string(query.lower()),
+                *self._clauses,
+            )
+            .order_by(SourcePackageName.name)
+        )
 
 
 class BasePersonVocabulary:

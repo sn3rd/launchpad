@@ -17,6 +17,7 @@ from lp.bugs.interfaces.apportjob import IProcessApportBlobJobSource
 from lp.bugs.interfaces.bug import IBugAddForm, IBugSet
 from lp.bugs.interfaces.bugtask import BugTaskImportance, BugTaskStatus
 from lp.registry.enums import BugSharingPolicy
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.ociproject import IOCIProject
 from lp.registry.interfaces.product import IProduct
 from lp.registry.interfaces.projectgroup import IProjectGroup
@@ -27,6 +28,7 @@ from lp.services.temporaryblobstorage.interfaces import (
 )
 from lp.services.webapp.escaping import html_escape
 from lp.services.webapp.servers import LaunchpadTestRequest
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
 from lp.testing import (
     EventRecorder,
     TestCaseWithFactory,
@@ -1183,3 +1185,198 @@ class TestFileBugRequestCache(TestCaseWithFactory):
 
 
 load_tests = load_tests_apply_scenarios
+
+
+class TestArchiveBugTargetFileBugGuidedView(TestCaseWithFactory):
+    """Tests for ArchiveBugTargetFileBugGuidedView."""
+
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.ppa = self.factory.makeArchive()
+        self.spn = self.factory.makeSourcePackageName()
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=self.ppa, sourcepackagename=self.spn
+        )
+        login_person(self.ppa.owner)
+
+    def _make_view(self, context, form=None):
+        if form is None:
+            form = {}
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            return create_initialized_view(context, "+filebug", form=form)
+
+    def _make_validate_view(self, context, form=None):
+        """Create a view that won't try to render the template on failure."""
+        from lp.bugs.browser.bugtarget import ArchiveBugTargetFileBugGuidedView
+
+        class ArchiveFileBugTestView(ArchiveBugTargetFileBugGuidedView):
+            def showFileBugForm(self):
+                pass  # suppress template rendering on failure
+
+        if form is None:
+            form = {}
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            request = LaunchpadTestRequest(form=form, method="POST")
+            view = ArchiveFileBugTestView(context, request)
+            view.initialize()
+        return view
+
+    # --- ArchiveBugTargetFileBugGuidedView properties ---
+
+    def test_field_names_includes_packagename_for_archive(self):
+        # The packagename field is included for IArchive contexts.
+        view = self._make_view(self.ppa)
+        self.assertIn("packagename", view.field_names)
+
+    def test_field_names_includes_packagename_for_asp(self):
+        # The packagename field is included for IArchiveSourcePackage contexts.
+        asp = self.ppa.getArchiveSourcePackage(self.spn)
+        view = self._make_view(asp)
+        self.assertIn("packagename", view.field_names)
+
+    def test_initial_values_prefills_packagename_for_asp(self):
+        # For IArchiveSourcePackage contexts the packagename initial value
+        # is pre-filled with the package name.
+        asp = self.ppa.getArchiveSourcePackage(self.spn)
+        view = self._make_view(asp)
+        self.assertEqual(asp.name, view.initial_values.get("packagename"))
+
+    def test_initial_values_no_packagename_for_archive(self):
+        # For IArchive contexts the packagename initial value is not set.
+        view = self._make_view(self.ppa)
+        self.assertIsNone(view.initial_values.get("packagename"))
+
+    def test_context_uses_malone(self):
+        # Archives always use Malone.
+        view = self._make_view(self.ppa)
+        self.assertTrue(view.contextUsesMalone())
+
+    def test_context_allows_new_bugs(self):
+        # Archives always allow new bugs.
+        view = self._make_view(self.ppa)
+        self.assertTrue(view.contextAllowsNewBugs())
+
+    def test_get_main_context_archive(self):
+        # For IArchive contexts getMainContext returns the archive itself.
+        view = self._make_view(self.ppa)
+        self.assertEqual(self.ppa, view.getMainContext())
+
+    def test_get_main_context_asp(self):
+        # For IArchiveSourcePackage contexts getMainContext returns the
+        # parent archive.
+        asp = self.ppa.getArchiveSourcePackage(self.spn)
+        view = self._make_view(asp)
+        self.assertEqual(self.ppa, view.getMainContext())
+
+    # --- validate() ---
+
+    def test_validate_unknown_package_for_archive_sets_error(self):
+        # Submitting a package name that does not exist in the archive
+        # produces a validation error.
+        form = {
+            "field.title": "A bug",
+            "field.comment": "A comment",
+            "packagename_option": "choose",
+            "field.packagename": "no-such-package",
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_validate_view(self.ppa, form=form)
+        self.assertIn("packagename", view.widget_errors)
+        self.assertIn("does not exist in", view.widget_errors["packagename"])
+
+    def test_validate_known_package_for_archive_passes(self):
+        # Submitting a package name that has been published to the archive
+        # doesn't set a validation error.
+        form = {
+            "field.title": "A bug",
+            "field.comment": "A comment",
+            "packagename_option": "choose",
+            "field.packagename": self.spn.name,
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_validate_view(self.ppa, form=form)
+        self.assertNotIn("packagename", view.widget_errors)
+
+    def test_validate_empty_package_name_sets_error(self):
+        # Choosing the "choose" option but leaving packagename empty
+        # produces a validation error.
+        form = {
+            "field.title": "A bug",
+            "field.comment": "A comment",
+            "packagename_option": "choose",
+            "field.packagename": "",
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_validate_view(self.ppa, form=form)
+        self.assertIn("packagename", view.widget_errors)
+
+    def test_validate_packagename_option_none_skips_validation(self):
+        # When the user selects "I don't know", no packagename validation
+        # is performed even if a name is present.
+        form = {
+            "field.title": "A bug",
+            "field.comment": "A comment",
+            "packagename_option": "none",
+            "field.packagename": "no-such-package",
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_validate_view(self.ppa, form=form)
+        self.assertNotIn("packagename", view.widget_errors)
+
+    # --- submit_bug_action() ---
+
+    def test_submit_bug_archive_only(self):
+        # Filing a bug against an archive (without a package) creates a task
+        # targeted to the archive.
+        form = {
+            "field.title": "Archive bug",
+            "field.comment": "A description",
+            "packagename_option": "none",
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_view(self.ppa, form=form)
+        self.assertEqual(0, len(view.errors))
+        bug_url = view.request.response.getHeader("Location")
+        bug_number = bug_url.split("/")[-1]
+        bug = getUtility(IBugSet).getByNameOrID(bug_number)
+        self.assertEqual([self.ppa], [task.target for task in bug.bugtasks])
+
+    def test_submit_bug_archive_with_package(self):
+        # Filing a bug against an archive with a package that has been
+        # published to it creates a task targeted to the IArchiveSourcePackage.
+        form = {
+            "field.title": "Package bug",
+            "field.comment": "A description",
+            "packagename_option": "choose",
+            "field.packagename": self.spn.name,
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_view(self.ppa, form=form)
+        self.assertEqual(0, len(view.errors))
+        bug_url = view.request.response.getHeader("Location")
+        bug_number = bug_url.split("/")[-1]
+        bug = getUtility(IBugSet).getByNameOrID(bug_number)
+        target = bug.bugtasks[0].target
+        self.assertTrue(IArchiveSourcePackage.providedBy(target))
+        self.assertEqual(self.spn, target.sourcepackagename)
+        self.assertEqual(self.ppa, target.archive)
+
+    def test_submit_bug_packagename_option_none_from_asp_targets_archive(self):
+        # When filing from an IArchiveSourcePackage context with
+        # packagename_option=none, the task is targeted to the parent archive.
+        asp = self.ppa.getArchiveSourcePackage(self.spn)
+        form = {
+            "field.title": "Archive-only bug",
+            "field.comment": "A description",
+            "packagename_option": "none",
+            "field.packagename": asp.name,
+            "field.actions.submit_bug": "Submit Bug Report",
+        }
+        view = self._make_view(asp, form=form)
+        self.assertEqual(0, len(view.errors))
+        bug_url = view.request.response.getHeader("Location")
+        bug_number = bug_url.split("/")[-1]
+        bug = getUtility(IBugSet).getByNameOrID(bug_number)
+        self.assertEqual([self.ppa], [task.target for task in bug.bugtasks])

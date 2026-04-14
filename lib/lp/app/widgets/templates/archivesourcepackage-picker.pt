@@ -1,0 +1,27 @@
+<tal:root
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    omit-tag="">
+
+<metal:form-picker use-macro="context/@@form-picker-macros/form-picker">
+  <script metal:fill-slot="add-picker" tal:content="structure string:
+  LPJS.use('node', 'lp.app.picker', function(Y) {
+      var config = ${view/json_config};
+      var ppa_id = '${view/ppa_id}';
+      config.getContextPath = function() {
+          var ref = Y.DOM.byId(ppa_id).value;
+          if (!ref) { return null; }
+          // ref is like ~owner/distro/name; convert to /~owner/+archive/distro/name
+          var m = ref.match(/^~?([^/]+)\/([^/]+)\/([^/]+)$/);
+          if (!m) { return null; }
+          return '/~' + m[1] + '/+archive/' + m[2] + '/' + m[3];
+      };
+      var show_widget_id = '${view/show_widget_id}';
+      Y.on('domready', function(e) {
+          Y.lp.app.picker.addPicker(config, show_widget_id);
+      });
+  });
+  "/>
+</metal:form-picker>
+
+</tal:root>

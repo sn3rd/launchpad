@@ -22,6 +22,7 @@ from lp.services.beautifulsoup import BeautifulSoup
 from lp.services.features.testing import FeatureFixture
 from lp.services.webapp.escaping import html_escape
 from lp.services.webapp.servers import LaunchpadTestRequest
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG, IArchive
 from lp.soyuz.model.binaryandsourcepackagename import (
     BinaryAndSourcePackageNameVocabulary,
 )
@@ -344,3 +345,64 @@ class LaunchpadTargetWidgetTestCase(TestCaseWithFactory):
         fields = soup.find_all(["input", "select"], {"id": re.compile(".*")})
         ids = [field["id"] for field in fields]
         self.assertContentEqual(expected_ids, ids)
+
+    def test_setUpSubWidgets_ppa_feature_flag(self):
+        # When ARCHIVE_BUGS_FEATURE_FLAG is enabled, ppa and ppa_package
+        # sub-widgets are created.
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            self.widget.setUpSubWidgets()
+        self.assertIsNotNone(self.widget.ppa_widget)
+        self.assertIsNotNone(self.widget.ppa_package_widget)
+
+    def test_setUpSubWidgets_ppa_feature_flag_off(self):
+        # When ARCHIVE_BUGS_FEATURE_FLAG is disabled (default), ppa and
+        # ppa_package sub-widgets are not created.
+        self.widget.setUpSubWidgets()
+        self.assertFalse(hasattr(self.widget, "ppa_widget"))
+        self.assertFalse(hasattr(self.widget, "ppa_package_widget"))
+
+    def test_setRenderedValue_archive(self):
+        # Passing an IArchive sets default_option to 'ppa' and populates
+        # the ppa widget.
+        ppa = self.factory.makeArchive()
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            self.widget.setUpSubWidgets()
+            self.widget.setRenderedValue(ppa)
+        self.assertEqual("ppa", self.widget.default_option)
+        self.assertEqual(ppa, self.widget.ppa_widget._getCurrentValue())
+
+    def test_setRenderedValue_archive_source_package(self):
+        # Passing an IArchiveSourcePackage sets default_option to 'ppa',
+        # populates the ppa widget with the archive and the ppa_package
+        # widget with the source package name.
+        ppa = self.factory.makeArchive()
+        spn = self.factory.makeSourcePackageName()
+        from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+
+        asp = ArchiveSourcePackage(ppa, spn)
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            self.widget.setUpSubWidgets()
+            self.widget.setRenderedValue(asp)
+        self.assertEqual("ppa", self.widget.default_option)
+        self.assertEqual(ppa, self.widget.ppa_widget._getCurrentValue())
+        self.assertEqual(
+            spn, self.widget.ppa_package_widget._getCurrentValue()
+        )
+
+    def test_getInputValue_ppa_archive_only(self):
+        # Selecting the 'ppa' option with no package returns the IArchive.
+        ppa = self.factory.makeArchive()
+        request = LaunchpadTestRequest(
+            form={
+                "field.target": "ppa",
+                "field.target.ppa": ppa.reference,
+                "field.target.ppa_package": "",
+            }
+        )
+        field = Reference(__name__="target", schema=Interface, title="target")
+        field = field.bind(Thing())
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            widget = LaunchpadTargetWidget(field, request)
+            result = widget.getInputValue()
+        self.assertTrue(IArchive.providedBy(result))
+        self.assertEqual(ppa, result)

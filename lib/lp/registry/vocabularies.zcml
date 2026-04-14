@@ -528,6 +528,21 @@
         attributes="setDistribution"/>
   </class>
 
+  <lp:securedutility
+    name="ArchiveSourcePackageName"
+    component="lp.registry.vocabularies.ArchiveSourcePackageVocabulary"
+    provides="zope.schema.interfaces.IVocabularyFactory"
+    >
+    <allow interface="zope.schema.interfaces.IVocabularyFactory"/>
+  </lp:securedutility>
+
+  <class class="lp.registry.vocabularies.ArchiveSourcePackageVocabulary">
+    <allow interface="lp.services.webapp.vocabulary.IHugeVocabulary"/>
+    <require
+        permission="zope.Public"
+        attributes="setArchive"/>
+  </class>
+
     <class
         class="lp.services.webapp.vocabulary.VocabularyFilterAll">
         <require

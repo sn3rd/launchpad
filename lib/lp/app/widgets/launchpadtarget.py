@@ -24,6 +24,7 @@ from lp.app.errors import NotFoundError, UnexpectedFormData
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.app.validators import LaunchpadValidationError
 from lp.app.widgets.itemswidgets import LaunchpadDropdownWidget
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -35,6 +36,7 @@ from lp.services.webapp.interfaces import (
     IAlwaysSubmittedWidget,
     IMultiLineWidgetLayout,
 )
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG, IArchive
 
 
 @implementer(IAlwaysSubmittedWidget, IMultiLineWidgetLayout, IInputWidget)
@@ -58,6 +60,11 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
             return "DistributionSourcePackage"
         else:
             return "BinaryAndSourcePackageName"
+
+    @property
+    def show_ppa_option(self):
+        """Whether to show the PPA option."""
+        return bool(getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG))
 
     def setUpSubWidgets(self):
         if self._widgets_set_up:
@@ -83,6 +90,23 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
                 vocabulary=self.getPackageVocabularyName(),
             ),
         ]
+        if self.show_ppa_option:
+            fields.extend(
+                [
+                    Choice(
+                        __name__="ppa",
+                        title="PPA",
+                        required=True,
+                        vocabulary="PPA",
+                    ),
+                    Choice(
+                        __name__="ppa_package",
+                        title="Package",
+                        required=False,
+                        vocabulary="ArchiveSourcePackageName",
+                    ),
+                ]
+            )
         self.distribution_widget = CustomWidgetFactory(LaunchpadDropdownWidget)
         for field in fields:
             setUpWidget(
@@ -93,7 +117,10 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
     def setUpOptions(self):
         """Set up options to be rendered."""
         self.options = {}
-        for option in ["package", "product"]:
+        option_list = ["package", "product"]
+        if self.show_ppa_option:
+            option_list.append("ppa")
+        for option in option_list:
             attributes = dict(
                 type="radio",
                 name=self.name,
@@ -112,6 +139,13 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
         self.product_widget.onKeyPress = (
             "selectWidget('%s.option.product', event)" % self.name
         )
+        if self.show_ppa_option:
+            self.ppa_widget.onKeyPress = (
+                "selectWidget('%s.option.ppa', event)" % self.name
+            )
+            self.ppa_package_widget.onKeyPress = (
+                "selectWidget('%s.option.ppa', event)" % self.name
+            )
 
     def hasInput(self):
         return self.name in self.request.form
@@ -203,6 +237,52 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
                 return dsp
             else:
                 return distribution
+        elif form_value == "ppa":
+            try:
+                archive = self.ppa_widget.getInputValue()
+            except MissingInputError:
+                self._error = WidgetInputError(
+                    self.name,
+                    self.label,
+                    LaunchpadValidationError("Please select a PPA"),
+                )
+                raise self._error
+            except ConversionError:
+                entered_name = self.request.form_ng.getOne(
+                    "%s.ppa" % self.name
+                )
+                self._error = WidgetInputError(
+                    self.name,
+                    self.label,
+                    LaunchpadValidationError(
+                        "There is no PPA with reference '%s' registered in"
+                        " Launchpad" % entered_name
+                    ),
+                )
+                raise self._error
+            self.ppa_package_widget.vocabulary.setArchive(archive)
+            if self.ppa_package_widget.hasInput():
+                try:
+                    package_name = self.ppa_package_widget.getInputValue()
+                    if package_name is None:
+                        return archive
+                    # ArchiveSourcePackageVocabulary returns SourcePackageName
+                    return archive.getArchiveSourcePackage(package_name)
+                except (ConversionError, NotFoundError):
+                    entered_name = self.request.form_ng.getOne(
+                        "%s.ppa_package" % self.name
+                    )
+                    self._error = WidgetInputError(
+                        self.name,
+                        self.label,
+                        LaunchpadValidationError(
+                            "There is no package named '%s' published in %s."
+                            % (entered_name, archive.displayname)
+                        ),
+                    )
+                    raise self._error
+            else:
+                return archive
         else:
             raise UnexpectedFormData("No valid option was selected.")
 
@@ -224,6 +304,13 @@ class LaunchpadTargetWidget(BrowserWidget, InputWidget):
             self.distribution_widget.setRenderedValue(value.distribution)
             # TODO enriqueensanchz 2025-07-22: add a widget for externalpackage
             # if necessary
+        elif IArchive.providedBy(value):
+            self.default_option = "ppa"
+            self.ppa_widget.setRenderedValue(value)
+        elif IArchiveSourcePackage.providedBy(value):
+            self.default_option = "ppa"
+            self.ppa_widget.setRenderedValue(value.archive)
+            self.ppa_package_widget.setRenderedValue(value.sourcepackagename)
         else:
             raise AssertionError("Not a valid value: %r" % value)
 
