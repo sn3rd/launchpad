@@ -12,13 +12,13 @@ __all__ = [
 ]
 
 import bz2
-import gzip
 import hashlib
 import lzma
 import os
 import re
 import shutil
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from functools import partial
 from itertools import chain, groupby
@@ -26,6 +26,7 @@ from operator import attrgetter
 
 from artifactory import ArtifactoryPath
 from debian.deb822 import Release, _multivalued
+from isal import igzip_threaded as gzip
 from storm.expr import And, Desc, Exists, Join, Not, Select
 from storm.locals import ClassAlias
 from zope.component import getUtility
@@ -1657,14 +1658,20 @@ class Publisher:
             release_file["NotAutomatic"] = "yes"
             release_file["ButAutomaticUpgrades"] = "yes"
 
-        for filename in sorted(all_files):
-            hashes = self._readIndexFileHashes(suite, filename)
+        file_list = sorted(all_files)
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+            worker_func = partial(
+                self._readIndexFileHashes,
+                suite,
+            )
+            result_hashes = list(executor.map(worker_func, file_list))
+        for hashes in result_hashes:
             if hashes is None:
                 continue
+
             for archive_hash in archive_hashes:
-                release_file.setdefault(archive_hash.apt_name, []).append(
-                    hashes[archive_hash.deb822_name]
-                )
+                hash = hashes[archive_hash.deb822_name]
+                release_file.setdefault(archive_hash.apt_name, []).append(hash)
 
         if distroseries.publish_by_hash and distroseries.advertise_by_hash:
             release_file["Acquire-By-Hash"] = "yes"

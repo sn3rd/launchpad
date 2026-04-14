@@ -66,6 +66,10 @@ module = "gpgme"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "isal"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "iso8601"
 ignore_missing_imports = true
 
