@@ -16,12 +16,13 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from operator import attrgetter, itemgetter
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from storm.databases.postgres import JSON
 from storm.expr import (
     And,
     Cast,
+    Count,
     Desc,
     Join,
     LeftJoin,
@@ -42,6 +43,8 @@ from zope.security.proxy import removeSecurityProxy
 
 from lp.app.errors import NotFoundError
 from lp.buildmaster.enums import BuildStatus
+from lp.registry.interfaces.distribution import IDistribution
+from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.person import validate_public_person
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.sourcepackage import SourcePackageType
@@ -2583,6 +2586,45 @@ class PublishingSet:
                 removed_by,
                 removal_comment=removal_comment,
             )
+
+    def getPocketCountsForDistro(
+        self, context, statuses=None
+    ) -> Dict[PackagePublishingPocket, int]:
+        """See `IPublishingSet`."""
+
+        if IDistribution.providedBy(context):
+            clauses = [
+                SourcePackagePublishingHistory.archive_id.is_in(
+                    context.all_distro_archive_ids
+                ),
+            ]
+        elif IDistroSeries.providedBy(context):
+            clauses = [
+                SourcePackagePublishingHistory.distroseries == context,
+                SourcePackagePublishingHistory.archive_id.is_in(
+                    context.distribution.all_distro_archive_ids
+                ),
+            ]
+        else:
+            raise AssertionError("Unsupported context: %r" % context)
+
+        if statuses is not None:
+            clauses.append(
+                SourcePackagePublishingHistory.status.is_in(list(statuses))
+            )
+
+        rows = (
+            IStore(SourcePackagePublishingHistory)
+            .find(
+                (SourcePackagePublishingHistory.pocket, Count()),
+                *clauses,
+            )
+            .group_by(SourcePackagePublishingHistory.pocket)
+        )
+
+        counts = {pocket: 0 for pocket in PackagePublishingPocket.items}
+        counts.update(rows)
+        return counts
 
 
 def get_current_source_releases(

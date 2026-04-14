@@ -2,6 +2,7 @@
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
 """BinaryPackageBuild interfaces."""
+from typing import Dict
 
 __all__ = [
     "BuildSetStatus",
@@ -479,11 +480,13 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         sourcepackagename matches (SQL LIKE).
         """
 
-    def getCountsForDistro(context, date_finished_since=None):
+    def getCountsForDistro(
+        context, date_finished_since=None
+    ) -> Dict[BuildStatus, int]:
         """Count builds grouped by status for a Distribution/DS/DAS.
 
         Returns a dict mapping `BuildStatus` values to their count.
-        Only statuses with at least one matching build are included.
+        Statuses with no matching builds are included with a count of 0.
 
         Gina-generated builds (``FULLYBUILT`` with no ``date_finished``)
         are excluded.  Gina is a legacy script that imports packages from
@@ -495,7 +498,8 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         :param date_finished_since: Optional datetime; when given, only
             builds with ``date_finished >= date_finished_since`` are
             counted.
-        :return: ``dict`` of ``{BuildStatus: int}``.
+        :return: ``dict`` of ``{BuildStatus: int}`` containing an entry
+            for every ``BuildStatus`` value.
         """
 
     def getBuildsBySourcePackageRelease(

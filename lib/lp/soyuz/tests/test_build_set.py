@@ -223,12 +223,12 @@ class TestBuildSet(TestCaseWithFactory):
         # after that timestamp are counted.
         self.setUpBuilds()
         # All builds were finished just now, so a future cutoff returns
-        # no counts.
+        # zero for every status.
         future = datetime.now(timezone.utc) + timedelta(hours=1)
         counts = getUtility(IBinaryPackageBuildSet).getCountsForDistro(
             self.distribution, date_finished_since=future
         )
-        self.assertEqual({}, counts)
+        self.assertEqual({status: 0 for status in BuildStatus.items}, counts)
 
         # A cutoff in the past includes everything.
         past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -239,20 +239,24 @@ class TestBuildSet(TestCaseWithFactory):
         self.assertEqual(2, counts.get(BuildStatus.FAILEDTOBUILD, 0))
 
     def test_getCountsForDistro_empty(self):
-        # An empty distroseries returns an empty dict.
+        # An empty distroseries returns zero for every status.
         counts = getUtility(IBinaryPackageBuildSet).getCountsForDistro(
             self.distroseries
         )
-        self.assertEqual({}, counts)
+        self.assertEqual({status: 0 for status in BuildStatus.items}, counts)
 
-    def test_getCountsForDistro_omits_zero_statuses(self):
-        # Only statuses with at least one build appear in the result.
+    def test_getCountsForDistro_includes_zero_statuses(self):
+        # Statuses with no matching builds appear with a count of 0.
         self.setUpBuilds()
         counts = getUtility(IBinaryPackageBuildSet).getCountsForDistro(
             self.distribution
         )
-        self.assertNotIn(BuildStatus.FAILEDTOUPLOAD, counts)
-        self.assertNotIn(BuildStatus.NEEDSBUILD, counts)
+        self.assertEqual(0, counts.get(BuildStatus.FAILEDTOUPLOAD))
+        self.assertEqual(0, counts.get(BuildStatus.NEEDSBUILD))
+        self.assertEqual(
+            {status for status in BuildStatus.items},
+            set(counts.keys()),
+        )
 
     def test_get_status_summary_for_builds(self):
         # We can query for the status summary of a number of builds
