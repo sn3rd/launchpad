@@ -39,6 +39,7 @@ from lp.buildmaster.interfaces.packagebuild import (
     IPackageBuildView,
 )
 from lp.buildmaster.interfaces.processor import IProcessor
+from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.sourcepackagename import ISourcePackageName
 from lp.soyuz.interfaces.publishing import ISourcePackagePublishingHistory
 from lp.soyuz.interfaces.sourcepackagerelease import ISourcePackageRelease
@@ -500,6 +501,29 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
             counted.
         :return: ``dict`` of ``{BuildStatus: int}`` containing an entry
             for every ``BuildStatus`` value.
+        """
+
+    def getPocketCountsForDistro(
+        context, date_finished_since=None
+    ) -> Dict[PackagePublishingPocket, int]:
+        """Count builds grouped by pocket for a Distribution/DS/DAS.
+
+        Returns a dict mapping `PackagePublishingPocket` values to their
+        count. Pockets with no matching builds are included with a count
+        of 0.
+
+        Gina-generated builds (``FULLYBUILT`` with no ``date_finished``)
+        are excluded.  Gina is a legacy script that imports packages from
+        an external repository (see ``lp/soyuz/scripts/gina/README``);
+        the resulting build records have no ``date_finished``.
+
+        :param context: An `IDistribution`, `IDistroSeries`, or
+            `IDistroArchSeries`.
+        :param date_finished_since: Optional datetime; when given, only
+            builds with ``date_finished >= date_finished_since`` are
+            counted.
+        :return: ``dict`` of ``{PackagePublishingPocket: int}`` containing
+            an entry for every ``PackagePublishingPocket`` value.
         """
 
     def getBuildsBySourcePackageRelease(

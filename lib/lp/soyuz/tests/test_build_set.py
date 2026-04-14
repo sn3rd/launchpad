@@ -258,6 +258,73 @@ class TestBuildSet(TestCaseWithFactory):
             set(counts.keys()),
         )
 
+    def test_getPocketCountsForDistro_distribution(self):
+        # Counts are grouped by pocket across the distribution.
+        self.setUpBuilds()
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution
+        )
+        self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
+
+    def test_getPocketCountsForDistro_distroseries(self):
+        # Counts are grouped by pocket for a distroseries.
+        self.setUpBuilds()
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
+
+    def test_getPocketCountsForDistro_distroarchseries(self):
+        # Counts are scoped to a single architecture.
+        self.setUpBuilds()
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.das_one
+        )
+        self.assertEqual(5, counts.get(PackagePublishingPocket.RELEASE, 0))
+
+    def test_getPocketCountsForDistro_date_filter(self):
+        # When date_finished_since is given, only builds finished on or
+        # after that timestamp are counted.
+        self.setUpBuilds()
+        # All builds were finished just now, so a future cutoff returns
+        # zero for every pocket.
+        future = datetime.now(timezone.utc) + timedelta(hours=1)
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution, date_finished_since=future
+        )
+        self.assertEqual(
+            {pocket: 0 for pocket in PackagePublishingPocket.items}, counts
+        )
+
+        # A cutoff in the past includes everything.
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution, date_finished_since=past
+        )
+        self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
+
+    def test_getPocketCountsForDistro_empty(self):
+        # An empty distroseries returns zero for every pocket.
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distroseries
+        )
+        self.assertEqual(
+            {pocket: 0 for pocket in PackagePublishingPocket.items}, counts
+        )
+
+    def test_getPocketCountsForDistro_includes_zero_pockets(self):
+        # Pockets with no matching builds appear with a count of 0.
+        self.setUpBuilds()
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution
+        )
+        self.assertEqual(0, counts.get(PackagePublishingPocket.SECURITY))
+        self.assertEqual(0, counts.get(PackagePublishingPocket.UPDATES))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
+
     def test_get_status_summary_for_builds(self):
         # We can query for the status summary of a number of builds
         self.setUpBuilds()
