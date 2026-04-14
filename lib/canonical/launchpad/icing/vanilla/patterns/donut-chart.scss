@@ -3,7 +3,7 @@ svg[chart='donut'] {
   font-size: unset;
 
   .segment {
-    transition: d 150ms ease-out;
+    transition: d var(--transition-duration-fast) var(--transition-timing-ease-out);
     outline: none;
 
     &:hover {

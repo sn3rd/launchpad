@@ -1,0 +1,24 @@
+:root {
+  --transition-timing-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --transition-timing-ease-in: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --transition-duration-snap: 100ms;
+    --transition-duration-fast: 165ms;
+    --transition-duration-brisk: 333ms;
+    --transition-duration-slow: 500ms;
+    --transition-duration-sleepy: 1s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-duration-snap: 0ms;
+    --transition-duration-fast: 0ms;
+    --transition-duration-brisk: 0ms;
+    --transition-duration-slow: 0ms;
+    --transition-duration-sleepy: 0ms;
+  }
+}
