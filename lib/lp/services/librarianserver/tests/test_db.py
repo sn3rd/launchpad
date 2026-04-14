@@ -13,7 +13,7 @@ from zope.interface import implementer
 from lp.services.authserver.testing import InProcessAuthServerFixture
 from lp.services.database.interfaces import IStore
 from lp.services.librarian.interfaces import ILibraryFileAlias
-from lp.services.librarian.model import LibraryFileContent
+from lp.services.librarian.model import LibraryFileAlias, LibraryFileContent
 from lp.services.librarianserver import db
 from lp.services.macaroons.interfaces import (
     NO_USER,
@@ -108,12 +108,22 @@ class TestLibrarianStuff(TestCase):
         """Return the file content object that created."""
         return self.store.find(LibraryFileContent, id=self.content_id).one()
 
+    def _getLFA(self, alias_id):
+        """Return a LibraryFileAlias ORM object by ID."""
+        return (
+            IStore(LibraryFileAlias)
+            .find(LibraryFileAlias, LibraryFileAlias.id == alias_id)
+            .one()
+        )
+
     def test_getAlias(self):
-        # Library.getAlias() returns the LibrarayFileAlias for a given
-        # LibraryFileAlias ID.
+        # Library.getAlias() returns alias metadata for a given
+        # LibraryFileAlias ID tuple.
         library = db.Library(restricted=False)
-        alias = library.getAlias(1, None, "/")
-        self.assertEqual(1, alias.id)
+        content_id, _filename, _mimetype, _date, _size, _restricted = (
+            library.getAlias(1, None, "/")
+        )
+        self.assertEqual(1, content_id)
 
     def test_getAlias_no_such_record(self):
         # Library.getAlias() raises a LookupError, if no record with
@@ -125,31 +135,33 @@ class TestLibrarianStuff(TestCase):
         # Library.getAlias() raises a LookupError, if no content
         # record for the given alias exists.
         library = db.Library(restricted=False)
-        alias = library.getAlias(1, None, "/")
-        alias.content = None
+        self._getLFA(1).content = None
+        transaction.commit()
         self.assertRaises(LookupError, library.getAlias, 1, None, "/")
 
     def test_getAlias_content_is_none(self):
         # Library.getAlias() raises a LookupError, if the matching
         # record does not reference any LibraryFileContent record.
         library = db.Library(restricted=False)
-        alias = library.getAlias(1, None, "/")
-        alias.content = None
+        self._getLFA(1).content = None
+        transaction.commit()
         self.assertRaises(LookupError, library.getAlias, 1, None, "/")
 
     def test_getAlias_restricted_library_unrestricted_alias(self):
         # Library.getAlias() allows looking up unrestricted
         # LibraryFileAliases from a restricted library.
         restricted_library = db.Library(restricted=True)
-        alias = restricted_library.getAlias(1, None, "/")
-        self.assertEqual(1, alias.id)
+        content_id, _filename, _mimetype, _date, _size, _restricted = (
+            restricted_library.getAlias(1, None, "/")
+        )
+        self.assertEqual(1, content_id)
 
     def test_getAlias_unrestricted_library_restricted_alias(self):
         # Library.getAlias() raises a LookupError if an unrestricted
         # library looks up a restricted LibraryFileAlias.
         unrestricted_library = db.Library(restricted=False)
-        alias = unrestricted_library.getAlias(1, None, "/")
-        alias.restricted = True
+        self._getLFA(1).restricted = True
+        transaction.commit()
         self.assertRaises(
             LookupError, unrestricted_library.getAlias, 1, None, "/"
         )
@@ -162,16 +174,15 @@ class TestLibrarianStuff(TestCase):
             ZopeUtilityFixture(issuer, IMacaroonIssuer, name="test")
         )
         self.useFixture(InProcessAuthServerFixture())
-        unrestricted_library = db.Library(restricted=False)
-        alias = unrestricted_library.getAlias(1, None, "/")
-        alias.restricted = True
+        lfa = self._getLFA(1)
+        lfa.restricted = True
         transaction.commit()
         restricted_library = db.Library(restricted=True)
-        macaroon = issuer.issueMacaroon(alias)
-        alias = yield deferToThread(
-            restricted_library.getAlias, 1, macaroon, "/"
+        macaroon = issuer.issueMacaroon(lfa)
+        content_id, _filename, _mimetype, _date, _size, _restricted = (
+            yield deferToThread(restricted_library.getAlias, 1, macaroon, "/")
         )
-        self.assertEqual(1, alias.id)
+        self.assertEqual(1, content_id)
 
     @defer.inlineCallbacks
     def test_getAlias_with_wrong_macaroon(self):
@@ -181,12 +192,11 @@ class TestLibrarianStuff(TestCase):
             ZopeUtilityFixture(issuer, IMacaroonIssuer, name="test")
         )
         self.useFixture(InProcessAuthServerFixture())
-        unrestricted_library = db.Library(restricted=False)
-        alias = unrestricted_library.getAlias(1, None, "/")
-        alias.restricted = True
-        other_alias = unrestricted_library.getAlias(2, None, "/")
+        lfa = self._getLFA(1)
+        lfa.restricted = True
+        other_lfa = self._getLFA(2)
         transaction.commit()
-        macaroon = issuer.issueMacaroon(other_alias)
+        macaroon = issuer.issueMacaroon(other_lfa)
         restricted_library = db.Library(restricted=True)
         with ExpectedException(LookupError):
             yield deferToThread(restricted_library.getAlias, 1, macaroon, "/")
@@ -194,9 +204,8 @@ class TestLibrarianStuff(TestCase):
     @defer.inlineCallbacks
     def test_getAlias_with_macaroon_timeout(self):
         # The authserver call is cancelled after a timeout period.
-        unrestricted_library = db.Library(restricted=False)
-        alias = unrestricted_library.getAlias(1, None, "/")
-        alias.restricted = True
+        lfa = self._getLFA(1)
+        lfa.restricted = True
         transaction.commit()
         macaroon = Macaroon()
         restricted_library = db.Library(restricted=True)
@@ -230,7 +239,7 @@ class TestLibrarianStuff(TestCase):
         # Library.getAliases() does not return records which do not
         # reference any LibraryFileContent record.
         library = db.Library(restricted=False)
-        alias = library.getAlias(1, None, "/")
+        alias = self._getLFA(1)
         alias.content = None
         aliases = library.getAliases(1)
         expected_aliases = [
@@ -243,7 +252,7 @@ class TestLibrarianStuff(TestCase):
         # LibrarayFileAlias records when called from a unrestricted
         # library and vice versa.
         unrestricted_library = db.Library(restricted=False)
-        alias = unrestricted_library.getAlias(1, None, "/")
+        alias = self._getLFA(1)
         alias.restricted = True
 
         aliases = unrestricted_library.getAliases(1)

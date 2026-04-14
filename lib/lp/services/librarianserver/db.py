@@ -19,6 +19,7 @@ from twisted.internet import threads
 from twisted.web import xmlrpc
 
 from lp.services.config import config
+from lp.services.database import read_transaction
 from lp.services.database.interfaces import IStore
 from lp.services.database.sqlbase import session_store
 from lp.services.librarian.model import (
@@ -85,54 +86,56 @@ class Library:
             else:
                 raise
 
-    def getAlias(self, aliasid, token, path):
-        """Returns a LibraryFileAlias, or raises LookupError.
+    def _checkMacaroon(self, aliasid, macaroon):
+        """Verify a macaroon via the authserver. Must be called from a thread.
 
-        A LookupError is raised if no record with the given ID exists
-        or if not related LibraryFileContent exists.
-
-        :param aliasid: A `LibraryFileAlias` ID.
-        :param token: The token for the file. If None no token is present.
-            When a token is supplied, it is looked up with path.
-        :param path: The path the request is for, unused unless a token
-            is supplied; when supplied it must match the token. The
-            value of path is expected to be that from a twisted request.args
-            e.g. /foo/bar.
+        Raises LookupError if the macaroon is invalid or not authorised.
+        Unlike token-based access, this makes no DB calls and holds no
+        connection as the authserver handles all verification.
         """
-        restricted = self.restricted
-        if token and path:
-            # With a token and a path we may be able to serve restricted files
-            # on the public port.
-            if isinstance(token, Macaroon):
-                # Macaroons have enough other constraints that they don't
-                # need to be path-specific; it's simpler and faster to just
-                # check the alias ID.
-                token_ok = threads.blockingCallFromThread(
-                    default_reactor, self._verifyMacaroon, token, aliasid
-                )
-            else:
-                # The URL-encoding of the path may have changed somewhere
-                # along the line, so re-encode it canonically. LFA.filename
-                # can't contain slashes, so they're safe to leave unencoded.
-                # And urllib.parse.quote erroneously excludes ~ from its
-                # safe set, while RFC 3986 says it should be unescaped and
-                # Chromium forcibly decodes it in any URL that it sees.
-                #
-                # This needs to match url_path_quote.
-                normalised_path = quote(unquote(path), safe="/~+")
-                store = session_store()
-                token_ok = not store.find(
-                    TimeLimitedToken,
-                    SQL("age(created) < interval '1 day'"),
-                    TimeLimitedToken.token
-                    == hashlib.sha256(token).hexdigest(),
-                    TimeLimitedToken.path == normalised_path,
-                ).is_empty()
-                store.reset()
-            if token_ok:
-                restricted = True
-            else:
-                raise LookupError("Token stale/pruned/path mismatch")
+        # Macaroons have enough other constraints that they don't
+        # need to be path-specific; it's simpler and faster to just
+        # check the alias ID.
+        token_ok = threads.blockingCallFromThread(
+            default_reactor, self._verifyMacaroon, macaroon, aliasid
+        )
+        if not token_ok:
+            raise LookupError("Macaroon verification failed")
+
+    @read_transaction
+    def _checkTimeLimitedToken(self, token, path):
+        """Validate a time-limited URL token against the DB.
+
+        Raises LookupError if the token is stale, pruned, or path-mismatched.
+        """
+        # The URL-encoding of the path may have changed somewhere
+        # along the line, so re-encode it canonically. LFA.filename
+        # can't contain slashes, so they're safe to leave unencoded.
+        # And urllib.parse.quote erroneously excludes ~ from its
+        # safe set, while RFC 3986 says it should be unescaped and
+        # Chromium forcibly decodes it in any URL that it sees.
+        #
+        # This needs to match url_path_quote.
+        normalised_path = quote(unquote(path), safe="/~+")
+        store = session_store()
+        token_ok = not store.find(
+            TimeLimitedToken,
+            SQL("age(created) < interval '1 day'"),
+            TimeLimitedToken.token == hashlib.sha256(token).hexdigest(),
+            TimeLimitedToken.path == normalised_path,
+        ).is_empty()
+        store.reset()
+        if not token_ok:
+            raise LookupError("Token stale/pruned/path mismatch")
+
+    @read_transaction
+    def _fetchAliasData(self, aliasid, restricted):
+        """Fetch alias metadata as plain values inside a short read transaction
+
+        Returns a tuple of (content_id, filename, mimetype, date_created,
+        filesize, restricted).  All Storm attribute accesses happen inside
+        this transaction so the connection is released immediately on return.
+        """
         clauses = [
             LibraryFileAlias.id == aliasid,
             LibraryFileAlias.content == LibraryFileContent.id,
@@ -142,7 +145,41 @@ class Library:
         alias = IStore(LibraryFileAlias).find(LibraryFileAlias, *clauses).one()
         if alias is None:
             raise LookupError("No file alias with LibraryFileContent")
-        return alias
+        return (
+            alias.content_id,
+            alias.filename,
+            alias.mimetype,
+            alias.date_created,
+            alias.content.filesize,
+            alias.restricted,
+        )
+
+    def getAlias(self, aliasid, token, path):
+        """Return alias metadata as a tuple, or raise LookupError.
+
+        Returns (content_id, filename, mimetype, date_created, filesize,
+        restricted). Each step uses its own short read transaction so no DB
+        connection is held across the authserver XML-RPC call.
+
+        :param aliasid: A `LibraryFileAlias` ID.
+        :param token: The token for the file. If None no token is present.
+            When a token is supplied, it is looked up with path.
+        :param path: The path the request is for, unused unless a token
+            is supplied; when supplied it must match the token.
+        """
+        restricted = self.restricted
+        if token and path:
+            # With a token and a path we may be able to serve restricted files
+            # on the public port.
+            if isinstance(token, Macaroon):
+                # Authserver XML-RPC; no DB connection held during this call.
+                self._checkMacaroon(aliasid, token)
+            else:
+                # Short read transaction; connection released on return.
+                self._checkTimeLimitedToken(token, path)
+            restricted = True
+        # Short read transaction; connection released on return.
+        return self._fetchAliasData(aliasid, restricted)
 
     def getAliases(self, fileid):
         results = IStore(LibraryFileAlias).find(
