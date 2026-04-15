@@ -172,14 +172,17 @@
       </dl>
       <hr class="p-rule" />
       <dl class="description-list is-stats">
-        <div class="description-list__stat">
+        <div
+          class="description-list__stat"
+          tal:define="bugs_summary view/get_bugs_summary"
+        >
           <div class="description-list__item">
             <dt>Open critical bugs</dt>
             <dd class="u-flex--row">
               <i class="p-icon--circle is-negative"></i>
               <span
                 class="p-heading--3 u-no-margin u-no-padding"
-                tal:content="view/bugs_summary/critical_bugs_count/fmt:intcomma"
+                tal:content="bugs_summary/critical_bugs_count/fmt:intcomma"
               >
                 0
               </span>
@@ -187,14 +190,14 @@
           </div>
           <div class="description-list__item">
             <dt>Open bugs</dt>
-            <dd tal:content="view/bugs_summary/open_bugs_count/fmt:intcomma">
+            <dd tal:content="bugs_summary/open_bugs_count/fmt:intcomma">
               0
             </dd>
           </div>
           <div class="description-list__item">
             <dt>In progress bugs</dt>
             <dd
-              tal:content="view/bugs_summary/inprogress_bugs_count/fmt:intcomma"
+              tal:content="bugs_summary/inprogress_bugs_count/fmt:intcomma"
             >
               0
             </dd>

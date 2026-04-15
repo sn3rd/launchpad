@@ -16,6 +16,7 @@ from zope.security.proxy import removeSecurityProxy
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.bugs.interfaces.bugtargetparent import IBugTargetParent
+from lp.bugs.interfaces.bugtask import BugTaskImportance, BugTaskStatus
 from lp.registry.errors import NoSuchDistroSeries
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distroseries import IDistroSeriesSet
@@ -199,6 +200,19 @@ class TestDistroSeriesCurrentSourceReleases(
 
 class TestDistroSeries(TestCaseWithFactory):
     layer = DatabaseFunctionalLayer
+
+    def _makeBugTask(
+        self, distroseries, owner, status, importance, milestone=None
+    ):
+        task = self.factory.makeBugTask(owner=owner, target=distroseries)
+        with person_logged_in(owner):
+            if milestone is not None:
+                task.transitionToMilestone(milestone, milestone.target.owner)
+            if task.status != status:
+                task.transitionToStatus(status)
+            if task.importance != importance:
+                task.transitionToImportance(importance)
+        return task
 
     def test_getSuite_release_pocket(self):
         # The suite of a distro series and the release pocket is the name of
@@ -562,6 +576,76 @@ class TestDistroSeries(TestCaseWithFactory):
             archive=archive, name="nonexistent-package"
         )
         self.assertIsNone(result)
+
+    def test_getBugSummaryStatusImportanceCounts_returns_grouped_counts(self):
+        distroseries = self.factory.makeDistroSeries()
+        owner = self.factory.makePerson()
+
+        # Unresolved tasks should be counted.
+        self._makeBugTask(
+            distroseries,
+            owner=owner,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+        self._makeBugTask(
+            distroseries,
+            owner=owner,
+            status=BugTaskStatus.INPROGRESS,
+            importance=BugTaskImportance.HIGH,
+        )
+        # Resolved tasks should be excluded by countBugs.
+        self._makeBugTask(
+            distroseries,
+            owner=owner,
+            status=BugTaskStatus.FIXRELEASED,
+            importance=BugTaskImportance.CRITICAL,
+        )
+
+        counts = distroseries.getBugSummaryStatusImportanceCounts(owner)
+
+        self.assertIsInstance(counts, dict)
+        self.assertEqual(
+            counts[(BugTaskStatus.NEW, BugTaskImportance.CRITICAL)], 1
+        )
+        self.assertEqual(
+            counts[(BugTaskStatus.INPROGRESS, BugTaskImportance.HIGH)], 1
+        )
+        self.assertNotIn(
+            (BugTaskStatus.FIXRELEASED, BugTaskImportance.CRITICAL), counts
+        )
+
+    def test_getBugSummaryStatusImportanceCounts_filters_by_milestone(self):
+        distroseries = self.factory.makeDistroSeries()
+        owner = self.factory.makePerson()
+        milestone = self.factory.makeMilestone(distroseries=distroseries)
+
+        # Included: task on the selected milestone.
+        self._makeBugTask(
+            distroseries,
+            owner=owner,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.HIGH,
+            milestone=milestone,
+        )
+        # Excluded: task not on that milestone.
+        self._makeBugTask(
+            distroseries,
+            owner=owner,
+            status=BugTaskStatus.NEW,
+            importance=BugTaskImportance.CRITICAL,
+        )
+
+        counts = distroseries.getBugSummaryStatusImportanceCounts(
+            owner, milestone=milestone
+        )
+
+        self.assertEqual(
+            counts[(BugTaskStatus.NEW, BugTaskImportance.HIGH)], 1
+        )
+        self.assertNotIn(
+            (BugTaskStatus.NEW, BugTaskImportance.CRITICAL), counts
+        )
 
 
 class TestDistroSeriesPackaging(TestCaseWithFactory):

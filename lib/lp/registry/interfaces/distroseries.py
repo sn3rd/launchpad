@@ -830,6 +830,19 @@ class IDistroSeriesPublic(
         this distribution series but which lack Packaging links.
         """
 
+    def getBugSummaryStatusImportanceCounts(user, milestone=None):
+        """Return BugSummary counts grouped by status and importance.
+
+        If ``milestone`` is provided, counts are restricted to bugs that
+        match both this distroseries and that milestone.
+
+        :param user: The user to query on behalf of.
+        :param milestone: Optional milestone filter.
+        :return: A dict in the same shape as ``IBugTaskSet.countBugs`` for
+            ``("status", "importance")`` grouping, i.e.
+            ``{(status, importance): count, ...}``.
+        """
+
     def getBinaryPackage(name):
         """Return a DistroSeriesBinaryPackage for this name.
 
