@@ -12,6 +12,7 @@ from unittest.mock import call
 
 from fixtures import MockPatch
 from storm.store import Store
+from testscenarios import WithScenarios, load_tests_apply_scenarios
 from testtools.matchers import Not, PathExists
 from testtools.twistedsupport import AsynchronousDeferredRunTest
 from twisted.internet import defer
@@ -35,6 +36,7 @@ from lp.archivepublisher.model.archivepublisherrun import ArchivePublisherRun
 from lp.archivepublisher.publishing import GLOBAL_PUBLISHER_LOCK, Publisher
 from lp.archivepublisher.scripts.publishdistro import (
     ARCHIVEPUBLISHER_HISTORY_ENABLED,
+    PUBLISHER_DIRECT_INDEXES,
     PublishDistro,
 )
 from lp.archivepublisher.tests.artifactory_fixture import (
@@ -70,10 +72,20 @@ from lp.testing.keyserver import InProcessKeyServerFixture
 from lp.testing.layers import ZopelessDatabaseLayer
 
 
-class TestPublishDistro(TestNativePublishingBase):
+class TestPublishDistro(WithScenarios, TestNativePublishingBase):
     """Test the publish-distro.py script works properly."""
 
+    scenarios = [
+        ("direct_indexes", {"use_direct_indexes": True}),
+        ("ftp_archive", {"use_direct_indexes": False}),
+    ]
+
     run_tests_with = AsynchronousDeferredRunTest.make_factory(timeout=30)
+
+    def setUp(self):
+        super().setUp()
+        if self.use_direct_indexes:
+            self.useFixture(FeatureFixture({PUBLISHER_DIRECT_INDEXES: "on"}))
 
     def runPublishDistro(self, extra_args=None, distribution="ubuntutest"):
         """Run publish-distro without invoking the script.
@@ -1149,6 +1161,7 @@ class FakePublisher:
         self.B_dominate = FakeMethod()
         self.C_doFTPArchive = FakeMethod()
         self.C_writeIndexes = FakeMethod()
+        self.C_doDirectIndexes = FakeMethod()
         self.D_writeReleaseFiles = FakeMethod()
         self.createSeriesAliases = FakeMethod()
         self.markSuiteDirty = FakeMethod()
@@ -1855,15 +1868,28 @@ class TestPublishDistroMethods(TestCaseWithFactory):
                         self.assertEqual(1, publisher_step.call_count)
 
     def test_publishArchive_uses_apt_ftparchive_for_main_archive(self):
-        # For some types of archive, publishArchive invokes the
-        # publisher's C_doFTPArchive method as a way of generating
-        # indexes.
+        # Without the direct-indexes feature flag, publishArchive invokes
+        # C_doFTPArchive for PRIMARY/COPY archives.
         distro = self.makeDistro()
         script = self.makeScript(distro)
         script.txn = FakeTransaction()
         publisher = FakePublisher()
         script.publishArchive(FakeArchive(distro), publisher)
         self.assertEqual(1, publisher.C_doFTPArchive.call_count)
+        self.assertEqual(0, publisher.C_doDirectIndexes.call_count)
+        self.assertEqual(0, publisher.C_writeIndexes.call_count)
+
+    def test_publishArchive_uses_direct_indexes_for_main_archive(self):
+        # With the direct-indexes feature flag enabled, publishArchive
+        # invokes C_doDirectIndexes for PRIMARY/COPY archives.
+        self.useFixture(FeatureFixture({PUBLISHER_DIRECT_INDEXES: "on"}))
+        distro = self.makeDistro()
+        script = self.makeScript(distro)
+        script.txn = FakeTransaction()
+        publisher = FakePublisher()
+        script.publishArchive(FakeArchive(distro), publisher)
+        self.assertEqual(0, publisher.C_doFTPArchive.call_count)
+        self.assertEqual(1, publisher.C_doDirectIndexes.call_count)
         self.assertEqual(0, publisher.C_writeIndexes.call_count)
 
     def test_publishArchive_writes_own_indexes_for_ppa(self):
@@ -2505,3 +2531,6 @@ class TestPublishDistroMethods(TestCaseWithFactory):
         self.assertEqual(
             ArchivePublisherRunStatus.FAILED, publisher_run.status
         )
+
+
+load_tests = load_tests_apply_scenarios

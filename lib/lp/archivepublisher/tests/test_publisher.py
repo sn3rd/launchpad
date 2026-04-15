@@ -5136,4 +5136,159 @@ class TestPublisherDirtyPockets(TestPublisherBase):
         self.assertIn("hoary-test", self.publisher.dirty_suites)
 
 
+class TestDirectIndexGeneration(TestPublisherBase):
+    """Tests for C_doDirectIndexes."""
+
+    def _makePublisher(self):
+        return Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+    def _getSourcesContent(self, suite="breezy-autotest", component="main"):
+        """Read and decompress Sources.gz for the given suite/component."""
+        path = os.path.join(
+            self.config.distsroot, suite, component, "source", "Sources.gz"
+        )
+        with gzip.open(path) as f:
+            return f.read().decode("utf-8")
+
+    def test_generates_sources_index(self):
+        """C_doDirectIndexes produces a Sources.gz file."""
+        publisher = self._makePublisher()
+        self.getPubSource(filecontent=b"Hello world")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        content = self._getSourcesContent()
+        self.assertIn("Package: foo", content)
+
+    def test_marks_release_files_needed(self):
+        """C_doDirectIndexes marks a dirty suite as needing release files."""
+        publisher = self._makePublisher()
+        self.getPubSource(filecontent=b"Hello world")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        self.assertIn("breezy-autotest", publisher.release_files_needed)
+
+    def test_generates_override_files(self):
+        """C_doDirectIndexes produces override files in overrideroot."""
+        publisher = self._makePublisher()
+        self.getPubSource(filecontent=b"Hello world")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        override_path = os.path.join(
+            self.config.overrideroot,
+            "override.breezy-autotest.main.src",
+        )
+        self.assertTrue(
+            os.path.exists(override_path),
+            "Source override file not generated",
+        )
+        extra_path = os.path.join(
+            self.config.overrideroot,
+            "override.breezy-autotest.extra.main",
+        )
+        self.assertTrue(
+            os.path.exists(extra_path),
+            "Extra override file not generated",
+        )
+
+    def test_applies_extra_overrides(self):
+        """Extra overrides from the generated override file are applied."""
+        publisher = self._makePublisher()
+        self.getPubBinaries(filecontent=b"Binary content")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+
+        # Write a more-extra.override file with an arch-specific key
+        os.makedirs(self.config.miscroot, exist_ok=True)
+        extra_extra_path = os.path.join(
+            self.config.miscroot,
+            "more-extra.override.breezy-autotest.main",
+        )
+        with open(extra_extra_path, "w") as f:
+            f.write("foo-bin/i386\tTask\tubuntu-desktop\n")
+
+        publisher.C_doDirectIndexes(False)
+
+        # Task override appears in Packages for the matching arch
+        packages_path = os.path.join(
+            self.config.distsroot,
+            "breezy-autotest",
+            "main",
+            "binary-i386",
+            "Packages.gz",
+        )
+        with gzip.open(packages_path) as f:
+            packages_content = f.read().decode("utf-8")
+        self.assertIn("Task: ubuntu-desktop", packages_content)
+
+        # Sources must NOT contain the override
+        sources_content = self._getSourcesContent()
+        self.assertNotIn("Task:", sources_content)
+
+    def test_careful_mode_includes_allowed_suites(self):
+        """C_doDirectIndexes in careful mode processes allowed suites."""
+        publisher = self._makePublisher()
+        self.getPubSource(filecontent=b"Hello world")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        # Run in careful mode - should process even though not dirty.
+        publisher.dirty_suites = set()
+        publisher.C_doDirectIndexes(True)
+
+        content = self._getSourcesContent()
+        self.assertIn("Package: foo", content)
+
+    def test_sources_contain_expected_fields(self):
+        """Direct Sources output contains expected metadata fields."""
+        publisher = self._makePublisher()
+        self.getPubSource(filecontent=b"Hello world")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+        content = self._getSourcesContent()
+
+        self.assertIn("Package: foo", content)
+        self.assertIn("Version:", content)
+        self.assertIn("Directory:", content)
+        self.assertIn("Files:", content)
+        self.assertIn("Priority:", content)
+
+    def test_generates_packages_files(self):
+        """C_doDirectIndexes produces Packages.gz files for binaries."""
+        publisher = self._makePublisher()
+        self.getPubBinaries(filecontent=b"Binary content")
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        packages_path = os.path.join(
+            self.config.distsroot,
+            "breezy-autotest",
+            "main",
+            "binary-i386",
+            "Packages.gz",
+        )
+        self.assertTrue(
+            os.path.exists(packages_path),
+            "Packages.gz not generated for i386",
+        )
+
+
 load_tests = load_tests_apply_scenarios
