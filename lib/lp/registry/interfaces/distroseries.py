@@ -615,11 +615,8 @@ class IDistroSeriesPublic(
             constraint=validate_valid_until_config,
             description=_(
                 """
-                Configuration for Valid-Until tags in Release files for main
-                archives.
-
-                Maps pockets to dicts with 'validity_period' and
-                'refresh_threshold' keys.
+                Optional dict configuration to control publishing of
+                Valid-Until tags in Release files for main archives.
 
                 Each key must be one of:
 

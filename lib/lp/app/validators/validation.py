@@ -144,21 +144,19 @@ def validate_content_templates(value):
 
 
 def validate_valid_until_config(value):
-    """Validate valid_until_config dictionary structure.
+    """
+    Validate valid_until_config dictionary structure.
 
-    Validates that each pocket's configuration contains exactly
+    Validates that each pocket's configuration contains only
     'refresh_threshold' and 'validity_period' keys, and that
     refresh_threshold <= validity_period.
 
     Also validates that Release pocket configuration is only specified for
-    DistroSeries with SeriesStatus in EXPERIMENTAL or DEVELOPMENT.
+    DistroSeries with SeriesStatus in ACTIVE_UNRELEASED_STATUSES.
     """
     # Avoid circular imports
     from lp.registry.interfaces.pocket import PackagePublishingPocket
     from lp.registry.model.distroseries import ACTIVE_UNRELEASED_STATUSES
-
-    if not value:
-        return True
 
     errors = []
 
@@ -193,7 +191,7 @@ def validate_valid_until_config(value):
             errors.append(
                 f"Invalid keys for pocket {pocket_name}: "
                 f"{', '.join(error_parts)}. "
-                f"Expected exactly 'refresh_threshold' and 'validity_period'."
+                f"Expected only 'refresh_threshold' and 'validity_period'."
             )
             continue
 

@@ -476,7 +476,7 @@ class Publisher:
             return False
 
         if "Valid-Until" in release_data:
-            # Release file needs a refersh if Valid-Until was enabled
+            # Release file needs a refresh if Valid-Until was enabled
             # previously, but has been disabled now.
             if (
                 not distroseries.valid_until_config
