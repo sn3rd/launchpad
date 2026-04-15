@@ -652,10 +652,10 @@ class TestDirectSourcesIndex(TestNativePublishingBase):
         store = IStore(SourcePackagePublishingHistory)
         return generate_sources_index(
             store,
-            pub_source.archive_id,
-            pub_source.distroseries_id,
-            pub_source.pocket.value,
-            pub_source.component_id,
+            archive_id=pub_source.archive_id,
+            distroseries_id=pub_source.distroseries_id,
+            pocket=pub_source.pocket.value,
+            component_id=pub_source.component_id,
             overrides=overrides,
         )
 
@@ -720,7 +720,13 @@ class TestDirectSourcesIndex(TestNativePublishingBase):
             status=PackagePublishingStatus.PUBLISHED,
         )
         store = IStore(SourcePackagePublishingHistory)
-        content = generate_sources_index(store, -1, 1, 0, 1)
+        content = generate_sources_index(
+            store,
+            archive_id=-1,
+            distroseries_id=1,
+            pocket=0,
+            component_id=1,
+        )
         self.assertEqual(b"", content)
 
     def test_multiple_packages_ordered(self):
@@ -862,14 +868,14 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
         arch = bpph.distroarchseries
         packages_bytes, translations_bytes = generate_packages_index(
             store,
-            bpph.archive_id,
-            arch.distroseries.id,
-            bpph.pocket.value,
-            bpph.component_id,
-            arch.id,
-            arch.architecturetag,
-            arch.underlying_architecturetag,
-            separate_long_descriptions,
+            archive_id=bpph.archive_id,
+            distroseries_id=arch.distroseries.id,
+            pocket=bpph.pocket.value,
+            component_id=bpph.component_id,
+            distroarchseries_id=arch.id,
+            architecturetag=arch.architecturetag,
+            underlying_architecturetag=arch.underlying_architecturetag,
+            separate_long_descriptions=separate_long_descriptions,
             overrides=overrides,
         )
         return packages_bytes, translations_bytes
@@ -903,13 +909,13 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
         store = IStore(BinaryPackagePublishingHistory)
         packages_bytes, translations_bytes = generate_packages_index(
             store,
-            -1,
-            1,
-            0,
-            1,
-            1,
-            "i386",
-            None,
+            archive_id=-1,
+            distroseries_id=1,
+            pocket=0,
+            component_id=1,
+            distroarchseries_id=1,
+            architecturetag="i386",
+            underlying_architecturetag=None,
         )
         self.assertEqual(b"", packages_bytes)
         self.assertEqual(b"", translations_bytes)
@@ -1095,13 +1101,13 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
         bpph = deb_pubs[0]
         packages_bytes, _ = generate_packages_index(
             store,
-            bpph.archive_id,
-            arch.distroseries.id,
-            bpph.pocket.value,
-            bpph.component_id,
-            arch.id,
-            arch.architecturetag,
-            arch.underlying_architecturetag,
+            archive_id=bpph.archive_id,
+            distroseries_id=arch.distroseries.id,
+            pocket=bpph.pocket.value,
+            component_id=bpph.component_id,
+            distroarchseries_id=arch.id,
+            architecturetag=arch.architecturetag,
+            underlying_architecturetag=arch.underlying_architecturetag,
             formats=[BinaryPackageFormat.DEB],
         )
         decoded = packages_bytes.decode("utf-8")
@@ -1125,13 +1131,13 @@ class TestDirectPackagesIndex(TestNativePublishingBase):
         bpph = deb_pubs[0]
         packages_bytes, _ = generate_packages_index(
             store,
-            bpph.archive_id,
-            arch.distroseries.id,
-            bpph.pocket.value,
-            bpph.component_id,
-            arch.id,
-            arch.architecturetag,
-            arch.underlying_architecturetag,
+            archive_id=bpph.archive_id,
+            distroseries_id=arch.distroseries.id,
+            pocket=bpph.pocket.value,
+            component_id=bpph.component_id,
+            distroarchseries_id=arch.id,
+            architecturetag=arch.architecturetag,
+            underlying_architecturetag=arch.underlying_architecturetag,
             formats=[BinaryPackageFormat.UDEB],
         )
         decoded = packages_bytes.decode("utf-8")
@@ -1161,13 +1167,13 @@ class TestDirectPackagesIndexTranslations(TestNativePublishingBase):
             arch = bpph.distroarchseries
             _, translations_bytes = generate_packages_index(
                 store,
-                bpph.archive_id,
-                arch.distroseries.id,
-                bpph.pocket.value,
-                bpph.component_id,
-                arch.id,
-                arch.architecturetag,
-                arch.underlying_architecturetag,
+                archive_id=bpph.archive_id,
+                distroseries_id=arch.distroseries.id,
+                pocket=bpph.pocket.value,
+                component_id=bpph.component_id,
+                distroarchseries_id=arch.id,
+                architecturetag=arch.architecturetag,
+                underlying_architecturetag=arch.underlying_architecturetag,
                 separate_long_descriptions=True,
                 seen_translations=seen_translations,
             )
@@ -1223,13 +1229,13 @@ class TestDirectPackagesIndexMaintainer(TestNativePublishingBase):
         arch = bpph.distroarchseries
         packages_bytes, _ = generate_packages_index(
             store,
-            bpph.archive_id,
-            arch.distroseries.id,
-            bpph.pocket.value,
-            bpph.component_id,
-            arch.id,
-            arch.architecturetag,
-            arch.underlying_architecturetag,
+            archive_id=bpph.archive_id,
+            distroseries_id=arch.distroseries.id,
+            pocket=bpph.pocket.value,
+            component_id=bpph.component_id,
+            distroarchseries_id=arch.id,
+            architecturetag=arch.architecturetag,
+            underlying_architecturetag=arch.underlying_architecturetag,
         )
         return packages_bytes
 

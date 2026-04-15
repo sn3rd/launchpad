@@ -18,6 +18,7 @@ import lzma
 import os
 import re
 import shutil
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import partial
@@ -943,12 +944,21 @@ class Publisher:
             "override.%s.extra.%s" % (suite, component.name),
         )
         extra_overrides = read_extra_overrides(extra_override_path)
+        t_start = time.time()
         sources_bytes = generate_sources_index(
             store,
-            self.archive.id,
-            distroseries.id,
-            pocket.value,
-            component.id,
+            archive_id=self.archive.id,
+            distroseries_id=distroseries.id,
+            pocket=pocket.value,
+            component_id=component.id,
+        )
+
+        self.log.debug(
+            "d-i: Sources %s/%s (%d bytes, %.3fs)",
+            suite,
+            component.name,
+            len(sources_bytes),
+            time.time() - t_start,
         )
 
         source_index = RepositoryIndexFile(
@@ -988,19 +998,28 @@ class Publisher:
                 extra_overrides, arch.architecturetag
             )
 
+            t_start = time.time()
             packages_bytes, translations_bytes = generate_packages_index(
                 store,
-                self.archive.id,
-                distroseries.id,
-                pocket.value,
-                component.id,
-                arch.id,
-                arch.architecturetag,
-                arch.underlying_architecturetag,
-                separate_long_descriptions,
+                archive_id=self.archive.id,
+                distroseries_id=distroseries.id,
+                pocket=pocket.value,
+                component_id=component.id,
+                distroarchseries_id=arch.id,
+                architecturetag=arch.architecturetag,
+                underlying_architecturetag=arch.underlying_architecturetag,
+                separate_long_descriptions=separate_long_descriptions,
                 overrides=arch_overrides,
                 formats=[BinaryPackageFormat.DEB],
                 seen_translations=seen_translations,
+            )
+            self.log.debug(
+                "d-i: Packages %s/%s/%s (%d bytes, %.3fs)",
+                suite,
+                component.name,
+                arch_path,
+                len(packages_bytes),
+                time.time() - t_start,
             )
 
             # Write main Packages index (DEBs)
@@ -1024,13 +1043,13 @@ class Publisher:
                 if subcomp == "debian-installer":
                     di_bytes, _ = generate_packages_index(
                         store,
-                        self.archive.id,
-                        distroseries.id,
-                        pocket.value,
-                        component.id,
-                        arch.id,
-                        arch.architecturetag,
-                        arch.underlying_architecturetag,
+                        archive_id=self.archive.id,
+                        distroseries_id=distroseries.id,
+                        pocket=pocket.value,
+                        component_id=component.id,
+                        distroarchseries_id=arch.id,
+                        architecturetag=arch.architecturetag,
+                        underlying_architecturetag=arch.underlying_architecturetag,  # noqa: E501
                         overrides=arch_overrides,
                         formats=[BinaryPackageFormat.UDEB],
                     )
