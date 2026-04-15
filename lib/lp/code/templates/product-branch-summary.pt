@@ -118,7 +118,7 @@
        tal:define="configure_code context/menu:overview/configure_code|nothing">
       <p>
         <a class="sprite maybe"
-           href="https://help.launchpad.net/Code">Getting started
+           href="https://documentation.ubuntu.com/launchpad/user/explanation/working-with-code/git-hosting/">Getting started
           with code hosting in Launchpad</a>.</p>
 
       <p tal:condition="configure_code/enabled|nothing"

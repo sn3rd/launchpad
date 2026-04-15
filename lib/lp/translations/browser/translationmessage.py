@@ -301,7 +301,7 @@ class BaseTranslationView(LaunchpadView):
             application to see whether anyone has submitted it yet.  If not,
             please file the information there as a question.  The preferred
             format for such questions is described in the
-            <a href="https://help.launchpad.net/FAQ/Translations">Frequently
+            <a href="https://answers.launchpad.net/launchpad/+faqs">Frequently
             Asked Questions list</a>.
             </p>
             <p>
