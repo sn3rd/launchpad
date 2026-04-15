@@ -357,6 +357,204 @@ class AffectsEmailCommandTestCase(TestCaseWithFactory):
             normalize_whitespace(str(error)),
         )
 
+    def test_getBugTarget_archive_invalid_reference_error(self):
+        # A path starting with ~ but missing segments raises an error.
+        message = (
+            "'~owner/ubuntu' is not a valid archive reference. "
+            "Expected ~owner/distribution/archive."
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            message,
+            AffectsEmailCommand.getBugTarget,
+            "~owner/ubuntu",
+        )
+
+    def test_getBugTarget_archive_not_found_error(self):
+        # A well-formed reference that doesn't match any archive raises an
+        # error.
+        message = (
+            "There is no archive named "
+            "'~no-such-person/ubuntu/ppa' registered in Launchpad."
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            message,
+            AffectsEmailCommand.getBugTarget,
+            "~no-such-person/ubuntu/ppa",
+        )
+
+    def test_getBugTarget_archive(self):
+        # ~owner/distro/ppa resolves to the IArchive (PPA).
+        archive = self.factory.makeArchive()
+        path = "~%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+        )
+        self.assertEqual(archive, AffectsEmailCommand.getBugTarget(path))
+
+    def test_getBugTarget_archive_series(self):
+        # ~owner/distro/ppa/series resolves to an IArchiveSeries.
+        archive_series = self.factory.makeArchiveSeries()
+        archive = archive_series.archive
+        path = "~%s/%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+            archive_series.distroseries.name,
+        )
+        self.assertEqual(
+            archive_series, AffectsEmailCommand.getBugTarget(path)
+        )
+
+    def test_getBugTarget_archive_series_not_found_error(self):
+        # A series name that doesn't match any series in the archive raises
+        # an error, even when the archive has other series.
+        archive_series = self.factory.makeArchiveSeries()
+        archive = archive_series.archive
+        path = "~%s/%s/%s/no-such-series" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            "'no-such-series' is not a series or source package in %s."
+            % archive.displayname,
+            AffectsEmailCommand.getBugTarget,
+            path,
+        )
+
+    def test_getBugTarget_archive_source_package(self):
+        # ~owner/distro/ppa/package resolves to an IArchiveSourcePackage.
+        asp = self.factory.makeArchiveSourcePackage()
+        archive = asp.archive
+        path = "~%s/%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+            asp.sourcepackagename.name,
+        )
+        self.assertEqual(asp, AffectsEmailCommand.getBugTarget(path))
+
+    def test_getBugTarget_archive_source_package_series(self):
+        # ~owner/distro/ppa/series/package resolves to an
+        # IArchiveSourcePackageSeries.
+        asps = self.factory.makeArchiveSourcePackageSeries()
+        archive = asps.archive
+        path = "~%s/%s/%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+            asps.distroseries.name,
+            asps.sourcepackagename.name,
+        )
+        self.assertEqual(asps, AffectsEmailCommand.getBugTarget(path))
+
+    def test_getBugTarget_archive_source_package_series_not_found_error(self):
+        # A series/package combination that doesn't exist in the archive
+        # raises an error.
+        archive = self.factory.makeArchive()
+        path = "~%s/%s/%s/no-such-series/no-such-package" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            "'no-such-series/no-such-package' is not a valid "
+            "series/package combination in %s." % archive.displayname,
+            AffectsEmailCommand.getBugTarget,
+            path,
+        )
+
+    def test_getBugTarget_archive_source_package_series_package_not_in_series(
+        self,
+    ):
+        # A package published under a different series still resolves: no
+        # per-series publication check is needed, mirroring how ISourcePackage
+        asps = self.factory.makeArchiveSourcePackageSeries()
+        archive = asps.archive
+        other_series = self.factory.makeDistroSeries(
+            distribution=archive.distribution
+        )
+        path = "~%s/%s/%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+            other_series.name,
+            asps.sourcepackagename.name,
+        )
+        expected = archive.getArchiveSourcePackageSeries(
+            other_series, asps.sourcepackagename
+        )
+        self.assertEqual(expected, AffectsEmailCommand.getBugTarget(path))
+
+    def test_getBugTarget_archive_source_package_series_series_has_no_packages(
+        self,
+    ):
+        # A package that has never been published anywhere in the archive
+        # raises an error, even when the series itself is valid. The package
+        # must be known to the archive though it need not be published in the
+        # requested series.
+        archive_series = self.factory.makeArchiveSeries()
+        archive = archive_series.archive
+        sourcepackagename = self.factory.makeSourcePackageName()
+        path = "~%s/%s/%s/%s/%s" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+            archive_series.distroseries.name,
+            sourcepackagename.name,
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            "'%s/%s' is not a valid series/package combination in %s."
+            % (
+                archive_series.distroseries.name,
+                sourcepackagename.name,
+                archive.displayname,
+            ),
+            AffectsEmailCommand.getBugTarget,
+            path,
+        )
+
+    def test_getBugTarget_archive_invalid_segment_error(self):
+        # A single segment after the archive reference that is neither a
+        # series nor a published package raises an error.
+        archive = self.factory.makeArchive()
+        path = "~%s/%s/%s/no-such-thing" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+        )
+        message = (
+            "'no-such-thing' is not a series or source package in %s."
+            % (archive.displayname,)
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            message,
+            AffectsEmailCommand.getBugTarget,
+            path,
+        )
+
+    def test_getBugTarget_archive_too_many_path_components_error(self):
+        # More than two segments after the archive reference raises an error.
+        archive = self.factory.makeArchive()
+        path = "~%s/%s/%s/focal/linux/extra" % (
+            archive.owner.name,
+            archive.distribution.name,
+            archive.name,
+        )
+        self.assertRaisesWithContent(
+            BugTargetNotFound,
+            "Unexpected path components: extra",
+            AffectsEmailCommand.getBugTarget,
+            path,
+        )
+
 
 class BugEmailCommandTestCase(TestCaseWithFactory):
     layer = LaunchpadFunctionalLayer

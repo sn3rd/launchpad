@@ -256,6 +256,12 @@ class DistributionUsingMaloneVocabulary:
 
 def BugNominatableSeriesVocabulary(context=None):
     """Return a nominatable series vocabulary."""
+    # Check if we're in an archive context
+    if getUtility(ILaunchBag).bugtask.archive:
+        return BugNominatableDistroSeriesVocabulary(
+            context, getUtility(ILaunchBag).bugtask.archive.distribution
+        )
+
     if getUtility(ILaunchBag).distribution:
         return BugNominatableDistroSeriesVocabulary(
             context, getUtility(ILaunchBag).distribution

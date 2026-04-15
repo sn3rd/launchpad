@@ -7992,16 +7992,23 @@ class TestGetArchiveSourcePackageSeries(TestCaseWithFactory):
         )
         self.assertIsNone(asp)
 
-    def test_returns_none_for_package_not_in_series(self):
-        """getArchiveSourcePackageSeries returns None if not in series."""
+    def test_returns_object_for_package_not_in_series(self):
+        """getArchiveSourcePackageSeries returns object even if the package
+        is not published in the requested series, as long as it is published
+        somewhere in the archive (no per-series publication check)."""
         other_series = self.factory.makeDistroSeries(
             distribution=self.distribution
         )
-        # Package exists in archive but not in this series
+        # Package is published in self.distroseries but not in other_series;
+        # the archive-wide check passes so we still get an ASPS back.
         asp = self.archive.getArchiveSourcePackageSeries(
             other_series, self.sourcepackagename
         )
-        self.assertIsNone(asp)
+        self.assertIsNotNone(asp)
+        naked_asp = removeSecurityProxy(asp)
+        self.assertEqual(self.sourcepackagename, naked_asp.sourcepackagename)
+        self.assertEqual(self.archive, naked_asp.archive)
+        self.assertEqual(other_series, naked_asp.distroseries)
 
     def test_returns_object_for_deleted_package(self):
         """getArchiveSourcePackageSeries returns object even for deleted

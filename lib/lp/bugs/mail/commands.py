@@ -53,6 +53,7 @@ from lp.services.mail.interfaces import (
 from lp.services.messages.interfaces.message import IMessageSet
 from lp.services.webapp.authorization import check_permission
 from lp.services.webapp.interfaces import ILaunchBag
+from lp.soyuz.interfaces.archive import IArchiveSet
 
 error_templates = os.path.join(os.path.dirname(__file__), "errortemplates")
 
@@ -502,6 +503,67 @@ class AffectsEmailCommand(EmailCommand):
         return path
 
     @classmethod
+    def _getArchiveBugTarget(cls, path):
+        """Return the IBugTarget for an archive path.
+
+        Path should be in one of the following forms:
+
+            ~$owner/$distribution/$archive
+            ~$owner/$distribution/$archive/$series
+            ~$owner/$distribution/$archive/$package
+            ~$owner/$distribution/$archive/$series/$package
+        """
+        parts = path.split("/")
+        if len(parts) < 3:
+            raise BugTargetNotFound(
+                "'%s' is not a valid archive reference. "
+                "Expected ~owner/distribution/archive." % path
+            )
+        archive_ref = "/".join(parts[:3])
+        archive = getUtility(IArchiveSet).getByReference(archive_ref)
+        if archive is None:
+            raise BugTargetNotFound(
+                "There is no archive named '%s' registered in "
+                "Launchpad." % archive_ref
+            )
+        if not archive.is_ppa:
+            raise BugTargetNotFound(
+                "Only PPAs can be bug targets, not '%s'." % archive_ref
+            )
+        remainder = parts[3:]
+        if not remainder:
+            return archive
+        elif len(remainder) == 1:
+            segment = remainder[0]
+            # Try as a distroseries name first.
+            archive_series = archive.getArchiveSeries(segment)
+            if archive_series is not None:
+                return archive_series
+            # Try as a source package name.
+            archive_sp = archive.getArchiveSourcePackage(segment)
+            if archive_sp is not None:
+                return archive_sp
+            raise BugTargetNotFound(
+                "'%s' is not a series or source package in %s."
+                % (segment, archive.displayname)
+            )
+        elif len(remainder) == 2:
+            series_name, package_name = remainder
+            target = archive.getArchiveSourcePackageSeries(
+                series_name, package_name
+            )
+            if target is None:
+                raise BugTargetNotFound(
+                    "'%s/%s' is not a valid series/package combination "
+                    "in %s." % (series_name, package_name, archive.displayname)
+                )
+            return target
+        else:
+            raise BugTargetNotFound(
+                "Unexpected path components: %s" % "/".join(remainder[2:])
+            )
+
+    @classmethod
     def getBugTarget(cls, path):
         """Return the IBugTarget with the given path.
 
@@ -513,13 +575,18 @@ class AffectsEmailCommand(EmailCommand):
             $distribution/$source_package
             $distribution/$distro_series
             $distribution/$distro_series/$source_package
+            ~$owner/$distribution/$archive
+            ~$owner/$distribution/$archive/$series
+            ~$owner/$distribution/$archive/$package
+            ~$owner/$distribution/$archive/$series/$package
         """
         path = cls._normalizePath(path)
         name, rest = cls._splitPath(path)
 
-        # TODO: ilkeremrekoc 2026-03-25: Currently all bug target parents are
-        # pillars, but we will be able to have non-pillar bug target parents
-        # soon. So we should change this by then.
+        # Archive reference paths start with ~ (or ppa: prefix).
+        if name.startswith("~") or name.startswith("ppa:"):
+            return cls._getArchiveBugTarget(path)
+
         bug_target_parent = getUtility(IPillarNameSet).getByName(
             name, ignore_inactive=True
         )

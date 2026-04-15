@@ -334,21 +334,27 @@ class BugContextMenu(ContextMenu):
     def nominate(self):
         """Return the 'Target/Nominate for series' Link."""
         launchbag = getUtility(ILaunchBag)
-        target = launchbag.product or launchbag.distribution
-        if check_permission("launchpad.Driver", target) or (
-            getFeatureFlag("bugs.nominations.bug_supervisors_can_target")
-            and check_permission("launchpad.BugSupervisor", target)
-        ):
-            text = "Target to series"
-            return Link("+nominate", text, icon="milestone")
-        elif (
-            check_permission("launchpad.BugSupervisor", target)
-            or self.user is None
-        ):
-            text = "Nominate for series"
-            return Link("+nominate", text, icon="milestone")
+
+        if launchbag.bugtask.archive:
+            # For archives, check if user can edit the archive to allow
+            # targeting.
+            archive = launchbag.bugtask.archive
+            if check_permission("launchpad.Edit", archive):
+                text = "Target to series"
+                return Link("+nominate", text, icon="milestone")
         else:
-            return Link("+nominate", "", enabled=False, icon="milestone")
+            target = launchbag.product or launchbag.distribution
+            if check_permission("launchpad.Driver", target) or (
+                getFeatureFlag("bugs.nominations.bug_supervisors_can_target")
+                and check_permission("launchpad.BugSupervisor", target)
+            ):
+                text = "Target to series"
+                return Link("+nominate", text, icon="milestone")
+            elif check_permission("launchpad.BugSupervisor", target):
+                text = "Nominate for series"
+                return Link("+nominate", text, icon="milestone")
+
+        return Link("+nominate", "", enabled=False, icon="milestone")
 
     @enabled_with_permission("launchpad.Append")
     def addcomment(self):

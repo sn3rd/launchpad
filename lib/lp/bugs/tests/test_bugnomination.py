@@ -14,7 +14,12 @@ from lp.bugs.interfaces.bugnomination import (
     IBugNomination,
     IBugNominationSet,
 )
+from lp.registry.interfaces.archiveseries import IArchiveSeries
+from lp.registry.interfaces.archivesourcepackageseries import (
+    IArchiveSourcePackageSeries,
+)
 from lp.services.features.testing import FeatureFixture
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
 from lp.soyuz.interfaces.publishing import PackagePublishingStatus
 from lp.testing import (
     TestCaseWithFactory,
@@ -208,6 +213,143 @@ class BugNominationTestCase(TestCaseWithFactory):
         self.assertContentEqual(
             expected_targets, [bt.target for bt in nomination.bug.bugtasks]
         )
+
+    def test_approve_archive_creates_archive_series_task(self):
+        # Approving a nomination for an archive bug task without a package
+        # creates an ArchiveSeries bug task.
+
+        distribution = self.factory.makeDistribution()
+        distroseries = self.factory.makeDistroSeries(distribution=distribution)
+        archive = self.factory.makeArchive(distribution=distribution)
+        # Publish something so the distroseries appears in series_with_sources.
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=archive, distroseries=distroseries
+        )
+        bug = self.factory.makeBug(target=archive)
+
+        with person_logged_in(distribution.owner):
+            # Enable the feature flag
+            with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+                nomination = bug.addNomination(
+                    distribution.owner, distroseries
+                )
+                initial_task_count = len(bug.bugtasks)
+                nomination.approve(distribution.owner)
+
+                # Check that a new task was created
+                self.assertEqual(initial_task_count + 1, len(bug.bugtasks))
+
+                # Find the new task
+                new_tasks = [
+                    bt
+                    for bt in bug.bugtasks
+                    if IArchiveSeries.providedBy(bt.target)
+                ]
+                self.assertEqual(1, len(new_tasks))
+
+                # Verify the ArchiveSeries target
+                archive_series = new_tasks[0].target
+                self.assertEqual(archive, archive_series.archive)
+                self.assertEqual(distroseries, archive_series.distroseries)
+
+    def test_approve_archive_creates_series_task_for_published_package(self):
+        # Approving a nomination creates an ArchiveSourcePackageSeries task
+        # for a bug with an archive+package task.
+        distribution = self.factory.makeDistribution()
+        distroseries = self.factory.makeDistroSeries(distribution=distribution)
+        archive = self.factory.makeArchive(distribution=distribution)
+        asp = self.factory.makeArchiveSourcePackage(archive=archive)
+        spn = asp.sourcepackagename
+        self.factory.makeSourcePackagePublishingHistory(
+            sourcepackagename=spn,
+            archive=archive,
+            distroseries=distroseries,
+        )
+
+        with person_logged_in(distribution.owner):
+            with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+                bug = self.factory.makeBug(target=distribution)
+                bug.addTask(distribution.owner, asp, validate_target=False)
+                nomination = bug.addNomination(
+                    distribution.owner, distroseries
+                )
+                nomination.approve(distribution.owner)
+
+                series_tasks = [
+                    bt
+                    for bt in bug.bugtasks
+                    if IArchiveSourcePackageSeries.providedBy(bt.target)
+                ]
+                self.assertEqual(1, len(series_tasks))
+                self.assertEqual(archive, series_tasks[0].target.archive)
+                self.assertEqual(
+                    distroseries, series_tasks[0].target.distroseries
+                )
+                self.assertEqual(spn, series_tasks[0].target.sourcepackagename)
+
+    def test_createTask_archive_package_creates_archive_package_series_task(
+        self,
+    ):
+        # When adding a PPA+package task to a bug with an approved
+        # nomination, an ArchiveSourcePackageSeries task is created.
+        distribution = self.factory.makeDistribution()
+        distroseries = self.factory.makeDistroSeries(distribution=distribution)
+        archive = self.factory.makeArchive(distribution=distribution)
+        asp = self.factory.makeArchiveSourcePackage(archive=archive)
+        spn = asp.sourcepackagename
+        self.factory.makeSourcePackagePublishingHistory(
+            sourcepackagename=spn,
+            archive=archive,
+            distroseries=distroseries,
+        )
+
+        with person_logged_in(distribution.owner):
+            with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+                bug = self.factory.makeBug(target=distribution)
+                nomination = bug.addNomination(
+                    distribution.owner, distroseries
+                )
+                nomination.approve(distribution.owner)
+                bug.addTask(distribution.owner, asp, validate_target=False)
+
+                series_tasks = [
+                    bt
+                    for bt in bug.bugtasks
+                    if IArchiveSourcePackageSeries.providedBy(bt.target)
+                ]
+                self.assertEqual(1, len(series_tasks))
+                self.assertEqual(archive, series_tasks[0].target.archive)
+                self.assertEqual(
+                    distroseries, series_tasks[0].target.distroseries
+                )
+                self.assertEqual(spn, series_tasks[0].target.sourcepackagename)
+
+    def test_createTask_archive_creates_archive_series_task(self):
+        # Adding an archive bug task creates an ArchiveSeries task for
+        # any approved nomination on the archive's distribution.
+        distribution = self.factory.makeDistribution()
+        distroseries = self.factory.makeDistroSeries(distribution=distribution)
+        archive = self.factory.makeArchive(distribution=distribution)
+
+        with person_logged_in(distribution.owner):
+            with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+                bug = self.factory.makeBug(target=distribution)
+                nomination = bug.addNomination(
+                    distribution.owner, distroseries
+                )
+                nomination.approve(distribution.owner)
+                bug.addTask(distribution.owner, archive, validate_target=False)
+
+                series_tasks = [
+                    bt
+                    for bt in bug.bugtasks
+                    if IArchiveSeries.providedBy(bt.target)
+                ]
+                self.assertEqual(1, len(series_tasks))
+                self.assertEqual(archive, series_tasks[0].target.archive)
+                self.assertEqual(
+                    distroseries, series_tasks[0].target.distroseries
+                )
 
 
 class CanBeNominatedForTestMixin:

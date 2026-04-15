@@ -3,8 +3,17 @@
 
 """Tests for bug listing views on Archive-related bug targets."""
 
+from lp.app.errors import NotFoundError
+from lp.bugs.browser.bugtask import BugTaskNavigation
+from lp.services.features.testing import FeatureFixture
 from lp.soyuz.enums import ArchivePurpose
-from lp.testing import TestCaseWithFactory, login_person, person_logged_in
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
+from lp.testing import (
+    LaunchpadTestRequest,
+    TestCaseWithFactory,
+    login_person,
+    person_logged_in,
+)
 from lp.testing.layers import DatabaseFunctionalLayer
 from lp.testing.views import create_initialized_view
 
@@ -324,3 +333,46 @@ class TestArchiveBugListing(TestCaseWithFactory):
 
             # Should complete without error
             self.assertEqual(2, len(sorted_tasks))
+
+    def test_archive_bug_task_edit_widget(self):
+        """Test that the bug task edit widget can handle Archive targets."""
+        owner = self.factory.makePerson()
+        ppa = self.factory.makeArchive(owner=owner, purpose=ArchivePurpose.PPA)
+
+        with person_logged_in(owner):
+            with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+                # File a bug against the archive
+                bug = self.factory.makeBug(target=ppa, title="Test Bug")
+                bugtask = bug.bugtasks[0]
+
+                # Create the bug task edit view - this uses the
+                # BugTaskTargetWidget which needs to handle Archive objects in
+                # setRenderedValue
+                view = create_initialized_view(
+                    bugtask, "+editstatus", principal=owner
+                )
+
+                # The view should be created successfully without
+                # AssertionError
+                self.assertIsNotNone(view)
+
+    def test_archive_bug_task_edit_widget_feature_flag_off(self):
+        """Test that +editstatus is unavailable for Archive tasks when the
+        feature flag is off."""
+        owner = self.factory.makePerson()
+        ppa = self.factory.makeArchive(owner=owner, purpose=ArchivePurpose.PPA)
+
+        with person_logged_in(owner):
+            bug = self.factory.makeBug(target=ppa, title="Test Bug")
+            bugtask = bug.bugtasks[0]
+
+            # With the flag off (default), publishTraverse should block
+            # +editstatus for Archive targets.
+            request = LaunchpadTestRequest()
+            navigation = BugTaskNavigation(bugtask, request)
+            self.assertRaises(
+                NotFoundError,
+                navigation.publishTraverse,
+                request,
+                "+editstatus",
+            )

@@ -26,6 +26,10 @@ from lp.bugs.interfaces.bugnomination import (
     IBugNominationSet,
 )
 from lp.bugs.interfaces.bugtask import IBugTaskSet
+from lp.registry.interfaces.archiveseries import IArchiveSeries
+from lp.registry.interfaces.archivesourcepackageseries import (
+    IArchiveSourcePackageSeries,
+)
 from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.externalpackageseries import IExternalPackageSeries
 from lp.registry.interfaces.person import validate_public_person
@@ -118,22 +122,40 @@ class BugNomination(StormBase):
             distribution = self.distroseries.distribution
             distroseries = self.distroseries
             for task in self.bug.bugtasks:
-                if not task.distribution == distribution:
-                    continue
-                if task.packagetype is not None:
-                    targets.append(
-                        distroseries.getExternalPackageSeries(
-                            task.sourcepackagename,
-                            task.packagetype,
-                            task.channel,
+
+                if task.distribution == distribution:
+                    if task.packagetype is not None:
+                        targets.append(
+                            distroseries.getExternalPackageSeries(
+                                task.sourcepackagename,
+                                task.packagetype,
+                                task.channel,
+                            )
                         )
-                    )
-                elif task.sourcepackagename is not None:
-                    targets.append(
-                        distroseries.getSourcePackage(task.sourcepackagename)
-                    )
-                else:
-                    targets.append(distroseries)
+                    elif task.sourcepackagename is not None:
+                        targets.append(
+                            distroseries.getSourcePackage(
+                                task.sourcepackagename
+                            )
+                        )
+                    else:
+                        targets.append(distroseries)
+                elif (
+                    task.archive
+                    and task.archive.distribution == distribution
+                    and not task.distroseries
+                ):
+                    if task.sourcepackagename is not None:
+
+                        targets.append(
+                            distroseries.getArchiveSourcePackageSeries(
+                                task.archive, task.sourcepackagename
+                            )
+                        )
+                    else:
+                        targets.append(
+                            distroseries.getArchiveSeries(task.archive)
+                        )
         else:
             targets.append(self.productseries)
         bugtasks = getUtility(IBugTaskSet).createManyTasks(
@@ -242,6 +264,10 @@ class BugNominationSet:
         elif ISourcePackage.providedBy(target):
             filter_args = dict(distroseries_id=target.series.id)
         elif IExternalPackageSeries.providedBy(target):
+            filter_args = dict(distroseries_id=target.series.id)
+        elif IArchiveSourcePackageSeries.providedBy(target):
+            filter_args = dict(distroseries_id=target.series.id)
+        elif IArchiveSeries.providedBy(target):
             filter_args = dict(distroseries_id=target.series.id)
         else:
             return None
