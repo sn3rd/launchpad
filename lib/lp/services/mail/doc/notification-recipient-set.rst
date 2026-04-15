@@ -43,10 +43,13 @@ the IPerson to add along the notification rationale and header code.
     ... )
     >>> recipients.add(cprov, "You are notified for no reason.", "Why not")
 
-The current list of header values in use can be found at
-https://help.launchpad.net/LaunchpadMessageRationale. The 'Why not'
-value is only used as an example. In practice, you should try to reuse
-existing values if they apply to your context.
+`message rationale headers`_.
+
+.. _message rationale headers: https://documentation.ubuntu.com/launchpad/user/
+   explanation/message-rationale-headers/
+
+The 'Why not' value is only used as an example. In practice, you should try to
+reuse existing values if they apply to your context.
 
 The getPersons() method returns the list of recipients sorted by display
 name.

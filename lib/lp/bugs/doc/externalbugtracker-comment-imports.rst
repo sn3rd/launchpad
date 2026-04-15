@@ -545,14 +545,14 @@ is used as the From address.
     >>> print(notifications[0].message.owner.name)
     bug-watch-updater
 
-    >>> print(notifications[0].message.text_contents)
+    >>> print(notifications[0].message.text_contents)  # doctest: +ELLIPSIS
     Launchpad has imported 2 comments from the remote bug at
     http://.../show_bug.cgi?id=42.
     <BLANKLINE>
     If you reply to an imported comment from within Launchpad, your comment
     will be sent to the remote bug automatically. Read more about
     Launchpad's inter-bugtracker facilities at
-    https://help.launchpad.net/InterBugTracking.
+    https://documentation.ubuntu.com/launchpad/.../#bugs-in-external-trackers.
     <BLANKLINE>
     ------------------------------------------------------------------------
     On 2008-09-12T16:30:45+00:00 Foo Bar wrote:

@@ -309,7 +309,7 @@
         <tal:display_revision replace="display_revision" />
         <tal:devmode condition="devmode">devmode</tal:devmode>
         <tal:demo condition="is_demo">demo site</tal:demo>
-        (<a href="https://documentation.ubuntu.com/launchpad/"
+        (<a href="https://documentation.ubuntu.com/launchpad/developer/how-to/get-source-code/"
              >Get the code!</a>)
       </span>
     </div>

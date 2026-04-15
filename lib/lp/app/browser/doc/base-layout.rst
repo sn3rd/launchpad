@@ -150,7 +150,7 @@ Page Footers
     >>> bugs_request.setPrincipal(user)
     >>> view = BugsMainSideView(user, bugs_request)
     >>> footer = find_tag_by_id(html, "footer")
-    >>> for tag in footer.find_all("a"):
+    >>> for tag in footer.find_all("a"):  # doctest: +ELLIPSIS
     ...     print(tag.string, tag["href"])
     ...
     None http://launchpad.test/
@@ -163,7 +163,7 @@ Page Footers
     Blog http://blog.launchpad.net/
     Careers https://canonical.com/careers
     System status https://ubuntu.social/@launchpadstatus
-    Get the code! https://documentation.ubuntu.com/launchpad/
+    Get the code! https://documentation.ubuntu.com/.../get-source-code/
 
 
 Public and private presentation
