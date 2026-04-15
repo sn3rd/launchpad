@@ -43,6 +43,7 @@ the IPerson to add along the notification rationale and header code.
     ... )
     >>> recipients.add(cprov, "You are notified for no reason.", "Why not")
 
+The current list of header values in use can be found at
 `message rationale headers`_.
 
 .. _message rationale headers: https://documentation.ubuntu.com/launchpad/user/
