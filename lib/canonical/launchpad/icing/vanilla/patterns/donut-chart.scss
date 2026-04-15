@@ -1,0 +1,43 @@
+svg[chart='donut'] {
+  font: var(--typography-paragraph-default);
+  font-size: unset;
+
+  .segment {
+    transition: d var(--transition-duration-fast) var(--transition-timing-ease-out);
+    outline: none;
+
+    &:hover {
+      d: var(--arc-d-hover);
+    }
+
+    &:focus-visible {
+      stroke: var(--color-border-focus);
+      stroke-width: var(--dimension-stroke-thickness-large);
+      stroke-linejoin: round;
+    }
+
+  }
+
+  .title,
+  .subtitle {
+    fill: currentColor;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    x: 0;
+    y: 0;
+  }
+
+  .title {
+    font: var(--typography-h3);
+
+    &:has(+ .subtitle) {
+      transform: translateY(-0.4em);
+    }
+  }
+
+  .subtitle {
+    font: var(--typography-paragraph-default);
+    color: var(--color-text-muted);
+    transform: translateY(0.9em);
+  }
+}

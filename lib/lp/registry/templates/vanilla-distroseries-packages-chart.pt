@@ -4,13 +4,32 @@
   <div id="packages-chart" class="packages-chart">
     <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
-         tal:condition="python:view.packages_chart_tabs.active == 'source'">
-      <ul tal:repeat="item python:view.source_packages_summary_all_time.items()">
+         tal:condition="python:view.packages_chart_tabs.active == 'source'" style="display: flex; justify-content: center; align-items: center; padding-block: var(--dimension-spacing-inline-xxxl)">
+        <svg
+          width="180"
+          height="180"
+          chart="donut"
+          chart-radius="100"
+          chart-title="96,008"
+          chart-subtitle="Total"
+          chart-clockwise="true"
+          chart-min-ratio="0.02"
+          chart-thickness="20"
+          chart-gap="0.004"
+          chart-segments='[
+            {"value": 12, "fill": "#4D4D4D", "label": "12 Failures"},
+            {"value": 34, "fill": "#24598F", "label": "34 Builds"},
+            {"value": 0, "fill": "#8C8C8C", "label": "0 Unknown"},
+            {"value": 56, "fill": "#0E8420", "label": "56 Total"}
+          ]'
+        >
+        </svg>
+      <!-- <ul tal:repeat="item python:view.source_packages_summary_all_time.items()">
         <li>
           <span tal:content="python:item[0].title">Published</span>
           <span tal:content="python:item[1]">1234</span>
         </li>
-      </ul>
+      </ul> -->
     </div>
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
          tal:condition="python:view.packages_chart_tabs.active == 'binary'">
