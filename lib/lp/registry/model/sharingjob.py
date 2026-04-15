@@ -346,10 +346,6 @@ class RemoveArtifactSubscriptionsJob(SharingJobDerived):
             for value in self.metadata["information_types"]
         ]
 
-    @property
-    def bug_target_parent(self):
-        return self.pillar
-
     def getErrorRecipients(self):
         # If something goes wrong we want to let the requestor know as well
         # as the pillar maintainer (if there is a pillar).
@@ -372,7 +368,6 @@ class RemoveArtifactSubscriptionsJob(SharingJobDerived):
             "specification_ids": self.specification_ids,
             "ocirecipe_ids": self.ocirecipe_ids,
             "pillar": getattr(self.pillar, "name", None),
-            "bug_target_parent": getattr(self.bug_target_parent, "name", None),
             "grantee": getattr(self.grantee, "name", None),
         }
         return "reconciling subscriptions for %s" % ", ".join(

@@ -54,10 +54,10 @@ If there are not any branches, a helpful message is shown.
 
 The 'Help' links go to the help wiki.
 
-    >>> for anchor in summary.find_all("a"):  # doctest: +ELLIPSIS
+    >>> for anchor in summary.find_all("a"):
     ...     print(anchor["href"])
     ...
-    https://documentation.ubuntu.com/launchpad/user/.../git-hosting/
+    https://help.launchpad.net/Code
 
 
 Link to the product downloads
