@@ -13,6 +13,7 @@ from datetime import date, timedelta
 import transaction
 from testtools.matchers import Equals
 from zope.component import getUtility
+from zope.security.interfaces import Unauthorized
 from zope.security.proxy import removeSecurityProxy
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
@@ -487,24 +488,55 @@ class TestDistroSeries(TestCaseWithFactory):
                     "validity_period": 10,
                 }
             }
-        self.assertTrue(distroseries.valid_until_config)
         naked_distroseries = removeSecurityProxy(distroseries)
         self.assertEqual(
             {"BACKPORTS": {"refresh_threshold": 5, "validity_period": 10}},
             naked_distroseries.publishing_options["valid_until_config"],
         )
 
-    def test_unauth_users_cant_modify_publishing_option(self):
-        """Test that unauthorized users cannot edit valid_until_config."""
+    def test_valid_until_config_empty(self):
         distroseries = self.factory.makeDistroSeries()
-        unauthorized_user = self.factory.makePerson()
+        self.assertFalse(distroseries.valid_until_config)
+        with admin_logged_in():
+            distroseries.valid_until_config = {}
+        naked_distroseries = removeSecurityProxy(distroseries)
+        self.assertEqual(
+            {},
+            naked_distroseries.publishing_options["valid_until_config"],
+        )
 
-        with person_logged_in(unauthorized_user):
+    def test_valid_until_config_set_to_None(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertFalse(distroseries.valid_until_config)
+        with admin_logged_in():
+            distroseries.valid_until_config = None
+        naked_distroseries = removeSecurityProxy(distroseries)
+        self.assertEqual(
+            {},
+            naked_distroseries.publishing_options["valid_until_config"],
+        )
+
+    def test_anonymous_users_cant_modify_valid_until_config(self):
+        """Test that anonymous users cannot edit valid_until_config."""
+        distroseries = self.factory.makeDistroSeries()
+
+        self.assertRaises(
+            Unauthorized, setattr, distroseries, "valid_until_config", {}
+        )
+
+    def test_regular_users_cant_modify_valid_until_config(self):
+        """
+        Test that regular authenticated users cannot edit
+        valid_until_config.
+        """
+        distroseries = self.factory.makeDistroSeries()
+        regular_user = self.factory.makePerson()
+        with person_logged_in(regular_user):
             self.assertRaises(
-                Exception, setattr, distroseries, "valid_until_config", True
+                Unauthorized, setattr, distroseries, "valid_until_config", {}
             )
 
-    def test_distribution_owner_can_modify_publishing_option(self):
+    def test_distribution_owner_can_modify_valid_until_config(self):
         """Test that distribution owners can edit valid_until_config."""
         distroseries = self.factory.makeDistroSeries()
         distribution_owner = distroseries.distribution.owner
