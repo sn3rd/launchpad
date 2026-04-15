@@ -1250,7 +1250,14 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
             DecoratedResultSet(result_set, result_decorator=itemgetter(0))
         )
 
-    def _getCountsForDistroClauses(self, context, date_finished_since):
+    def _getCountsForDistroClauses(self, context):
+        """
+        Construct query clauses shared by all getCountsForDistro() methods.
+
+        :param context: An `IDistribution`, `IDistroSeries`, or
+            `IDistroArchSeries`.
+        :return: A list of query clauses.
+        """
         if IDistribution.providedBy(context):
             col = BinaryPackageBuild.distribution_id
         elif IDistroSeries.providedBy(context):
@@ -1268,17 +1275,19 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
                 BinaryPackageBuild.date_finished != None,
             ),
         ]
-        if date_finished_since is not None:
-            clauses.append(
-                BinaryPackageBuild.date_finished >= date_finished_since
-            )
+
         return clauses
 
     def getCountsForDistro(
         self, context, date_finished_since=None
     ) -> Dict[BuildStatus, int]:
         """See `IBinaryPackageBuildSet`."""
-        clauses = self._getCountsForDistroClauses(context, date_finished_since)
+        clauses = self._getCountsForDistroClauses(context)
+        if date_finished_since is not None:
+            clauses.append(
+                BinaryPackageBuild.date_finished >= date_finished_since
+            )
+
         rows = (
             IStore(BinaryPackageBuild)
             .find(
@@ -1293,10 +1302,14 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
         return counts
 
     def getPocketCountsForDistro(
-        self, context, date_finished_since=None
+        self, context, statuses=None
     ) -> Dict[PackagePublishingPocket, int]:
         """See `IBinaryPackageBuildSet`."""
-        clauses = self._getCountsForDistroClauses(context, date_finished_since)
+        clauses = self._getCountsForDistroClauses(context)
+
+        if statuses is not None:
+            clauses.append(BinaryPackageBuild.status.is_in(list(statuses)))
+
         rows = (
             IStore(BinaryPackageBuild)
             .find(

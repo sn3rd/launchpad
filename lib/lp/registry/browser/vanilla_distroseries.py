@@ -247,7 +247,14 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def binary_packages_summary_all_time(self):
         """Return the packages build status summary of all time."""
         return getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
-            self.context
+            self.context,
+            statuses=[
+                BuildStatus.FULLYBUILT,
+                BuildStatus.BUILDING,
+                BuildStatus.GATHERING,
+                BuildStatus.MANUALDEPWAIT,
+                BuildStatus.UPLOADING,
+            ],
         )
 
     def _build_packages_list_data(
