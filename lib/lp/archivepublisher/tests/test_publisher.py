@@ -90,6 +90,7 @@ from lp.soyuz.enums import (
 )
 from lp.soyuz.interfaces.archive import IArchiveSet
 from lp.soyuz.interfaces.archivefile import IArchiveFileSet
+from lp.soyuz.model.archive import PRE_RELEASE_POCKETS
 from lp.soyuz.tests.test_publishing import TestNativePublishingBase
 from lp.testing import TestCaseWithFactory, login_person
 from lp.testing.fakemethod import FakeMethod
@@ -3237,7 +3238,6 @@ class TestValidUntil(TestPublisherBase):
         )
         # default to one stable and one non-stable series
         self.breezy_autotest.status = SeriesStatus.CURRENT
-        self.breezy_autotest
         self.hoary_test = self.ubuntutest["hoary-test"]
         self.ubuntutest["hoary-test"].status = SeriesStatus.DEVELOPMENT
         self.logger = BufferLogger()
@@ -3575,6 +3575,57 @@ class TestValidUntil(TestPublisherBase):
         self.assertValidUntil(
             publisher, self.breezy_autotest, PROPOSED, is_present=True
         )
+
+    def testValidUntilForDevelopmentSeriesPreReleasePockets(self):
+        """
+        Test Valid-Until in pre-release pockets of development
+        series.
+
+        Configures Valid-Until for all non-pre-release pockets in a
+        DEVELOPMENT series, verifies the tag is published, then disables the
+        configuration and verifies the tag is removed.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        non_pre_release_pockets = set(PackagePublishingPocket.items) - set(
+            PRE_RELEASE_POCKETS
+        )
+        self.hoary_test.valid_until_config = {
+            pocket: {"refresh_threshold": 7, "validity_period": 14}
+            for pocket in non_pre_release_pockets
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        for pocket in non_pre_release_pockets:
+            self.assertValidUntil(
+                publisher, self.hoary_test, pocket, is_present=True
+            )
+
+        # disable Valid-Until
+        self.hoary_test.valid_until_config = {}
+
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+        for pocket in PRE_RELEASE_POCKETS:
+            self.assertValidUntil(
+                publisher, self.hoary_test, pocket, is_present=False
+            )
 
     def testValidUntilNotInPPAArchives(self):
         """
