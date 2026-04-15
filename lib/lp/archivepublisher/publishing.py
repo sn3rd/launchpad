@@ -905,6 +905,7 @@ class Publisher:
                             % (distroseries.name, pocket.name)
                         )
                         continue
+                    self.checkDirtySuiteBeforePublishing(distroseries, pocket)
                 else:
                     if not self.isAllowed(distroseries, pocket):
                         continue
