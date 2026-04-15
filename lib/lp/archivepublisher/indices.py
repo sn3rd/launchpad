@@ -21,6 +21,8 @@ from collections import OrderedDict
 from lp.soyuz.enums import PackagePublishingPriority, PackagePublishingStatus
 from lp.soyuz.model.publishing import makePoolPath
 
+DEFAULT_COMPONENT = "main"
+
 
 class IndexStanzaFields:
     """Store and format ordered Index Stanza fields."""
@@ -462,6 +464,10 @@ def generate_sources_index(
 
         pool_path = makePoolPath(name, component)
 
+        # Prefix the section with the component name for non-main components
+        if component != DEFAULT_COMPONENT:
+            section = "%s/%s" % (component, section)
+
         fields = IndexStanzaFields()
         fields.append("Package", name)
         fields.append("Binary", dsc_binaries)
@@ -735,6 +741,10 @@ def generate_packages_index(
             source = "%s (%s)" % (source_name, source_version)
         elif package != source_name:
             source = source_name
+
+        # Prefix the section with the component name for non-main components
+        if component != DEFAULT_COMPONENT:
+            section = "%s/%s" % (component, section)
 
         fields = IndexStanzaFields()
         fields.append("Package", package)

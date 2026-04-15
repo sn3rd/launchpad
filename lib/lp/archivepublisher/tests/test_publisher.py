@@ -5155,6 +5155,20 @@ class TestDirectIndexGeneration(TestPublisherBase):
         with gzip.open(path) as f:
             return f.read().decode("utf-8")
 
+    def _getPackagesContent(
+        self, suite="breezy-autotest", component="main", arch="i386"
+    ):
+        """Read and decompress Packages for the given suite/component/arch."""
+        path = os.path.join(
+            self.config.distsroot,
+            suite,
+            component,
+            "binary-%s" % arch,
+            "Packages.gz",
+        )
+        with gzip.open(path) as f:
+            return f.read().decode("utf-8")
+
     def test_generates_sources_index(self):
         """C_doDirectIndexes produces a Sources.gz file."""
         publisher = self._makePublisher()
@@ -5224,15 +5238,7 @@ class TestDirectIndexGeneration(TestPublisherBase):
         publisher.C_doDirectIndexes(False)
 
         # Task override appears in Packages for the matching arch
-        packages_path = os.path.join(
-            self.config.distsroot,
-            "breezy-autotest",
-            "main",
-            "binary-i386",
-            "Packages.gz",
-        )
-        with gzip.open(packages_path) as f:
-            packages_content = f.read().decode("utf-8")
+        packages_content = self._getPackagesContent()
         self.assertIn("Task: ubuntu-desktop", packages_content)
 
         # Sources must NOT contain the override
@@ -5278,17 +5284,52 @@ class TestDirectIndexGeneration(TestPublisherBase):
         self.layer.commit()
         publisher.C_doDirectIndexes(False)
 
-        packages_path = os.path.join(
-            self.config.distsroot,
-            "breezy-autotest",
-            "main",
-            "binary-i386",
-            "Packages.gz",
+        content = self._getPackagesContent()
+        self.assertIn("Package: foo-bin", content)
+
+    def test_section_has_component_prefix_for_non_main(self):
+        """Section field is prefixed with component name for non-main."""
+        publisher = self._makePublisher()
+        pub_source = self.getPubSource(
+            sourcename="mypkg",
+            component="universe",
+            section="libs",
+            filecontent=b"Hello world",
         )
-        self.assertTrue(
-            os.path.exists(packages_path),
-            "Packages.gz not generated for i386",
+        self.getPubBinaries(
+            binaryname="mypkg-bin",
+            component="universe",
+            pub_source=pub_source,
+            filecontent=b"Hello world",
         )
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        sources_content = self._getSourcesContent(component="universe")
+        self.assertIn("Section: universe/libs", sources_content)
+
+        packages_content = self._getPackagesContent(component="universe")
+        self.assertIn("Section: universe/libs", packages_content)
+
+    def test_section_no_prefix_for_main(self):
+        """Section field is NOT prefixed for packages in the main component."""
+        publisher = self._makePublisher()
+        self.getPubSource(
+            sourcename="mypkg",
+            component="main",
+            section="devel",
+            filecontent=b"Hello world",
+        )
+
+        publisher.A_publish(False)
+        self.layer.commit()
+        publisher.C_doDirectIndexes(False)
+
+        content = self._getSourcesContent()
+        self.assertIn("Section: devel", content)
+        self.assertNotIn("Section: main/devel", content)
 
 
 load_tests = load_tests_apply_scenarios
