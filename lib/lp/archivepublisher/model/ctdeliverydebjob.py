@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.  This software is licensed under the
 # GNU Affero General Public License version 3 (see the file LICENSE).
 
-__all__ = ["CTDeliveryDebJob"]
+__all__ = ["CTDeliveryDebJob", "CTDeliveryError", "CTUnavailableError"]
 
 import csv
 import json
@@ -72,13 +72,21 @@ POCKET_TO_NAME = {
 }
 
 
+class CTDeliveryError(Exception):
+    """CT delivery failure that should trigger a job retry."""
+
+
+class CTUnavailableError(CTDeliveryError):
+    """CT service is unreachable."""
+
+
 @implementer(ICTDeliveryDebJob)
 @provider(ICTDeliveryDebJobSource)
 class CTDeliveryDebJob(CTDeliveryJobDerived):
     class_job_type = CTDeliveryJobType.DEB
 
     user_error_types = ()
-    retry_error_types = ()
+    retry_error_types = (CTDeliveryError,)
 
     # Retry sooner than the default.
     retry_delay = timedelta(minutes=5)
@@ -268,6 +276,14 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
             )
             return
 
+        result = self.metadata.get("result", {})
+        failed_bpph_ids = result.get("failed_bpph_ids")
+        failed_spph_ids = result.get("failed_spph_ids")
+
+        if failed_bpph_ids or failed_spph_ids:
+            self._run_retry_mode(failed_bpph_ids or [], failed_spph_ids or [])
+            return
+
         manual_mode = self.metadata.get("manual_mode")
 
         if manual_mode:
@@ -388,6 +404,96 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
             csv_output=csv_output,
         )
 
+    def _run_retry_mode(
+        self,
+        failed_bpph_ids: List[int],
+        failed_spph_ids: List[int],
+    ) -> None:
+        """Retry delivery for previously failed payloads by ID."""
+        logger.info(
+            "[CT] Retrying failed payloads: "
+            f"bpph_ids={failed_bpph_ids}, spph_ids={failed_spph_ids}"
+        )
+
+        manual_mode = self.metadata.get("manual_mode")
+        if manual_mode:
+            archive_id = manual_mode.get("archive_id")
+            if archive_id is not None:
+                archive = getUtility(IArchiveSet).get(int(archive_id))
+                if archive is None:
+                    logger.warning(
+                        f"Archive {archive_id} not found; cannot retry"
+                    )
+                    return
+                distribution_name = archive.distribution.name
+            else:
+                distroseries_id = manual_mode.get("distroseries")
+                distribution_name = (
+                    getUtility(IDistroSeriesSet)
+                    .get(distroseries_id)
+                    .distribution.name
+                )
+                archive = None
+        else:
+            if self.publishing_history is None:
+                logger.warning("Publishing history not found; cannot retry")
+                return
+            archive = self.publishing_history.archive
+            distribution_name = archive.distribution.name
+
+        archive_ref = (
+            (
+                "primary"
+                if archive.purpose == ArchivePurpose.PRIMARY
+                else str(archive.reference)
+            )
+            if archive
+            else None
+        )
+
+        store = IStore(ArchivePublisherRun)
+        bpph_rows = (
+            self._query_bpph_rows(
+                store=store,
+                archive=archive,
+                specific_ids=failed_bpph_ids,
+            )
+            if failed_bpph_ids
+            else []
+        )
+        spph_rows = (
+            self._query_spph_rows(
+                store=store,
+                archive=archive,
+                specific_ids=failed_spph_ids,
+            )
+            if failed_spph_ids
+            else []
+        )
+
+        payloads_gen, bpph_ids, spph_ids = self._build_payloads(
+            bpph_rows=bpph_rows,
+            spph_rows=spph_rows,
+            distribution_name=distribution_name,
+            archive_reference=archive_ref,
+        )
+
+        metadata = self.metadata
+        result = metadata.setdefault("result", {})
+        result["bpph"] = bpph_ids
+        result["spph"] = spph_ids
+        # Clear previous failure markers; _deliver_payloads will re-set
+        # them if delivery fails again.
+        result.pop("failed_bpph_ids", None)
+        result.pop("failed_spph_ids", None)
+
+        if bpph_rows or spph_rows:
+            self._deliver_payloads(payloads_gen)
+        else:
+            logger.info(
+                "[CT] No rows found for retry IDs; " "clearing failure state."
+            )
+
     def _process_publishing_window(
         self,
         archive,
@@ -485,20 +591,23 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
 
     def _deliver_payloads(
         self,
-        payloads: Iterable[Dict[str, Any]],
+        tagged_payloads: Iterable[Tuple[str, Dict[str, Any]]],
         csv_output: Optional[str] = None,
     ) -> None:
         """Deliver payloads either to CSV file or via HTTP.
 
-        :param payloads: Iterable of payload dictionaries to deliver.
+        :param tagged_payloads: Iterable of (tracking_id, payload) tuples.
         :param csv_output: If provided, path to CSV file for output.
                           Otherwise, sends via HTTP to Commitment Tracker.
+        :raises CTUnavailableError: If CT health check fails.
+        :raises CTDeliveryError: If any payloads fail delivery.
         """
         metadata = self.metadata.setdefault("result", {})
 
         if csv_output:
             logger.info(f"Writing payloads to CSV: {csv_output}")
-            count = self._write_to_csv(payloads, csv_output)
+            bare_payloads = (payload for _, payload in tagged_payloads)
+            count = self._write_to_csv(bare_payloads, csv_output)
             metadata["ct_success_count"] = count
             metadata["ct_failure_count"] = 0
             metadata["csv_filename"] = csv_output
@@ -506,12 +615,47 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
             # Send via HTTP to Commitment Tracker
             logger.info("Sending payloads to CT")
             client = get_commitment_tracker_client()
-            success_count, failure_errors = client.send_payloads_with_results(
-                payloads
+
+            if not client.check_health():
+                raise CTUnavailableError("CT service health check failed")
+
+            success_count, failed_tracking_ids = (
+                client.send_payloads_with_results(tagged_payloads)
             )
             metadata["ct_success_count"] = success_count
-            metadata["ct_failure_count"] = len(failure_errors)
-            metadata.setdefault("error_description", []).extend(failure_errors)
+
+            if failed_tracking_ids:
+                failed_bpph, failed_spph = self._parse_failed_tracking_ids(
+                    failed_tracking_ids
+                )
+                metadata["ct_failure_count"] = len(failed_tracking_ids)
+                metadata["failed_bpph_ids"] = failed_bpph
+                metadata["failed_spph_ids"] = failed_spph
+                metadata.setdefault("error_description", []).extend(
+                    f"Failed: {tid}" for tid in failed_tracking_ids
+                )
+                raise CTDeliveryError(
+                    f"{len(failed_tracking_ids)} payload(s) failed delivery"
+                )
+            else:
+                metadata["ct_failure_count"] = 0
+
+    @staticmethod
+    def _parse_failed_tracking_ids(
+        tracking_ids: List[str],
+    ) -> Tuple[List[int], List[int]]:
+        """Parse tracking ID strings into separate bpph and spph ID lists."""
+        failed_bpph_ids: List[int] = []
+        failed_spph_ids: List[int] = []
+        for tid in tracking_ids:
+            if tid.startswith("bpph:"):
+                for id_str in tid[5:].split(","):
+                    id_str = id_str.strip()
+                    if id_str:
+                        failed_bpph_ids.append(int(id_str))
+            elif tid.startswith("spph:"):
+                failed_spph_ids.append(int(tid[5:].strip()))
+        return failed_bpph_ids, failed_spph_ids
 
     def notifyUserError(self, error) -> None:
         """Calls up and also saves the error text in this job's metadata.
@@ -591,13 +735,18 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
         self,
         store,
         archive,
-        datecreated_start: Optional[datetime],
-        datecreated_end: Optional[datetime],
-        datepublished_start: Optional[datetime],
-        datepublished_end: Optional[datetime],
-        distroseries: Optional[int],
-        status: int,
+        datecreated_start: Optional[datetime] = None,
+        datecreated_end: Optional[datetime] = None,
+        datepublished_start: Optional[datetime] = None,
+        datepublished_end: Optional[datetime] = None,
+        distroseries: Optional[int] = None,
+        status: int = PackagePublishingStatus.PUBLISHED.value,
+        specific_ids: Optional[List[int]] = None,
     ) -> List[Tuple]:
+        # Empty IN () is invalid SQL; callers asking for no IDs want no rows.
+        if specific_ids is not None and not specific_ids:
+            return []
+
         # Window is (prev_finished, curr_finished]
         bpph = Alias(Table("binarypackagepublishinghistory"), "bpph")
         bpr = Alias(Table("binarypackagerelease"), "bpr")
@@ -677,30 +826,38 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
         )
 
         # BUILD WHERE clauses
-        bpph_where_clauses = [
-            Eq(Column("status", bpph), status),
-            # Filter to DEB packages only. We don't want to get
-            # debug symbols (DDEB) or other package formats.
-            Eq(Column("filetype", bpf), BinaryPackageFormat.DEB.value),
-        ]
-        if datecreated_start is not None:
-            bpph_where_clauses.append(
-                Gt(Column("datecreated", bpph), datecreated_start)
-            )
-        if datecreated_end is not None:
-            bpph_where_clauses.append(
-                Le(Column("datecreated", bpph), datecreated_end)
-            )
-        if datepublished_start is not None:
-            bpph_where_clauses.append(
-                Gt(Column("datepublished", bpph), datepublished_start)
-            )
-        if datepublished_end is not None:
-            bpph_where_clauses.append(
-                Le(Column("datepublished", bpph), datepublished_end)
-            )
-        if distroseries:
-            bpph_where_clauses.append(Eq(Column("id", ds), distroseries))
+        if specific_ids is not None:
+            ids_sql = ", ".join(str(int(i)) for i in specific_ids)
+            bpph_where_clauses = [
+                SQL(f"bpph.id IN ({ids_sql})"),
+                Eq(Column("filetype", bpf), BinaryPackageFormat.DEB.value),
+            ]
+        else:
+            bpph_where_clauses = [
+                Eq(Column("status", bpph), status),
+                Eq(
+                    Column("filetype", bpf),
+                    BinaryPackageFormat.DEB.value,
+                ),
+            ]
+            if datecreated_start is not None:
+                bpph_where_clauses.append(
+                    Gt(Column("datecreated", bpph), datecreated_start)
+                )
+            if datecreated_end is not None:
+                bpph_where_clauses.append(
+                    Le(Column("datecreated", bpph), datecreated_end)
+                )
+            if datepublished_start is not None:
+                bpph_where_clauses.append(
+                    Gt(Column("datepublished", bpph), datepublished_start)
+                )
+            if datepublished_end is not None:
+                bpph_where_clauses.append(
+                    Le(Column("datepublished", bpph), datepublished_end)
+                )
+            if distroseries:
+                bpph_where_clauses.append(Eq(Column("id", ds), distroseries))
 
         arch_agg = SQL(
             "string_agg(DISTINCT das.architecturetag, ', ' "
@@ -789,13 +946,17 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
         self,
         store,
         archive,
-        datecreated_start: Optional[datetime],
-        datecreated_end: Optional[datetime],
-        datepublished_start: Optional[datetime],
-        datepublished_end: Optional[datetime],
-        distroseries: Optional[int],
-        status: int,
+        datecreated_start: Optional[datetime] = None,
+        datecreated_end: Optional[datetime] = None,
+        datepublished_start: Optional[datetime] = None,
+        datepublished_end: Optional[datetime] = None,
+        distroseries: Optional[int] = None,
+        status: int = PackagePublishingStatus.PUBLISHED.value,
+        specific_ids: Optional[List[int]] = None,
     ) -> List[Tuple]:
+        if specific_ids is not None and not specific_ids:
+            return []
+
         # SPPH aggregation in window.
         spph = Alias(Table("sourcepackagepublishinghistory"), "spph")
         spr = Alias(Table("sourcepackagerelease"), "spr")
@@ -851,31 +1012,41 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
             on=Eq(Column("content", lfa_s), Column("id", lfc_s)),
         )
 
-        spph_where_clauses = [
-            Eq(Column("status", spph), status),
-            # Filter to DSC files only.
-            # DSC files are always present for DEBs and contain the information
-            # that we need (source package metadata and hashes).
-            Eq(Column("filetype", sprf), SourcePackageFileType.DSC.value),
-        ]
-        if datecreated_start is not None:
-            spph_where_clauses.append(
-                Gt(Column("datecreated", spph), datecreated_start)
-            )
-        if datecreated_end is not None:
-            spph_where_clauses.append(
-                Le(Column("datecreated", spph), datecreated_end)
-            )
-        if datepublished_start is not None:
-            spph_where_clauses.append(
-                Gt(Column("datepublished", spph), datepublished_start)
-            )
-        if datepublished_end is not None:
-            spph_where_clauses.append(
-                Le(Column("datepublished", spph), datepublished_end)
-            )
-        if distroseries is not None:
-            spph_where_clauses.append(Eq(Column("id", ds_s), distroseries))
+        if specific_ids is not None:
+            ids_sql = ", ".join(str(int(i)) for i in specific_ids)
+            spph_where_clauses = [
+                SQL(f"spph.id IN ({ids_sql})"),
+                Eq(
+                    Column("filetype", sprf),
+                    SourcePackageFileType.DSC.value,
+                ),
+            ]
+        else:
+            spph_where_clauses = [
+                Eq(Column("status", spph), status),
+                Eq(
+                    Column("filetype", sprf),
+                    SourcePackageFileType.DSC.value,
+                ),
+            ]
+            if datecreated_start is not None:
+                spph_where_clauses.append(
+                    Gt(Column("datecreated", spph), datecreated_start)
+                )
+            if datecreated_end is not None:
+                spph_where_clauses.append(
+                    Le(Column("datecreated", spph), datecreated_end)
+                )
+            if datepublished_start is not None:
+                spph_where_clauses.append(
+                    Gt(Column("datepublished", spph), datepublished_start)
+                )
+            if datepublished_end is not None:
+                spph_where_clauses.append(
+                    Le(Column("datepublished", spph), datepublished_end)
+                )
+            if distroseries is not None:
+                spph_where_clauses.append(Eq(Column("id", ds_s), distroseries))
 
         select_columns_s = [
             Column("name", spn),  # package_name
@@ -935,12 +1106,11 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
         spph_rows: List[Tuple],
         distribution_name: str,
         archive_reference: Optional[str],
-    ) -> Tuple[Iterator[Dict[str, Any]], List[str], List[str]]:
-        """Build payloads from BPPH and SPPH rows as a generator.
+    ) -> Tuple[Iterator[Tuple[str, Dict[str, Any]]], List[str], List[str]]:
+        """Build tagged payloads from BPPH and SPPH rows as a generator.
 
-        Returns a tuple of (payload_generator, bpph_ids, spph_ids).
-        The generator yields payloads one at a time to avoid loading all
-        payloads into memory at once.
+        Returns (tagged_payload_generator, bpph_ids, spph_ids).
+        The generator yields (tracking_id, payload) tuples one at a time.
         """
         bpph_ids = []
         spph_ids = []
@@ -1018,7 +1188,7 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
                     binary_payload["release"]["properties"][
                         "source_package_version"
                     ] = sourcepackageversion
-                yield binary_payload
+                yield f"bpph:{bpph_ids_agg}", binary_payload
 
         def source_payload_generator():
             """Generate source payloads from SPPH rows."""
@@ -1075,7 +1245,7 @@ class CTDeliveryDebJob(CTDeliveryJobDerived):
                         },
                     },
                 }
-                yield source_payload
+                yield f"spph:{spph_id}", source_payload
 
         # Chain both generators together
         payloads = chain(

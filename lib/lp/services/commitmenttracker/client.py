@@ -21,6 +21,9 @@ class CommitmentTrackerClient:
 
     CT_MAX_RETRIES = 5
 
+    # 4xx responses that may still resolve on retry (rate limits, timeouts).
+    _RETRYABLE_CLIENT_ERROR_STATUSES = frozenset({408, 429})
+
     def __init__(
         self,
         base_url: str,
@@ -33,9 +36,8 @@ class CommitmentTrackerClient:
         if not base_url:
             raise ValueError("CommitmentTrackerClient base_url is required")
 
-        self.endpoint = (
-            f"{base_url.rstrip('/')}/{release_endpoint.lstrip('/')}"
-        )
+        self.base_url = base_url.rstrip("/")
+        self.endpoint = f"{self.base_url}/{release_endpoint.lstrip('/')}"
         self.timeout = timeout
         self.logger = logging.getLogger()
         self.session = self._make_session(
@@ -59,23 +61,51 @@ class CommitmentTrackerClient:
         session.headers.update({"Content-Type": "application/json"})
         return session
 
+    def check_health(self) -> bool:
+        """Return True if the CT service is reachable and healthy.
+
+        Hits GET {base_url}/health with a short timeout.
+        """
+        try:
+            resp = self.session.get(f"{self.base_url}/health", timeout=10)
+            return 200 <= resp.status_code < 300
+        except requests.RequestException:
+            return False
+
     def send_payloads_with_results(
-        self, payloads: Iterable[Dict[str, Any]]
+        self,
+        tagged_payloads: Iterable[Tuple[str, Dict[str, Any]]],
     ) -> Tuple[int, List[str]]:
-        """Send payloads and return (success_count, failure_errors)."""
-        total = 0
+        """Send tagged payloads; stop on first exhausted failure.
+
+        Accepts an iterable of (tracking_id, payload) tuples.  On the
+        first payload that exhausts its per-payload retries, remaining
+        payloads are collected as unsent and their tracking IDs are
+        returned alongside the failed one.
+
+        Returns (success_count, failed_tracking_ids).
+        """
         sent = 0
-        failure_errors: List[str] = []
-        for payload in payloads:
-            total += 1
+        failed_tracking_ids: List[str] = []
+        tagged_iter = iter(tagged_payloads)
+        for tracking_id, payload in tagged_iter:
             summary = self._payload_summary(payload)
             try:
                 self._post_with_retries(payload, summary)
                 sent += 1
             except Exception:
-                failure_errors.append(summary)
+                self.logger.warning(
+                    "[CT] payload exhausted retries: %s (%s)",
+                    tracking_id,
+                    summary,
+                )
+                failed_tracking_ids.append(tracking_id)
+                for remaining_id, _ in tagged_iter:
+                    failed_tracking_ids.append(remaining_id)
+                break
+        total = sent + len(failed_tracking_ids)
         self.logger.info("[CT] posted %d/%d payloads", sent, total)
-        return sent, failure_errors
+        return sent, failed_tracking_ids
 
     def _post_with_retries(
         self,
@@ -100,6 +130,18 @@ class CommitmentTrackerClient:
                         summary,
                     )
                     return
+                # Most 4xx are permanent for the same request (auth, payload,
+                # wrong URL). Do not burn CT_MAX_RETRIES sleeps on them.
+                if (
+                    400 <= resp.status_code < 500
+                    and resp.status_code
+                    not in self._RETRYABLE_CLIENT_ERROR_STATUSES
+                ):
+                    raise Exception(
+                        f"CT POST failed (non-retryable): "
+                        f"status={resp.status_code} "
+                        f"body={resp.text} payload={summary}"
+                    )
                 last_error = Exception(
                     f"CT POST failed: status={resp.status_code} "
                     f"body={resp.text} payload={summary}"

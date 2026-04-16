@@ -22,6 +22,8 @@ from lp.archivepublisher.model.archivepublisherrun import (
 from lp.archivepublisher.model.ctdeliverydebjob import (
     CT_DELIVERY_ENABLED,
     CTDeliveryDebJob,
+    CTDeliveryError,
+    CTUnavailableError,
 )
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.sourcepackage import SourcePackageFileType
@@ -229,12 +231,13 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         return bpph, spph
 
     def test_run_records_counts_and_errors(self):
-        """Job run records CT counts and failure summaries."""
+        """Job run raises CTDeliveryError and records failure metadata."""
         bpph, spph = self._setup_published_history()
 
         def _client_with_failing_post():
             client = CommitmentTrackerClient(base_url="http://commitment.test")
             client.CT_MAX_RETRIES = 1
+            client.check_health = lambda: True
 
             def _fail_post(*args, **kwargs):
                 raise requests.RequestException("boom")
@@ -249,13 +252,14 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         )
 
         job = self.job_source.create(self.archive_history)
-        job.run()
+        self.assertRaises(CTDeliveryError, job.run)
         result = job.metadata.get("result")
-        self.assertEqual([str(bpph.id)], result["bpph"])
-        self.assertEqual([str(spph.id)], result["spph"])
+        # With fail-fast, the first payload fails and the rest are unsent.
         self.assertEqual(0, result["ct_success_count"])
-        self.assertEqual(2, result["ct_failure_count"])
-        self.assertGreaterEqual(len(result["error_description"]), 2)
+        self.assertGreater(result["ct_failure_count"], 0)
+        self.assertIn("failed_bpph_ids", result)
+        self.assertIn("failed_spph_ids", result)
+        self.assertGreater(len(result["error_description"]), 0)
 
     def test_run_records_counts_success(self):
         """Job run records CT counts on success."""
@@ -263,6 +267,7 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
 
         def _client_with_ok_post():
             client = CommitmentTrackerClient(base_url="http://commitment.test")
+            client.check_health = lambda: True
 
             def _ok_post(*args, **kwargs):
                 class _Resp:
@@ -352,8 +357,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -438,8 +446,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -473,8 +484,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -548,8 +562,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -687,8 +704,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -784,8 +804,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -859,8 +882,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -930,8 +956,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -1023,8 +1052,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -1171,8 +1203,11 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         captured = {}
 
         class _FakeClient:
-            def send_payloads_with_results(self, payloads):
-                payloads_list = list(payloads)
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
                 captured["payloads"] = payloads_list
                 return len(payloads_list), []
 
@@ -1206,6 +1241,147 @@ class CTDeliveryDebJobTests(TestCaseWithFactory):
         # Verify metadata shows success
         result = job.metadata["result"]
         self.assertEqual(2, result["ct_success_count"])
+        self.assertEqual(0, result["ct_failure_count"])
+
+    def test_health_check_failure_raises_unavailable(self):
+        """CTUnavailableError is raised when CT health check fails."""
+        self._setup_published_history()
+
+        class _UnhealthyClient:
+            def check_health(self):
+                return False
+
+        self.patch(
+            jobmod,
+            "get_commitment_tracker_client",
+            lambda: _UnhealthyClient(),
+        )
+
+        job = self.job_source.create(self.archive_history)
+        self.assertRaises(CTUnavailableError, job.run)
+
+    def test_partial_failure_stores_failed_ids(self):
+        """When one payload fails, failed + unsent IDs are stored."""
+        bpph, spph = self._setup_published_history()
+
+        call_count = [0]
+
+        class _PartialClient:
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                sent = 0
+                failed = []
+                tagged_iter = iter(tagged_payloads)
+                for tid, _ in tagged_iter:
+                    call_count[0] += 1
+                    if call_count[0] == 1:
+                        sent += 1
+                    else:
+                        failed.append(tid)
+                        for rem_id, _ in tagged_iter:
+                            failed.append(rem_id)
+                        break
+                return sent, failed
+
+        self.patch(
+            jobmod,
+            "get_commitment_tracker_client",
+            lambda: _PartialClient(),
+        )
+
+        job = self.job_source.create(self.archive_history)
+        self.assertRaises(CTDeliveryError, job.run)
+
+        result = job.metadata["result"]
+        self.assertEqual(1, result["ct_success_count"])
+        self.assertEqual(1, result["ct_failure_count"])
+        # Exactly one of bpph/spph should have failed IDs.
+        total_failed = len(result.get("failed_bpph_ids", [])) + len(
+            result.get("failed_spph_ids", [])
+        )
+        self.assertGreater(total_failed, 0)
+
+    def test_retry_resends_only_failed_ids(self):
+        """On retry, only previously failed IDs are re-queried and sent."""
+        bpph, spph = self._setup_published_history()
+
+        attempt = [0]
+        captured_per_attempt = {}
+
+        class _RetryClient:
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                attempt[0] += 1
+                items = list(tagged_payloads)
+                captured_per_attempt[attempt[0]] = [
+                    (tid, p) for tid, p in items
+                ]
+                if attempt[0] == 1:
+                    # First attempt: first payload succeeds, second fails
+                    if len(items) >= 2:
+                        return 1, [items[1][0]]
+                    return len(items), []
+                # Second attempt: all succeed
+                return len(items), []
+
+        self.patch(
+            jobmod,
+            "get_commitment_tracker_client",
+            lambda: _RetryClient(),
+        )
+
+        job = self.job_source.create(self.archive_history)
+        # First run: partial failure
+        self.assertRaises(CTDeliveryError, job.run)
+        first_count = len(captured_per_attempt.get(1, []))
+        self.assertEqual(2, first_count)
+
+        # Simulate retry: run again (failed IDs are in metadata)
+        job.run()
+        retry_count = len(captured_per_attempt.get(2, []))
+        self.assertEqual(1, retry_count)
+
+        result = job.metadata["result"]
+        self.assertEqual(1, result["ct_success_count"])
+        self.assertEqual(0, result["ct_failure_count"])
+        self.assertNotIn("failed_bpph_ids", result)
+        self.assertNotIn("failed_spph_ids", result)
+
+    def test_retry_clears_failed_ids_on_success(self):
+        """Successful retry clears failed ID markers from metadata."""
+        bpph, spph = self._setup_published_history()
+
+        # Pre-populate metadata with fake failed IDs
+        job = self.job_source.create(self.archive_history)
+        naked_job = removeSecurityProxy(job)
+        naked_job.metadata["result"]["failed_bpph_ids"] = [bpph.id]
+        naked_job.metadata["result"]["failed_spph_ids"] = [spph.id]
+
+        captured = {}
+
+        class _FakeClient:
+            def check_health(self):
+                return True
+
+            def send_payloads_with_results(self, tagged_payloads):
+                payloads_list = [p for _, p in tagged_payloads]
+                captured["payloads"] = payloads_list
+                return len(payloads_list), []
+
+        self.patch(
+            jobmod,
+            "get_commitment_tracker_client",
+            lambda: _FakeClient(),
+        )
+
+        job.run()
+        result = job.metadata["result"]
+        self.assertNotIn("failed_bpph_ids", result)
+        self.assertNotIn("failed_spph_ids", result)
         self.assertEqual(0, result["ct_failure_count"])
 
 
