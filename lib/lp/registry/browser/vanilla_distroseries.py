@@ -10,6 +10,7 @@ __all__ = [
 
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import Literal, Tuple
 
 from markupsafe import Markup, escape
 from zope.component import getUtility
@@ -24,6 +25,7 @@ from lp.bugs.interfaces.bugtasksearch import BugTaskSearchParams
 from lp.buildmaster.enums import BuildStatus
 from lp.layers import VanillaLayer, setAdditionalLayer
 from lp.registry.browser import MilestoneOverlayMixin
+from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
@@ -82,6 +84,14 @@ BUILD_STATUS_ICONS = {
     BuildStatus.CANCELLING: SKIP_ICON,
     BuildStatus.MANUALDEPWAIT: WARNING_ICON,
     BuildStatus.CHROOTWAIT: WARNING_ICON,
+}
+
+POCKET_CHART_COLORS = {
+    PackagePublishingPocket.RELEASE: "var(--color-chart-green-primary)",
+    PackagePublishingPocket.PROPOSED: "var(--color-chart-green-secondary)",
+    PackagePublishingPocket.SECURITY: "var(--color-chart-blue-primary)",
+    PackagePublishingPocket.UPDATES: "var(--color-chart-blue-secondary)",
+    PackagePublishingPocket.BACKPORTS: "var(--color-chart-grey-primary)",
 }
 
 
@@ -236,12 +246,47 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             "failed_to_upload_packages_count": failed_to_upload,
         }
 
-    @property
-    def source_packages_summary_all_time(self):
-        """Return source package counts by status for all time."""
-        return getUtility(IPublishingSet).getPocketCountsForDistro(
-            self.context, statuses=active_publishing_status
-        )
+    def packages_summary_all_time_chart(
+        self, packages_type: Literal["source", "binary"]
+    ) -> Tuple[list, int]:
+        """Return package counts by status for all time."""
+        if packages_type == "source":
+            pocket_counts = getUtility(
+                IPublishingSet
+            ).getPocketCountsForDistro(
+                self.context, statuses=active_publishing_status
+            )
+        elif packages_type == "binary":
+            pocket_counts = getUtility(
+                IBinaryPackageBuildSet
+            ).getPocketCountsForDistro(
+                self.context,
+                statuses=[
+                    BuildStatus.FULLYBUILT,
+                    BuildStatus.BUILDING,
+                    BuildStatus.GATHERING,
+                    BuildStatus.MANUALDEPWAIT,
+                    BuildStatus.UPLOADING,
+                ],
+            )
+        else:
+            raise ValueError(f"Invalid packages type: {packages_type}")
+
+        segments = []
+        total = sum(pocket_counts.values())
+        for pocket, fill in POCKET_CHART_COLORS.items():
+            count = pocket_counts.get(pocket, 0)
+            percentage = int(count / total * 100) if total else 0
+            segments.append(
+                {
+                    "name": pocket.title,
+                    "value": count,
+                    "percentage": percentage,
+                    "fill": fill,
+                    "label": f"{count:,} {pocket.title}",
+                }
+            )
+        return segments, total
 
     @property
     def binary_packages_summary_all_time(self):

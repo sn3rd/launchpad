@@ -15,6 +15,7 @@ from lp.registry.browser.vanilla_distroseries import (
     HELP_ICON,
     LOADING_ICON,
     PENDING_ICON,
+    POCKET_CHART_COLORS,
     SKIP_ICON,
     SUCCESS_ICON,
 )
@@ -539,6 +540,204 @@ class TestVanillaDistroSeriesBinaryPackagesSummary(TestCaseWithFactory):
         self.assertEqual(2, counts[PackagePublishingPocket.RELEASE])
         self.assertEqual(1, counts[PackagePublishingPocket.UPDATES])
         self.assertEqual(0, counts[PackagePublishingPocket.SECURITY])
+
+
+class TestPackagesSummaryAllTimeChart(TestCaseWithFactory):
+    """Tests for packages_summary_all_time_chart."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def _makeBuild(self, distroseries, status, pocket):
+        spph = self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=pocket,
+        )
+        build = self.factory.makeBinaryPackageBuild(
+            source_package_release=spph.sourcepackagerelease,
+            distroarchseries=self.factory.makeDistroArchSeries(
+                distroseries=distroseries
+            ),
+            archive=spph.archive,
+            status=status,
+            pocket=pocket,
+        )
+        if status == BuildStatus.FULLYBUILT:
+            removeSecurityProxy(build).date_finished = datetime.now(
+                timezone.utc
+            )
+        return spph, build
+
+    def _getChart(self, distroseries, packages_type):
+        view = create_initialized_view(distroseries, "+vanilla")
+        return view.packages_summary_all_time_chart(packages_type)
+
+    def test_source_empty_returns_zero_segments(self):
+        """Empty distroseries returns segments with zero values."""
+        distroseries = self.factory.makeDistroSeries()
+        segments, total = self._getChart(distroseries, "source")
+        self.assertEqual(0, total)
+        for seg in segments:
+            self.assertEqual(0, seg["value"])
+            self.assertEqual(0, seg["percentage"])
+
+    def test_binary_empty_returns_zero_segments(self):
+        """Empty distroseries returns segments with zero values for binary."""
+        distroseries = self.factory.makeDistroSeries()
+        segments, total = self._getChart(distroseries, "binary")
+        self.assertEqual(0, total)
+        for seg in segments:
+            self.assertEqual(0, seg["value"])
+            self.assertEqual(0, seg["percentage"])
+
+    def test_invalid_type_raises(self):
+        """Invalid packages_type raises ValueError."""
+        distroseries = self.factory.makeDistroSeries()
+        view = create_initialized_view(distroseries, "+vanilla")
+        self.assertRaises(
+            ValueError,
+            view.packages_summary_all_time_chart,
+            "invalid",
+        )
+
+    def test_segment_keys(self):
+        """Each segment dict has expected keys."""
+        distroseries = self.factory.makeDistroSeries()
+        segments, _ = self._getChart(distroseries, "source")
+        expected_keys = {"name", "value", "percentage", "fill", "label"}
+        for seg in segments:
+            self.assertEqual(expected_keys, set(seg.keys()))
+
+    def test_segment_order_matches_pocket_chart_colors(self):
+        """Segments follow POCKET_CHART_COLORS order."""
+        distroseries = self.factory.makeDistroSeries()
+        segments, _ = self._getChart(distroseries, "source")
+        expected_names = [p.title for p in POCKET_CHART_COLORS]
+        actual_names = [seg["name"] for seg in segments]
+        self.assertEqual(expected_names, actual_names)
+
+    def test_segment_fill_matches_pocket_chart_colors(self):
+        """Each segment fill matches its pocket color."""
+        distroseries = self.factory.makeDistroSeries()
+        segments, _ = self._getChart(distroseries, "source")
+        expected_fills = list(POCKET_CHART_COLORS.values())
+        actual_fills = [seg["fill"] for seg in segments]
+        self.assertEqual(expected_fills, actual_fills)
+
+    def test_source_counts_published_packages(self):
+        """Source chart counts published source packages by pocket."""
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.RELEASE,
+        )
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.RELEASE,
+        )
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.SECURITY,
+        )
+        segments, total = self._getChart(distroseries, "source")
+        self.assertEqual(3, total)
+        by_name = {seg["name"]: seg for seg in segments}
+        self.assertEqual(2, by_name["Release"]["value"])
+        self.assertEqual(1, by_name["Security"]["value"])
+        self.assertEqual(0, by_name["Backports"]["value"])
+
+    def test_source_excludes_deleted_packages(self):
+        """Source chart excludes non-active publishing statuses."""
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.RELEASE,
+        )
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.DELETED,
+            pocket=PackagePublishingPocket.RELEASE,
+        )
+        segments, total = self._getChart(distroseries, "source")
+        self.assertEqual(1, total)
+
+    def test_binary_counts_by_pocket(self):
+        """Binary chart counts in-scope builds by pocket."""
+        distroseries = self.factory.makeDistroSeries()
+        self._makeBuild(
+            distroseries,
+            BuildStatus.FULLYBUILT,
+            PackagePublishingPocket.RELEASE,
+        )
+        self._makeBuild(
+            distroseries,
+            BuildStatus.BUILDING,
+            PackagePublishingPocket.RELEASE,
+        )
+        self._makeBuild(
+            distroseries,
+            BuildStatus.UPLOADING,
+            PackagePublishingPocket.UPDATES,
+        )
+        # Out-of-scope status should not count.
+        self._makeBuild(
+            distroseries,
+            BuildStatus.FAILEDTOBUILD,
+            PackagePublishingPocket.RELEASE,
+        )
+        segments, total = self._getChart(distroseries, "binary")
+        self.assertEqual(3, total)
+        by_name = {seg["name"]: seg for seg in segments}
+        self.assertEqual(2, by_name["Release"]["value"])
+        self.assertEqual(1, by_name["Updates"]["value"])
+
+    def test_percentage_calculation(self):
+        """Percentage is computed correctly per segment."""
+        distroseries = self.factory.makeDistroSeries()
+        # Create 3 source packages in RELEASE, 1 in SECURITY = 4 total.
+        for _ in range(3):
+            self.factory.makeSourcePackagePublishingHistory(
+                distroseries=distroseries,
+                archive=distroseries.main_archive,
+                status=PackagePublishingStatus.PUBLISHED,
+                pocket=PackagePublishingPocket.RELEASE,
+            )
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.SECURITY,
+        )
+        segments, total = self._getChart(distroseries, "source")
+        self.assertEqual(4, total)
+        by_name = {seg["name"]: seg for seg in segments}
+        self.assertEqual(75, by_name["Release"]["percentage"])
+        self.assertEqual(25, by_name["Security"]["percentage"])
+        self.assertEqual(0, by_name["Backports"]["percentage"])
+
+    def test_label_format(self):
+        """Label is formatted as 'count pocket_title'."""
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeSourcePackagePublishingHistory(
+            distroseries=distroseries,
+            archive=distroseries.main_archive,
+            status=PackagePublishingStatus.PUBLISHED,
+            pocket=PackagePublishingPocket.RELEASE,
+        )
+        segments, _ = self._getChart(distroseries, "source")
+        by_name = {seg["name"]: seg for seg in segments}
+        self.assertEqual("1 Release", by_name["Release"]["label"])
+        self.assertEqual("0 Backports", by_name["Backports"]["label"])
 
 
 class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
