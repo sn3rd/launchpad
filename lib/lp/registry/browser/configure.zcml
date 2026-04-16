@@ -697,6 +697,27 @@
         permission="zope.Public"
         />
     
+    <!-- ArchiveSeries configuration -->
+    <lp:url
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
+        urldata="lp.registry.browser.archiveseries.ArchiveSeriesURL"
+        />
+    <lp:navigation
+        module="lp.registry.browser.archiveseries"
+        classes="ArchiveSeriesNavigation"
+        />
+    <lp:menus
+        module="lp.registry.browser.archiveseries"
+        classes="ArchiveSeriesFacets
+                 ArchiveSeriesBugsMenu"
+        />
+    <adapter
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archiveseries.ArchiveSeriesBreadcrumb"
+        permission="zope.Public"
+        />
+    
     <adapter
         name="fmt"
         factory="lp.registry.browser.sourcepackage.SourcePackageFormatterAPI"

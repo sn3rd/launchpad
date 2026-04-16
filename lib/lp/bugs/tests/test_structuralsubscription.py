@@ -567,6 +567,25 @@ class TestGetStructuralSubscriptionTargets(TestCaseWithFactory):
             },
         )
 
+    def test_archiveseries_target(self):
+        """ArchiveSeries targets are excluded from structural subscriptions."""
+        from lp.soyuz.enums import ArchivePurpose
+
+        actor = self.factory.makePerson()
+        login_person(actor)
+        archive = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        archiveseries = self.factory.makeArchiveSeries(archive=archive)
+
+        # Create a bug on the archive
+        bug = self.factory.makeBug(target=archive)
+        # Add a task on the ArchiveSeries
+        bug.addTask(actor, archiveseries)
+
+        result = get_structural_subscription_targets(bug.bugtasks)
+        # Both Archive and ArchiveSeries are excluded as structural
+        # subscriptions are not yet supported for them
+        self.assertEqual(set(result), set())
+
     def test_product_with_project_group(self):
         # get_structural_subscription_targets() will yield both a
         # product and its parent project group if it has one.

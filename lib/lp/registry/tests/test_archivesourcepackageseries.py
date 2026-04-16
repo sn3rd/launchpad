@@ -272,3 +272,26 @@ class TestArchiveSourcePackageSeries(TestCaseWithFactory):
             other_distroseries,
             self.sourcepackagename,
         )
+
+    def test_check_publication_true_returns_none_without_publication(self):
+        """getArchiveSourcePackageSeries returns None when no publication
+        exists for the given package in the given series."""
+        archive = self.factory.makeArchive(distribution=self.distribution)
+        spn = self.factory.makeSourcePackageName("unpublished")
+        result = archive.getArchiveSourcePackageSeries(
+            self.distroseries, spn, check_publication=True
+        )
+        self.assertIsNone(result)
+
+    def test_check_publication_false_returns_object_without_publication(self):
+        """getArchiveSourcePackageSeries with check_publication=False returns
+        the object even when no publication exists in the archive."""
+        archive = self.factory.makeArchive(distribution=self.distribution)
+        spn = self.factory.makeSourcePackageName("unpublished")
+        result = archive.getArchiveSourcePackageSeries(
+            self.distroseries, spn, check_publication=False
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(spn, result.sourcepackagename)
+        self.assertEqual(archive, result.archive)
+        self.assertEqual(self.distroseries, result.distroseries)

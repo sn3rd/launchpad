@@ -345,6 +345,11 @@ class BugTaskSearchParams:
         self.distroseries = archivesourcepackageseries.distroseries
         self.sourcepackagename = archivesourcepackageseries.sourcepackagename
 
+    def setArchiveSeries(self, archiveseries):
+        """Set the archive series context to filter the search."""
+        self.archive = archiveseries.archive
+        self.distroseries = archiveseries.distroseries
+
     def setOCIProject(self, ociproject):
         """Set the distribution context on which to filter the search."""
         self.ociproject = ociproject
@@ -362,6 +367,7 @@ class BugTaskSearchParams:
             supported.
         """
         # Yay circular deps.
+        from lp.registry.interfaces.archiveseries import IArchiveSeries
         from lp.registry.interfaces.archivesourcepackage import (
             IArchiveSourcePackage,
         )
@@ -416,6 +422,8 @@ class BugTaskSearchParams:
             self.setArchiveSourcePackage(target)
         elif IArchiveSourcePackageSeries.providedBy(instance):
             self.setArchiveSourcePackageSeries(target)
+        elif IArchiveSeries.providedBy(instance):
+            self.setArchiveSeries(target)
         elif IProjectGroup.providedBy(instance):
             self.setProjectGroup(target)
         elif IOCIProject.providedBy(instance):

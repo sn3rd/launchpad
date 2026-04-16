@@ -53,6 +53,7 @@ from lp.registry.errors import (
     DeleteSubscriptionError,
     UserCannotSubscribePerson,
 )
+from lp.registry.interfaces.archiveseries import IArchiveSeries
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.archivesourcepackageseries import (
     IArchiveSourcePackageSeries,
@@ -623,7 +624,8 @@ def get_structural_subscriptions_for_bug(bug, person=None):
     # enriqueesanchz 2025-07-15 TODO: support bug subscriptions for
     # ExternalPackage
     # ilkeremrekoc 2026-02-12 TODO: support bug subscriptions for
-    # Archive, ArchiveSourcePackage and ArchiveSourcePackageSeries
+    # Archive, ArchiveSourcePackage, ArchiveSourcePackageSeries, and
+    # ArchiveSeries
     for bugtask in bug.bugtasks:
         if (
             not IExternalPackage.providedBy(bugtask.target)
@@ -631,6 +633,7 @@ def get_structural_subscriptions_for_bug(bug, person=None):
             and not IArchive.providedBy(bugtask.target)
             and not IArchiveSourcePackage.providedBy(bugtask.target)
             and not IArchiveSourcePackageSeries.providedBy(bugtask.target)
+            and not IArchiveSeries.providedBy(bugtask.target)
         ):
             bugtasks.append(bugtask)
 

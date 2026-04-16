@@ -229,6 +229,43 @@ class TestArchiveBugPageAccess(TestCaseWithFactory):
         self.assertEqual(asps.distroseries, result.distroseries)
         self.assertEqual(asps.sourcepackagename, result.sourcepackagename)
 
+    def test_traverse_series_returns_archive_series(self):
+        # With the flag on, traverse_series returns an ArchiveSeries.
+        from lp.registry.interfaces.archiveseries import IArchiveSeries
+
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        distroseries = self.factory.makeDistroSeries(
+            distribution=ppa.distribution
+        )
+        request = LaunchpadTestRequest()
+        nav = ArchiveNavigation(ppa, request=request)
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "true"}):
+            result = nav.traverse_series(distroseries.name)
+        self.assertTrue(IArchiveSeries.providedBy(result))
+        self.assertEqual(distroseries, result.distroseries)
+        self.assertEqual(ppa, result.archive)
+
+    def test_traverse_series_returns_none_for_unknown_series(self):
+        # traverse_series returns None when the distroseries does not exist.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        request = LaunchpadTestRequest()
+        nav = ArchiveNavigation(ppa, request=request)
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "true"}):
+            result = nav.traverse_series("no-such-series")
+        self.assertIsNone(result)
+
+    def test_traverse_series_blocked_without_flag(self):
+        # traverse_series raises NotFoundError when the flag is off.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        distroseries = self.factory.makeDistroSeries(
+            distribution=ppa.distribution
+        )
+        request = LaunchpadTestRequest()
+        nav = ArchiveNavigation(ppa, request=request)
+        self.assertRaises(
+            NotFoundError, nav.traverse_series, distroseries.name
+        )
+
 
 class TestArchiveBugsMenuLinks(TestCaseWithFactory):
     """Tests for ArchiveBugsMenu links."""

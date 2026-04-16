@@ -692,6 +692,32 @@
         provides="lp.services.webapp.interfaces.IBreadcrumb"
         factory="lp.registry.browser.archivesourcepackageseries.ArchiveSourcePackageSeriesBreadcrumb"/>
 
+    <!-- ArchiveSeries -->
+    <class
+        class="lp.registry.model.archiveseries.ArchiveSeries">
+        <allow
+            interface="lp.registry.interfaces.archiveseries.IArchiveSeriesView"/>
+        <allow
+            interface="lp.bugs.interfaces.bugtarget.ISeriesBugTarget"/>
+        <require
+            permission="launchpad.Edit"
+            set_schema="lp.app.interfaces.launchpad.IServiceUsage"/>
+    </class>
+    <adapter
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
+        provides="lp.app.interfaces.launchpad.IServiceUsage"
+        factory="lp.registry.adapters.sourcepackage_to_archive"
+        permission="zope.Public"/>
+    <adapter
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
+        provides="lp.services.webapp.interfaces.ICanonicalUrlData"
+        factory="lp.registry.browser.archiveseries.ArchiveSeriesURL"
+        permission="zope.Public"/>
+    <adapter
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
+        provides="lp.services.webapp.interfaces.IBreadcrumb"
+        factory="lp.registry.browser.archiveseries.ArchiveSeriesBreadcrumb"/>
+
     <!-- CommercialSubscription -->
 
     <class

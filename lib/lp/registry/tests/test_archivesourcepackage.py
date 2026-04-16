@@ -203,3 +203,20 @@ class TestArchiveSourcePackage(TestCaseWithFactory):
             main_asp.__hash__(),
             ppa_asp.__hash__(),
         )
+
+    def test_check_publication_true_returns_none_without_publication(self):
+        """getArchiveSourcePackage returns None when no publication exists."""
+        archive = self.factory.makeArchive(distribution=self.distribution)
+        spn = self.factory.makeSourcePackageName("unpublished")
+        result = archive.getArchiveSourcePackage(spn, check_publication=True)
+        self.assertIsNone(result)
+
+    def test_check_publication_false_returns_object_without_publication(self):
+        """getArchiveSourcePackage with check_publication=False returns
+        the object even when no publication exists in the archive."""
+        archive = self.factory.makeArchive(distribution=self.distribution)
+        spn = self.factory.makeSourcePackageName("unpublished")
+        result = archive.getArchiveSourcePackage(spn, check_publication=False)
+        self.assertIsNotNone(result)
+        self.assertEqual(spn, result.sourcepackagename)
+        self.assertEqual(archive, result.archive)

@@ -946,7 +946,7 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
 
         return DecoratedResultSet(resultset, pre_iter_hook=eager_load)
 
-    def getArchiveSourcePackage(self, name):
+    def getArchiveSourcePackage(self, name, check_publication=True):
         """See `IArchive`."""
         # Imported locally to avoid circular imports: ArchiveSourcePackage
         # references IArchive, so importing it at module level would create
@@ -962,24 +962,27 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
             if sourcepackagename is None:
                 return None
 
-        # Verify the archive has this package
-        has_publication = (
-            IStore(SourcePackagePublishingHistory)
-            .find(
-                SourcePackagePublishingHistory,
-                SourcePackagePublishingHistory.archive == self,
-                SourcePackagePublishingHistory.sourcepackagename
-                == sourcepackagename,
+        if check_publication:
+            # Verify the archive has this package
+            has_publication = (
+                IStore(SourcePackagePublishingHistory)
+                .find(
+                    SourcePackagePublishingHistory,
+                    SourcePackagePublishingHistory.archive == self,
+                    SourcePackagePublishingHistory.sourcepackagename
+                    == sourcepackagename,
+                )
+                .any()
             )
-            .any()
-        )
 
-        if not has_publication:
-            return None
+            if not has_publication:
+                return None
 
         return ArchiveSourcePackage(self, sourcepackagename)
 
-    def getArchiveSourcePackageSeries(self, distroseries, name):
+    def getArchiveSourcePackageSeries(
+        self, distroseries, name, check_publication=True
+    ):
         """See `IArchive`."""
         # Imported locally to avoid circular imports:
         # ArchiveSourcePackageSeries references IArchive, so importing it at
@@ -1010,25 +1013,44 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
             if sourcepackagename is None:
                 return None
 
-        # Verify the archive has this package in this distroseries
-        has_publication = (
-            IStore(SourcePackagePublishingHistory)
-            .find(
-                SourcePackagePublishingHistory,
-                SourcePackagePublishingHistory.archive == self,
-                SourcePackagePublishingHistory.distroseries == distroseries,
-                SourcePackagePublishingHistory.sourcepackagename
-                == sourcepackagename,
+        if check_publication:
+            # Verify the archive has this package in this distroseries
+            SPPH = SourcePackagePublishingHistory
+            has_publication = (
+                IStore(SPPH)
+                .find(
+                    SPPH,
+                    SPPH.archive == self,
+                    SPPH.distroseries == distroseries,
+                    SPPH.sourcepackagename == sourcepackagename,
+                )
+                .any()
             )
-            .any()
-        )
 
-        if not has_publication:
-            return None
+            if not has_publication:
+                return None
 
         return ArchiveSourcePackageSeries(
             self, distroseries, sourcepackagename
         )
+
+    def getArchiveSeries(self, distroseries):
+        """See `IArchive`."""
+        from lp.registry.model.archiveseries import ArchiveSeries
+
+        # Resolve distroseries if string
+        if isinstance(distroseries, str):
+            try:
+                distroseries = self.distribution.getSeries(distroseries)
+            except NoSuchDistroSeries:
+                return None
+        elif not IDistroSeries.providedBy(distroseries):
+            return None
+        elif distroseries.distribution != self.distribution:
+            # Distroseries must belong to the same distribution as the archive
+            return None
+
+        return ArchiveSeries(self, distroseries)
 
     def getSourcesForDeletion(self, name=None, status=None, distroseries=None):
         """See `IArchive`."""

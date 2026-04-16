@@ -88,6 +88,7 @@ from lp.bugs.interfaces.bugtasksearch import (
 from lp.bugs.interfaces.bugtracker import IHasExternalBugTracker
 from lp.bugs.interfaces.malone import IMaloneApplication
 from lp.layers import FeedsLayer
+from lp.registry.interfaces.archiveseries import IArchiveSeries
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.archivesourcepackageseries import (
     IArchiveSourcePackageSeries,
@@ -1161,6 +1162,7 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
         archivesourcepackageseries_context = (
             self._archiveSourcePackageSeriesContext()
         )
+        archiveseries_context = self._archiveSeriesContext()
         sourcepackage_context = self._sourcePackageContext()
         ociproject_context = self._ociprojectContext()
 
@@ -1175,7 +1177,12 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
             or archivesourcepackageseries_context
         ):
             return ["id", "summary", "importance", "status", "heat"]
-        elif distribution_context or distroseries_context or archive_context:
+        elif (
+            distribution_context
+            or distroseries_context
+            or archive_context
+            or archiveseries_context
+        ):
             return [
                 "id",
                 "summary",
@@ -1814,6 +1821,14 @@ class BugTaskSearchListingView(LaunchpadFormView, FeedsMixin, BugsInfoMixin):
         Return the IArchive if yes, otherwise return None.
         """
         return IArchive(self.context, None)
+
+    def _archiveSeriesContext(self):
+        """Is this page being viewed in an archive series?
+
+        Return the IArchiveSeries if yes, otherwise return None.
+        """
+
+        return IArchiveSeries(self.context, None)
 
     def _ociprojectContext(self):
         """Is this page being viewed in an OCI project context?

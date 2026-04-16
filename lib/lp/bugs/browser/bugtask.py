@@ -122,6 +122,7 @@ from lp.bugs.interfaces.bugwatch import BugWatchActivityStatus
 from lp.bugs.interfaces.cve import ICveSet
 from lp.bugs.vocabularies import BugTaskMilestoneVocabulary
 from lp.code.interfaces.branchcollection import IAllBranches
+from lp.registry.interfaces.archiveseries import IArchiveSeries
 from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.archivesourcepackageseries import (
     IArchiveSourcePackageSeries,
@@ -1954,6 +1955,18 @@ def bugtask_sort_key(bugtask):
             bugtask.target.archive.distribution.displayname,
             bugtask.target.archive.reference,
             None,
+            None,
+            Version(bugtask.target.distroseries.version),
+            None,
+            None,
+            None,
+        )
+    elif IArchiveSeries.providedBy(bugtask.target):
+        key = (
+            None,
+            bugtask.target.archive.distribution.displayname,
+            bugtask.target.archive.reference,
+            bugtask.target.distroseries.name,
             None,
             Version(bugtask.target.distroseries.version),
             None,

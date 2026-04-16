@@ -3555,6 +3555,29 @@ class TestBugTargetKeys(TestCaseWithFactory):
             ),
         )
 
+    def test_archiveseries(self):
+        archive = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        distroseries = self.factory.makeDistroSeries(
+            distribution=archive.distribution
+        )
+        from lp.registry.model.archiveseries import ArchiveSeries
+
+        archive_series = ArchiveSeries(archive, distroseries)
+        self.assertTargetKeyWorks(
+            archive_series,
+            dict(
+                product=None,
+                productseries=None,
+                distribution=None,
+                distroseries=distroseries,
+                sourcepackagename=None,
+                packagetype=None,
+                channel=None,
+                ociproject=None,
+                archive=archive,
+            ),
+        )
+
     def test_no_key_for_non_targets(self):
         self.assertRaises(
             AssertionError, bug_target_to_key, self.factory.makePerson()

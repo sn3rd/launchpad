@@ -5770,6 +5770,28 @@ class LaunchpadObjectFactory(ObjectFactory):
             )
         )
 
+    def makeArchiveSeries(
+        self,
+        archive=None,
+        distroseries=None,
+    ):
+        """Make an ArchiveSeries.
+
+        :param archive: The archive. If None, creates a new one.
+        :param distroseries: The distro series. If None, creates a new one.
+        :return: An ArchiveSeries combining the archive and distroseries.
+        """
+        if archive is None:
+            if distroseries is None:
+                distroseries = self.makeDistroSeries()
+            archive = self.makeArchive(distribution=distroseries.distribution)
+        elif distroseries is None:
+            distroseries = self.makeDistroSeries(
+                distribution=archive.distribution
+            )
+
+        return ProxyFactory(archive.getArchiveSeries(distroseries))
+
     def makeEmailMessage(
         self,
         body=None,
