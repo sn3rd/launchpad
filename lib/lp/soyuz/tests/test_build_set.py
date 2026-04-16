@@ -292,17 +292,29 @@ class TestBuildSet(TestCaseWithFactory):
             self.distribution, statuses=[BuildStatus.FULLYBUILT]
         )
         self.assertEqual(8, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
 
         counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
             self.distribution, statuses=[BuildStatus.FAILEDTOBUILD]
         )
         self.assertEqual(2, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
 
         # A status with no matching builds yields zero.
         counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
             self.distribution, statuses=[BuildStatus.NEEDSBUILD]
         )
         self.assertEqual(0, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
 
         # Multiple statuses combine (matches builds in any of them).
         counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
@@ -310,6 +322,10 @@ class TestBuildSet(TestCaseWithFactory):
             statuses=[BuildStatus.FULLYBUILT, BuildStatus.FAILEDTOBUILD],
         )
         self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
 
         # An empty statuses list matches no builds.
         counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(

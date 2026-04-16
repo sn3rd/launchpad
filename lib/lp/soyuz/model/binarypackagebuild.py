@@ -1308,7 +1308,7 @@ class BinaryPackageBuildSet(SpecificBuildFarmJobSourceMixin):
         clauses = self._getCountsForDistroClauses(context)
 
         if statuses is not None:
-            clauses.append(BinaryPackageBuild.status.is_in(list(statuses)))
+            clauses.append(BinaryPackageBuild.status.is_in(statuses))
 
         rows = (
             IStore(BinaryPackageBuild)
