@@ -41,9 +41,7 @@ def analyze_table() -> None:
             "-c",
             f"ANALYZE {table_name}",
         ],
-        capture_output=True,
         check=True,
-        text=True,
     )
     hookenv.action_set({"result": f"Analyzed the {table_name} table."})
 

@@ -79,9 +79,7 @@ def get_current_config() -> None:
     hookenv.log("Getting current cron-control configuration.")
     subprocess.run(
         ["/usr/bin/curl", "http://localhost/cron.ini"],
-        capture_output=True,
         check=True,
-        text=True,
     )
     hookenv.action_set({"result": "Current configuration displayed."})
 
