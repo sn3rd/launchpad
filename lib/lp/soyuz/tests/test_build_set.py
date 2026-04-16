@@ -282,26 +282,58 @@ class TestBuildSet(TestCaseWithFactory):
         )
         self.assertEqual(5, counts.get(PackagePublishingPocket.RELEASE, 0))
 
-    def test_getPocketCountsForDistro_date_filter(self):
-        # When date_finished_since is given, only builds finished on or
-        # after that timestamp are counted.
+    def test_getPocketCountsForDistro_statuses_filter(self):
+        # When statuses is given, only builds with a matching status are
+        # counted. setUpBuilds() creates 8 FULLYBUILT and 2 FAILEDTOBUILD
+        # builds, all in the RELEASE pocket.
         self.setUpBuilds()
-        # All builds were finished just now, so a future cutoff returns
-        # zero for every pocket.
-        future = datetime.now(timezone.utc) + timedelta(hours=1)
+
         counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
-            self.distribution, date_finished_since=future
+            self.distribution, statuses=[BuildStatus.FULLYBUILT]
+        )
+        self.assertEqual(8, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
+
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution, statuses=[BuildStatus.FAILEDTOBUILD]
+        )
+        self.assertEqual(2, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
+
+        # A status with no matching builds yields zero.
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution, statuses=[BuildStatus.NEEDSBUILD]
+        )
+        self.assertEqual(0, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
+
+        # Multiple statuses combine (matches builds in any of them).
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution,
+            statuses=[BuildStatus.FULLYBUILT, BuildStatus.FAILEDTOBUILD],
+        )
+        self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
+        self.assertEqual(
+            {pocket for pocket in PackagePublishingPocket.items},
+            set(counts.keys()),
+        )
+
+        # An empty statuses list matches no builds.
+        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
+            self.distribution, statuses=[]
         )
         self.assertEqual(
             {pocket: 0 for pocket in PackagePublishingPocket.items}, counts
         )
-
-        # A cutoff in the past includes everything.
-        past = datetime.now(timezone.utc) - timedelta(hours=1)
-        counts = getUtility(IBinaryPackageBuildSet).getPocketCountsForDistro(
-            self.distribution, date_finished_since=past
-        )
-        self.assertEqual(10, counts.get(PackagePublishingPocket.RELEASE, 0))
 
     def test_getPocketCountsForDistro_empty(self):
         # An empty distroseries returns zero for every pocket.

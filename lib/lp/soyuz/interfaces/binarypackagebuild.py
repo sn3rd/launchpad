@@ -504,13 +504,14 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
         """
 
     def getPocketCountsForDistro(
-        context, date_finished_since=None
+        context,
+        statuses=None,
     ) -> Dict[PackagePublishingPocket, int]:
         """Count builds grouped by pocket for a Distribution/DS/DAS.
 
-        Returns a dict mapping `PackagePublishingPocket` values to their
-        count. Pockets with no matching builds are included with a count
-        of 0.
+        Returns a dict mapping ``PackagePublishingPocket`` values to the
+        number of binary package builds.
+        Builds with no matching pockets are included with a count of 0.
 
         Gina-generated builds (``FULLYBUILT`` with no ``date_finished``)
         are excluded.  Gina is a legacy script that imports packages from
@@ -519,8 +520,8 @@ class IBinaryPackageBuildSet(ISpecificBuildFarmJobSource):
 
         :param context: An `IDistribution`, `IDistroSeries`, or
             `IDistroArchSeries`.
-        :param date_finished_since: Optional datetime; when given, only
-            builds with ``date_finished >= date_finished_since`` are
+        :param statuses: Optional iterable of `BuildStatus` values to filter
+            by. If ``None`` (the default), builds across all statuses are
             counted.
         :return: ``dict`` of ``{PackagePublishingPocket: int}`` containing
             an entry for every ``PackagePublishingPocket`` value.

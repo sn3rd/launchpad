@@ -2610,7 +2610,7 @@ class PublishingSet:
 
         if statuses is not None:
             clauses.append(
-                SourcePackagePublishingHistory.status.is_in(list(statuses))
+                SourcePackagePublishingHistory.status.is_in(statuses)
             )
 
         rows = (
