@@ -173,6 +173,10 @@
             name="+vanilla-distroseries-packages-list"
             template="../templates/vanilla-distroseries-packages-list.pt"
         />
+        <browser:page
+            name="+vanilla-distroseries-milestones"
+            template="../templates/vanilla-distroseries-milestones.pt"
+        />
     </browser:pages>
     <browser:page
         name="+packaging"

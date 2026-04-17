@@ -1,0 +1,32 @@
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
+
+  <section class="p-section"
+    tal:define="milestones python: list(context.milestones[:10])">
+    <hr class="p-rule" />
+    <h3>Milestones</h3>
+    <table tal:condition="milestones">
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Expected</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr tal:repeat="milestone milestones">
+          <td tal:content="milestone/name">1.0</td>
+          <td tal:content="milestone/dateexpected/fmt:approximatedate">2026-01-01</td>
+          <td tal:content="milestone/summary">Summary</td>
+        </tr>
+      </tbody>
+    </table>
+    <p tal:condition="not: milestones" class="u-text--muted">
+      No milestones have been set for this series.
+    </p>
+    <a tal:attributes="href string:${context/fmt:url}/+milestones">
+      View all milestones
+    </a>
+  </section>
+</tal:root>
