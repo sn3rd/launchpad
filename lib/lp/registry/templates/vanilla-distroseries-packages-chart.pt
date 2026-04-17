@@ -3,8 +3,8 @@
   <div id="packages-chart" tal:define="
       tab python:view.packages_chart_tabs.active;
       chart python:view.packages_summary_all_time_chart(tab);
-                          total python:chart[1];
-                          segments python:chart[0]">
+      total python:chart[1];
+      segments python:chart[0]">
     <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
     <div tal:attributes="id view/packages_chart_tabs/active_panel_id">
       <tal:has-data tal:condition="total">

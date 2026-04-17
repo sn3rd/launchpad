@@ -45,7 +45,7 @@ svg[chart='donut'] {
 
 .donut-chart-legends {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto 1fr auto auto;
   column-gap: var(--dimension-spacing-inline-s);
   row-gap: var(--dimension-spacing-block-xxs);
 
@@ -84,6 +84,7 @@ svg[chart='donut'] {
         display: flex;
         align-items: baseline;
         gap: var(--dimension-spacing-inline-s);
+
         overflow: hidden;
 
         &::after {
