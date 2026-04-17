@@ -63,7 +63,6 @@ class TestValidUntilConfigValidation(TestCaseWithFactory):
     def test_empty_config_is_valid(self):
         """Empty dict or None is valid."""
         self.assertTrue(validate_valid_until_config({}))
-        self.assertTrue(validate_valid_until_config(None))
 
     def test_valid_single_pocket_config(self):
         """Valid configuration with one pocket."""

@@ -1039,12 +1039,9 @@ class DistroSeries(
 
     @valid_until_config.setter
     def valid_until_config(self, value):
-        if not value:
-            self.publishing_options["valid_until_config"] = {}
-            return
+        assert isinstance(value, dict)
 
         normalized = {pocket.name: config for pocket, config in value.items()}
-
         self.publishing_options["valid_until_config"] = normalized
 
     def _customizeSearchParams(self, search_params):

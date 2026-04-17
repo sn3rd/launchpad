@@ -505,16 +505,23 @@ class TestDistroSeries(TestCaseWithFactory):
             naked_distroseries.publishing_options["valid_until_config"],
         )
 
-    def test_valid_until_config_set_to_None(self):
+    def test_valid_until_raises_assert(self):
+        """
+        Test that setting valid_until_config to non-dict values raises
+        AssertionError
+        """
         distroseries = self.factory.makeDistroSeries()
+        values = [None, [], (), 12]
+        for value in values:
+            with admin_logged_in():
+                self.assertRaises(
+                    AssertionError,
+                    setattr,
+                    distroseries,
+                    "valid_until_config",
+                    value,
+                )
         self.assertFalse(distroseries.valid_until_config)
-        with admin_logged_in():
-            distroseries.valid_until_config = None
-        naked_distroseries = removeSecurityProxy(distroseries)
-        self.assertEqual(
-            {},
-            naked_distroseries.publishing_options["valid_until_config"],
-        )
 
     def test_anonymous_users_cant_modify_valid_until_config(self):
         """Test that anonymous users cannot edit valid_until_config."""
