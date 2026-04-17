@@ -1,7 +1,8 @@
 @import "icons";
-@import "patterns/donut-chart";
-@import "patterns/description-list";
 @import "patterns/description-list-item";
+@import "patterns/description-list";
+@import "patterns/donut-chart";
+@import "patterns/meter";
 @import "tokens/color";
 @import "tokens/dimension";
 @import "tokens/transition";
@@ -17,6 +18,7 @@
   font-size: 14px;
 
   body {
+
     // overrides to vanilla framework
     .u-fixed-width,
     .p-navigation__row,
@@ -40,10 +42,13 @@
     .p-pricing-block--50-50 {
       max-width: 100%;
     }
+
     // remove the overflow which is used for text ellipsis, this prevents the tooltip from showing up
-    td,th {
+    td,
+    th {
       overflow: unset;
     }
+
     // small adjustment to the tooltip arrow position to remove the gap
     .p-tooltip__message::before {
       bottom: 99%;
