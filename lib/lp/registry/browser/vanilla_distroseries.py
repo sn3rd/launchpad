@@ -360,6 +360,13 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         return canonical_url(self.user, view_name="+related-packages")
 
     @property
+    def distroserieslanguages(self):
+        """Return the DistroSeriesLanguage rows for this series."""
+        result = self.context.distroserieslanguages
+        result.config(limit=10)
+        return result
+
+    @property
     def next_milestone(self):
         """Return the closest upcoming milestone by expected date."""
         today = datetime.today().date()

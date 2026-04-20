@@ -177,6 +177,10 @@
             name="+vanilla-distroseries-milestones"
             template="../templates/vanilla-distroseries-milestones.pt"
         />
+        <browser:page
+            name="+vanilla-distroseries-translation"
+            template="../templates/vanilla-distroseries-translation.pt"
+        />
     </browser:pages>
     <browser:page
         name="+packaging"

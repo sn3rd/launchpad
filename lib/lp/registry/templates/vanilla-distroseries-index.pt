@@ -48,13 +48,7 @@
           <div tal:replace="structure context/@@+vanilla-distroseries-milestones" />
         </div>
         <div class="grid-col-4">
-          <section class="p-section">
-            <hr class="p-rule" />
-            <h3>Translation coverage</h3>
-            <p class="u-text--muted">
-              Soon to be implemented.
-            </p>
-          </section>
+          <div tal:replace="structure context/@@+vanilla-distroseries-translation" />
         </div>        
       </div>
     </section>
