@@ -16,6 +16,7 @@ __all__ = [
 import http.client
 import typing
 from datetime import datetime
+from typing import Optional
 
 from lazr.lifecycle.snapshot import doNotSnapshot
 from lazr.restful.declarations import (
@@ -848,6 +849,21 @@ class IDistroSeriesPublic(
         :return: A dict in the same shape as ``IBugTaskSet.countBugs`` for
             ``("status", "importance")`` grouping, i.e.
             ``{(status, importance): count, ...}``.
+        """
+
+    def get_milestone(milestone_id: int) -> Optional[IMilestone]:
+        """Return the milestone for this distroseries with the given id.
+
+        :param milestone_id: The milestone's numeric id.
+        :return: The matching `IMilestone`, or None when no milestone with
+            that id belongs to this distroseries.
+        """
+
+    def get_upcoming_milestone() -> Optional[IMilestone]:
+        """Return the closest active upcoming milestone for this distroseries.
+
+        :return: The active `IMilestone` with the earliest ``dateexpected``
+            on or after today (ties broken by name), or None.
         """
 
     def getBinaryPackage(name):

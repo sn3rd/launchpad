@@ -3,7 +3,7 @@
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
 
   <section class="p-section"
-    tal:define="milestones python: list(context.milestones[:10])">
+    tal:define="milestones python: list(context.all_milestones[:10])">
     <hr class="p-rule" />
     <h3>Milestones</h3>
     <table tal:condition="milestones">
@@ -26,7 +26,7 @@
       No milestones have been set for this series.
     </p>
     <a tal:attributes="href string:${context/fmt:url}/+milestones">
-      View all milestones
+      All milestones
     </a>
   </section>
 </tal:root>

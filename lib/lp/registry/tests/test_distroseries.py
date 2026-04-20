@@ -8,6 +8,7 @@ __all__ = [
 ]
 
 import json
+from datetime import date, timedelta
 
 import transaction
 from testtools.matchers import Equals
@@ -646,6 +647,106 @@ class TestDistroSeries(TestCaseWithFactory):
         self.assertNotIn(
             (BugTaskStatus.NEW, BugTaskImportance.CRITICAL), counts
         )
+
+    def test_get_milestone_returns_matching_milestone(self):
+        distroseries = self.factory.makeDistroSeries()
+        milestone = self.factory.makeMilestone(distroseries=distroseries)
+        IStore(distroseries).flush()
+        self.assertEqual(milestone, distroseries.get_milestone(milestone.id))
+
+    def test_get_milestone_unknown_id_returns_None(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertIsNone(distroseries.get_milestone(-1))
+
+    def test_get_milestone_other_series_returns_None(self):
+        distroseries = self.factory.makeDistroSeries()
+        other_series = self.factory.makeDistroSeries()
+        other_milestone = self.factory.makeMilestone(distroseries=other_series)
+        IStore(distroseries).flush()
+        self.assertIsNone(distroseries.get_milestone(other_milestone.id))
+
+    def test_get_milestone_product_milestone_returns_None(self):
+        distroseries = self.factory.makeDistroSeries()
+        product_milestone = self.factory.makeMilestone(
+            product=self.factory.makeProduct()
+        )
+        IStore(distroseries).flush()
+        self.assertIsNone(distroseries.get_milestone(product_milestone.id))
+
+    def test_get_milestone_returns_inactive_milestone(self):
+        distroseries = self.factory.makeDistroSeries()
+        milestone = self.factory.makeMilestone(
+            distroseries=distroseries, active=False
+        )
+        IStore(distroseries).flush()
+        self.assertEqual(milestone, distroseries.get_milestone(milestone.id))
+
+    def test_get_upcoming_milestone_no_milestones(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertIsNone(distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_no_dateexpected(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeMilestone(distroseries=distroseries)
+        self.assertIsNone(distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_past_excluded(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeMilestone(
+            distroseries=distroseries,
+            dateexpected=date.today() - timedelta(days=1),
+        )
+        self.assertIsNone(distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_inactive_excluded(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeMilestone(
+            distroseries=distroseries,
+            dateexpected=date.today() + timedelta(days=1),
+            active=False,
+        )
+        self.assertIsNone(distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_other_series_excluded(self):
+        distroseries = self.factory.makeDistroSeries()
+        other_series = self.factory.makeDistroSeries()
+        self.factory.makeMilestone(
+            distroseries=other_series,
+            dateexpected=date.today() + timedelta(days=1),
+        )
+        self.assertIsNone(distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_returns_earliest(self):
+        distroseries = self.factory.makeDistroSeries()
+        later = self.factory.makeMilestone(
+            distroseries=distroseries,
+            dateexpected=date.today() + timedelta(days=10),
+        )
+        earlier = self.factory.makeMilestone(
+            distroseries=distroseries,
+            dateexpected=date.today() + timedelta(days=2),
+        )
+        self.assertEqual(earlier, distroseries.get_upcoming_milestone())
+        self.assertNotEqual(later, distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_ties_broken_by_name(self):
+        distroseries = self.factory.makeDistroSeries()
+        same_date = date.today() + timedelta(days=5)
+        milestone_b = self.factory.makeMilestone(
+            distroseries=distroseries, name="b", dateexpected=same_date
+        )
+        milestone_a = self.factory.makeMilestone(
+            distroseries=distroseries, name="a", dateexpected=same_date
+        )
+        self.assertEqual(milestone_a, distroseries.get_upcoming_milestone())
+        self.assertNotEqual(milestone_b, distroseries.get_upcoming_milestone())
+
+    def test_get_upcoming_milestone_includes_today(self):
+        distroseries = self.factory.makeDistroSeries()
+        milestone = self.factory.makeMilestone(
+            distroseries=distroseries, dateexpected=date.today()
+        )
+        self.assertEqual(milestone, distroseries.get_upcoming_milestone())
 
     def test_getArchiveSeries(self):
         # Test that we get the ArchiveSeries that belongs to the

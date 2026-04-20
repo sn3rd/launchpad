@@ -42,7 +42,15 @@
           </div>
         </div>
       </section>
-      
+      <section class="p-section">
+        <div class="grid-row">
+          <hr class="p-rule" />
+          <h3>Bugs</h3>
+          <div class="grid-col-2 grid-col-medium-8">
+            <div tal:replace="structure context/@@+vanilla-distroseries-bugs-summary" />
+          </div>
+        </div>
+      </section>
       <div class="grid-row">
         <div class="grid-col-4">
           <div tal:replace="structure context/@@+vanilla-distroseries-milestones" />
