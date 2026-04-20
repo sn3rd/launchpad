@@ -960,6 +960,48 @@ class TestInitializeDistroSeries(InitializationHelperTestCase):
         parent_srcs = test1.getSourcesIncluded(direct_inclusion=True)
         self.assertEqual(parent_srcs, child_srcs)
 
+    def test_copying_nested_packagesets(self):
+        # Nested packagesets (a packageset that includes another as a
+        # subset) must be correctly copied.
+        self.parent, self.parent_das = self.setupParent()
+        parent_pkgset = getUtility(IPackagesetSet).new(
+            "parentpkgset",
+            "parent packageset",
+            self.parent.owner,
+            distroseries=self.parent,
+        )
+        child_pkgset = getUtility(IPackagesetSet).new(
+            "childpkgset",
+            "child packageset",
+            self.parent.owner,
+            distroseries=self.parent,
+        )
+        parent_pkgset.addSources("firefox")
+        child_pkgset.addSources("udev")
+        parent_pkgset.add((child_pkgset,))
+        child_series = self._fullInitialize([self.parent])
+        # Both packagesets must have been copied
+        new_parent_pkgset = getUtility(IPackagesetSet).getByName(
+            child_series, "parentpkgset"
+        )
+        new_child_pkset = getUtility(IPackagesetSet).getByName(
+            child_series, "childpkgset"
+        )
+        # The nested inclusion relationship must be preserved
+        self.assertContentEqual(
+            new_parent_pkgset.setsIncluded(direct_inclusion=True),
+            [new_child_pkset],
+        )
+        # Sources must be copied
+        self.assertEqual(
+            parent_pkgset.getSourcesIncluded(direct_inclusion=True),
+            new_parent_pkgset.getSourcesIncluded(direct_inclusion=True),
+        )
+        self.assertEqual(
+            child_pkgset.getSourcesIncluded(direct_inclusion=True),
+            new_child_pkset.getSourcesIncluded(direct_inclusion=True),
+        )
+
     def test_copying_packagesets_multiple_parents(self):
         # When a packageset id is passed to the initialisation method,
         # only the packages in this packageset (and in the corresponding
