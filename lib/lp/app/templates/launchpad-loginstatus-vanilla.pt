@@ -1,22 +1,43 @@
 <tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
   xmlns:metal="http://xml.zope.org/namespaces/metal"
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
-  <li tal:condition="view/login_shown" class="p-navigation__item">
-    <a class="p-navigation__link" tal:attributes="href view/login_url">Log in / Register</a>
-  </li>
-  <li class="p-navigation__item--dropdown-toggle" tal:condition="view/logged_in">
+  <li class="p-navigation__item--dropdown-toggle">
     <a class="p-navigation__link" aria-controls="account-menu">
-      <span tal:replace="structure request/lp:person/fmt:icon" />
-      <span tal:content="request/lp:person/title" />
-      (<span tal:content="request/lp:person/name" />)
+      <tal:logged-in condition="view/logged_in">
+        <span tal:replace="structure request/lp:person/fmt:icon" />
+        <span tal:content="request/lp:person/title" />
+        (<span tal:content="request/lp:person/name" />)
+      </tal:logged-in>
+      <tal:anonymous condition="not:view/logged_in">
+        Account
+      </tal:anonymous>
     </a>
-    <ul class="p-navigation__dropdown--right" id="account-menu" aria-hidden="true">
+    <ul class="p-navigation__dropdown--right" id="account-menu" aria-hidden="true"
+      tal:define="theme_cookie request/cookies/lp_theme | string:light;
+      theme python:theme_cookie if theme_cookie in ('light', 'dark') else 'light'">
+      <li class="theme-switch p-navigation__dropdown-item">
+        <label class="p-switch u-no-margin--bottom u-no-padding--top">
+          <input type="checkbox" class="p-switch__input" role="switch" id="theme-toggle"
+          tal:attributes="checked python:'checked' if theme == 'dark' else None">
+          <span class="p-switch__slider"></span>
+          <span class="p-switch__label">
+            Dark mode
+            <small class="u-text--muted">(only affects current page)</small>
+          </span>
+        </label>
+      </li>
       <li>
+        <a class="p-navigation__dropdown-item" tal:attributes="href string:${context/fmt:url}/+classic">View in Launchpad Classic</a>
+      </li>
+      <li tal:condition="view/login_shown">
+        <a class="p-navigation__dropdown-item" tal:attributes="href view/login_url">Log in / Register</a>
+      </li>
+      <li tal:condition="view/logged_in">
         <a class="p-navigation__dropdown-item" tal:attributes="href request/lp:person/fmt:url">View Profile</a>
       </li>
-      <li>
+      <li tal:condition="view/logged_in">
         <a class="p-navigation__dropdown-item" href="/+logout">Log Out</a>
       </li>
-
-    </li>
-  </tal:root>
+    </ul>
+  </li>
+</tal:root>
