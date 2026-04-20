@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: var(--dimension-spacing-inline-xs);
+  flex-wrap: wrap;
 }
 
 .u-inline-image {

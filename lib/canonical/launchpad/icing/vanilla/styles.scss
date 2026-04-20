@@ -65,6 +65,10 @@
   pointer-events: none;
 }
 
+.p-tabs__list{ 
+  margin-block-end: var(--dimension-spacing-block-m);
+}
+
 .p-tabs__link[aria-current="page"] {
   position: relative;
 
@@ -76,5 +80,11 @@
     height: 0.1875rem;
     left: 0;
     right: 0;
+  }
+}
+
+@media (max-width: 621px) {
+  .grid-row {
+    row-gap: var(--dimension-spacing-block-l);
   }
 }

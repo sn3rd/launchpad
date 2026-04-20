@@ -1,44 +1,40 @@
-<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
-  xmlns:metal="http://xml.zope.org/namespaces/metal"
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal" xmlns:metal="http://xml.zope.org/namespaces/metal"
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
-  <div id="packages-chart" class="packages-chart">
+  <div id="packages-chart" tal:define="
+      tab python:view.packages_chart_tabs.active;
+      chart python:view.packages_summary_all_time_chart(tab);
+      total python:chart[1];
+      segments python:chart[0]">
     <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
-    <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
-         tal:condition="python:view.packages_chart_tabs.active == 'source'" style="display: flex; justify-content: center; align-items: center; padding-block: var(--dimension-spacing-inline-xxxl)">
-        <svg
-          width="180"
-          height="180"
-          chart="donut"
-          chart-radius="100"
-          chart-title="96,008"
-          chart-subtitle="Total"
-          chart-clockwise="true"
-          chart-min-ratio="0.02"
-          chart-thickness="20"
-          chart-gap="0.004"
-          chart-segments='[
-            {"value": 12, "fill": "#4D4D4D", "label": "12 Failures"},
-            {"value": 34, "fill": "#24598F", "label": "34 Builds"},
-            {"value": 0, "fill": "#8C8C8C", "label": "0 Unknown"},
-            {"value": 56, "fill": "#0E8420", "label": "56 Total"}
-          ]'
-        >
-        </svg>
-      <!-- <ul tal:repeat="item python:view.source_packages_summary_all_time.items()">
-        <li>
-          <span tal:content="python:item[0].title">Published</span>
-          <span tal:content="python:item[1]">1234</span>
-        </li>
-      </ul> -->
-    </div>
-    <div tal:attributes="id view/packages_chart_tabs/active_panel_id"
-         tal:condition="python:view.packages_chart_tabs.active == 'binary'">
-      <ul tal:repeat="item python:view.binary_packages_summary_all_time.items()">
-        <li>
-          <span tal:content="python:item[0].title">Building</span>
-          <span tal:content="python:item[1]">1234</span>
-        </li>
-      </ul>
+    <div tal:attributes="id view/packages_chart_tabs/active_panel_id">
+      <tal:has-data tal:condition="total">
+        <div class="chart-container">
+          <svg width="160" height="160" chart="donut" chart-radius="100" tal:attributes="chart-title total/fmt:intcomma;
+                              chart-segments python:modules['json'].dumps(segments)" chart-subtitle="Total"
+            chart-clockwise="false" chart-min-ratio="0.02" chart-thickness="20" chart-gap="0.004">
+          </svg>
+        </div>
+        <dl class="donut-chart-legends">
+          <div class="donut-chart-legends__item" tal:repeat="seg segments" class="chart-segment">
+            <tal:seg define="fill python:seg.get('fill');
+            name python:seg.get('name');
+            value python:seg.get('value');
+            pct python:seg.get('percentage')">
+              <dt>
+                <i class="donut-chart-legends__icon p-icon--circle" tal:attributes="style string:background-color: ${fill};"></i>
+                <span class="donut-chart-legends__name" tal:content="name">Release</span>
+              </dt>
+              <dd>
+                <span class="donut-chart-legends__value" tal:content="value/fmt:intcomma">0</span>
+                <span class="donut-chart-legends__percentage" tal:content="python:str(pct) + '%'">0%</span>
+              </dd>
+            </tal:seg>
+          </div>
+        </dl>
+      </tal:has-data>
+      <p tal:condition="not: total" class="u-text--muted">
+        No packages have been published for this series.
+      </p>
     </div>
   </div>
 </tal:root>
