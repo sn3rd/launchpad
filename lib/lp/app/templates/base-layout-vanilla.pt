@@ -10,6 +10,9 @@
     features request/features;
     feature_scopes request/features/scopes;
     CONTEXTS python:{'template':template, 'context': context, 'view':view};
+    theme_cookie request/cookies/lp_theme | string:light;
+    theme python:theme_cookie if theme_cookie in ('light', 'dark') else 'light';
+    body_class string:is-${theme};
   ">
   <metal:doctype define-slot="doctype">
     <tal:doctype tal:replace="structure string:&lt;!DOCTYPE html&gt;" />
@@ -64,7 +67,7 @@
       </tal:view>
     </head>
 
-    <body class="is-light">
+    <body tal:attributes="class body_class">
       <a href="#main-content" class="p-link--skip">Jump to main content</a>
 
       <metal:navigation use-macro="context/@@+base-layout-vanilla-macros/vf-navigation" />
@@ -125,25 +128,22 @@
     </tal:template>
 
     <script>
-      const darkPrefersScheme = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      );
-
       /**
-       * Toggles the theme of the body element
-       * @param {boolean} isDark - Whether the theme is dark
-       * @returns {void}
+       * Sets theme on body and persists in cookie (JS-accessible).
+       * @param {"light"|"dark"} theme
        */
-      const toggleTheme = (isDark) => {
+      function setTheme(theme) {
         document.body.classList.remove("is-light", "is-dark");
-        document.body.classList.add(isDark ? "is-dark" : "is-light");
-      };
+        document.body.classList.add("is-" + theme);
+        const oneYear = 60 * 60 * 24 * 365;
+        document.cookie = `lp_theme=${theme}; path=/; max-age=${oneYear}; SameSite=Lax`;
+      }
 
-      darkPrefersScheme.addEventListener("change", (event) => {
-        toggleTheme(event.matches);
+      document.addEventListener("change", function (event) {
+        const toggle = event.target.closest("#theme-toggle");
+        if (!toggle) return;
+        setTheme(toggle.checked ? "dark" : "light");
       });
-
-      toggleTheme(darkPrefersScheme.matches);
     </script>
   </html>
 </metal:page>
