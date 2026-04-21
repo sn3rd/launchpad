@@ -6,6 +6,7 @@
     <hr class="p-rule" />
     <h3>Translation coverage</h3>
     <table tal:condition="distroseries_languages">
+      <caption class="u-off-screen">Translation coverage by language</caption>
       <colgroup>
         <col style="width: 35%;" />
         <col style="width: 30%;" />
@@ -14,10 +15,10 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Language</th>
-          <th>Status</th>
-          <th>Contributors</th>
-          <th aria-label="Actions"></th>
+          <th scope="col">Language</th>
+          <th scope="col">Status</th>
+          <th scope="col">Contributors</th>
+          <th scope="col" aria-label="Actions"></th>
         </tr>
       </thead>
       <tbody>
@@ -27,7 +28,7 @@
             <meter min="0" max="100"
               tal:attributes="value python: '%.1f' % distroseries_language.translatedPercentage();
                               title python: '%.1f%%' % distroseries_language.translatedPercentage()"
-              style="--meter-width: 100%; vertical-align: middle;">
+              style="--meter-width: 100%; vertical-align: middle; min-width: 100px;">
             </meter>
           </td>
           <td tal:content="distroseries_language/contributor_count">0</td>

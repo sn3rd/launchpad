@@ -2435,6 +2435,7 @@ class PublishingSet:
                 SourceUploadBuildInfo(
                     arch_tag=das.architecturetag,
                     build_status=build.status,
+                    build_id=build.id,
                 )
             )
 

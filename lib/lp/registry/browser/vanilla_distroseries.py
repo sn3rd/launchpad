@@ -11,6 +11,7 @@ __all__ = [
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Literal, Tuple
+from urllib.parse import quote
 
 from markupsafe import Markup, escape
 from zope.component import getUtility
@@ -204,7 +205,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             offset=offset,
         )
 
-    def _build_bugs_list_markup(self, bugtasks, empty_message):
+    def _build_bugs_list_markup(self, bugtasks, caption, empty_message):
         """Return an HTML table of bug tasks, or an empty-state ``<p>``."""
         bugtasks = list(bugtasks)
         if not bugtasks:
@@ -239,21 +240,23 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         )
         headers = ["Bug", "Title", "Importance", "Status"]
         header_row = Markup("").join(
-            Markup("<th>{}</th>").format(h) for h in headers
+            Markup('<th scope="col">{}</th>').format(h) for h in headers
         )
         return Markup(
             "<table>"
+            '<caption class="u-off-screen">{}</caption>'
             "<colgroup>{}</colgroup>"
             "<thead><tr>{}</tr></thead>"
             "<tbody>{}</tbody>"
             "</table>"
-        ).format(colgroup, header_row, Markup("").join(rows))
+        ).format(escape(caption), colgroup, header_row, Markup("").join(rows))
 
     @property
     def bugs_subscriptions_markup(self):
         """Return the user's subscribed bugs table HTML."""
         return self._build_bugs_list_markup(
             self.list_bugs_subscriptions(),
+            caption="Subscribed bugs in this series",
             empty_message="You have no bug subscriptions in this series.",
         )
 
@@ -262,6 +265,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         """Return the critical bugs table HTML."""
         return self._build_bugs_list_markup(
             self.list_bugs_important(),
+            caption="Critical bugs in this series",
             empty_message="No critical bugs in this series.",
         )
 
@@ -270,6 +274,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         """Return the new bugs table HTML."""
         return self._build_bugs_list_markup(
             self.list_bugs_new(),
+            caption="New bugs in this series",
             empty_message="No new bugs in this series.",
         )
 
@@ -401,7 +406,10 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         )
 
     def _build_packages_list_data(
-        self, creator=None, empty_message="No recent package uploads found."
+        self,
+        creator=None,
+        caption="Recent source package uploads",
+        empty_message="No recent package uploads found.",
     ):
         """Return an HTML table of recent source uploads, or an empty-state
         ``<p>`` element."""
@@ -413,9 +421,19 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 empty_message
             )
 
+        series_url = canonical_url(self.context)
+        distro_url = canonical_url(self.context.distribution)
         rows = []
         tooltip_idx = 0
         for upload in uploads:
+            name_url = "{}/+source/{}".format(
+                series_url, quote(upload["name"], safe="")
+            )
+            version_url = "{}/+source/{}/{}".format(
+                distro_url,
+                quote(upload["name"], safe=""),
+                quote(upload["version"], safe=""),
+            )
             build_chips = []
             for build in upload["builds"]:
                 tooltip_id = "build-tooltip-%d" % tooltip_idx
@@ -424,15 +442,20 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                     build["build_status"], HELP_ICON
                 )
                 status_label = build["build_status"].title
+                build_url = "{}/+build/{}".format(
+                    version_url, build["build_id"]
+                )
                 build_chips.append(
                     Markup(
-                        '<span class="u-flex--row p-tooltip--btm-center"'
+                        '<a class="p-link--soft u-flex--row'
+                        ' p-tooltip--btm-center" href="{}"'
                         ' aria-describedby="{}">'
                         ' <i class="{}"></i>{}'
                         '<span class="p-tooltip__message" role="tooltip"'
                         ' id="{}">{}</span>'
-                        "</span>"
+                        "</a>"
                     ).format(
+                        build_url,
                         tooltip_id,
                         icon_class,
                         escape(build["arch_tag"]),
@@ -440,16 +463,21 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                         escape(status_label),
                     )
                 )
+            builds_markup = Markup(
+                "<span"
+                ' class="u-flex--row"'
+                ' style="gap: var(--dimension-spacing-inline-s);"'
+                ">{}</span>"
+            ).format(Markup(" ").join(build_chips))
             cells = [
-                escape(upload["name"]),
-                escape(upload["version"]),
+                Markup('<a class="p-link--soft" href="{}">{}</a>').format(
+                    name_url, escape(upload["name"])
+                ),
+                Markup('<a class="p-link--soft" href="{}">{}</a>').format(
+                    version_url, escape(upload["version"])
+                ),
                 escape(upload["pocket_title"]),
-                Markup(
-                    "<span"
-                    ' class="u-flex--row"'
-                    ' style="gap: var(--dimension-spacing-inline-s);"'
-                    ">{}</span>"
-                ).format(Markup(" ").join(build_chips)),
+                builds_markup,
             ]
             rows.append(
                 Markup("<tr>{}</tr>").format(
@@ -465,20 +493,23 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         )
         headers = ["Source package", "Version", "Pocket", "Builds"]
         header_row = Markup("").join(
-            Markup("<th>{}</th>").format(h) for h in headers
+            Markup('<th scope="col">{}</th>').format(h) for h in headers
         )
         return Markup(
             "<table>"
+            '<caption class="u-off-screen">{}</caption>'
             "<colgroup>{}</colgroup>"
             "<thead><tr>{}</tr></thead>"
             "<tbody>{}</tbody>"
             "</table>"
-        ).format(colgroup, header_row, Markup("").join(rows))
+        ).format(escape(caption), colgroup, header_row, Markup("").join(rows))
 
     @property
     def packages_list_data(self):
         """Return recent source uploads table HTML for the template."""
-        return self._build_packages_list_data()
+        return self._build_packages_list_data(
+            caption="Latest source package uploads to this series",
+        )
 
     @property
     def my_uploads_data(self):
@@ -487,6 +518,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             return Markup("")
         return self._build_packages_list_data(
             creator=self.user,
+            caption="Your recent source package uploads to this series",
             empty_message="You have no recent uploads to this series.",
         )
 

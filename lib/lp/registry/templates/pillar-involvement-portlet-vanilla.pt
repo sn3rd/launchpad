@@ -5,7 +5,7 @@
     in the original template but are specific to edit pages which aren't used
     by this template yet.
   </tal:comment>
-  <h2 class="p-heading--5">Get Involved</h2>
+  <h2 class="p-heading--5" style="margin-bottom: var(--dimension-spacing-block-xs);">Get Involved</h2>
 
   <ul class="p-list u-no-margin">
     <li class="p-list__item" tal:repeat="link view/enabled_links">

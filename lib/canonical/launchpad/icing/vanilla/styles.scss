@@ -88,4 +88,12 @@
   .grid-row {
     row-gap: var(--dimension-spacing-block-l);
   }
+
+  // Make wide tables horizontally scrollable on narrow viewports.
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
