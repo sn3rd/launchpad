@@ -1,11 +1,9 @@
 meter {
-  --meter-background: var(--color-icon-status-shade-2);
-  --meter-fill: var(--color-information);
   --meter-border-radius: var(--dimension-radius-small);
   --meter-width: 162px;
   --meter-height: var(--dimension-size-xxs);
 
-  background: var(--meter-background);
+  background: var(--color-meter-background);
   border: none;
   border-radius: var(--meter-border-radius);
   width: var(--meter-width);
@@ -14,7 +12,7 @@ meter {
   &::-webkit-meter-bar {
     width: var(--meter-width);
     height: var(--meter-height);
-    background: var(--meter-background);
+    background: var(--color-meter-background);
     border: none;
     border-radius: var(--meter-border-radius);
   }
@@ -22,12 +20,12 @@ meter {
   &::-webkit-meter-optimum-value,
   &::-webkit-meter-suboptimum-value,
   &::-webkit-meter-even-less-good-value {
-    background: var(--meter-fill);
+    background: var(--color-meter-fill);
     border-radius: var(--meter-border-radius);
   }
 
   &::-moz-meter-bar {
-    background: var(--meter-fill);
+    background: var(--color-meter-fill);
     border-radius: var(--meter-border-radius);
   }
 }

@@ -1,5 +1,6 @@
 @import "icons";
 @import "patterns/description-list-item";
+@import "patterns/description-list-layout";
 @import "patterns/description-list";
 @import "patterns/donut-chart";
 @import "patterns/meter";
@@ -65,7 +66,7 @@
   pointer-events: none;
 }
 
-.p-tabs__list{ 
+.p-tabs__list {
   margin-block-end: var(--dimension-spacing-block-m);
 }
 

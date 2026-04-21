@@ -407,28 +407,36 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     @property
     def distroserieslanguages(self):
         """Return the DistroSeriesLanguage rows for this series."""
-        result = self.context.distroserieslanguages
-        result.config(limit=10)
-        return result
+        return list(self.context.distroserieslanguages.config(limit=10))
+
+    @property
+    def bugs_milestones(self):
+        """Milestones offered in the bugs-summary milestone selector."""
+        return list(self.context.all_milestones.config(limit=100))
+
+    @property
+    def selected_bugs_milestone(self):
+        """
+        Return the milestone selected via the ``bugs-milestone`` query param.
+
+        Returns None when the param is missing, non-numeric, or does not
+        match a milestone of this distroseries.
+        """
+        raw = self.request.form.get("bugs-milestone")
+        if not raw:
+            return None
+        try:
+            milestone_id = int(raw)
+        except (TypeError, ValueError):
+            return None
+
+        return self.context.get_milestone(milestone_id)
 
     @property
     def next_milestone(self):
-        """Return the closest upcoming milestone by expected date."""
-        today = datetime.today().date()
-        # `self.context.milestones` already returns active milestones for this
-        # distroseries; we further restrict to those with a date on or after
-        # today and pick the one with the earliest expected date.
-        upcoming = [
-            milestone
-            for milestone in self.context.milestones
-            if milestone.dateexpected is not None
-            and milestone.dateexpected >= today
-        ]
+        """
+        Return the closest upcoming milestone by expected date.
 
-        if not upcoming:
-            return None
-
-        return min(
-            upcoming,
-            key=lambda milestone: (milestone.dateexpected, milestone.name),
-        )
+        Returns None if no upcoming milestone is found.
+        """
+        return self.context.get_upcoming_milestone()

@@ -15,7 +15,7 @@
           </svg>
         </div>
         <dl class="donut-chart-legends">
-          <div class="donut-chart-legends__item" tal:repeat="seg segments" class="chart-segment">
+          <div class="donut-chart-legends__item" tal:repeat="seg segments">
             <tal:seg define="fill python:seg.get('fill');
             name python:seg.get('name');
             value python:seg.get('value');

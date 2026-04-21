@@ -2,10 +2,10 @@
   xmlns:metal="http://xml.zope.org/namespaces/metal"
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
   <section id="translation-coverage" class="p-section"
-    tal:define="distroseries_language python: view.distroserieslanguages">
+    tal:define="distroseries_languages python: view.distroserieslanguages">
     <hr class="p-rule" />
     <h3>Translation coverage</h3>
-    <table tal:condition="distroseries_language">
+    <table tal:condition="distroseries_languages">
       <colgroup>
         <col style="width: 35%;" />
         <col style="width: 30%;" />
@@ -21,28 +21,28 @@
         </tr>
       </thead>
       <tbody>
-        <tr tal:repeat="drlang distroseries_language">
-          <td tal:content="drlang/language/englishname">English</td>
+        <tr tal:repeat="distroseries_language distroseries_languages">
+          <td tal:content="distroseries_language/language/englishname">English</td>
           <td>
             <meter min="0" max="100"
-              tal:attributes="value python: '%.1f' % drlang.translatedPercentage();
-                              title python: '%.1f%%' % drlang.translatedPercentage()"
-              style="--meter-fill: var(--color-icon-default); --meter-width: 100%; vertical-align: middle;">
+              tal:attributes="value python: '%.1f' % distroseries_language.translatedPercentage();
+                              title python: '%.1f%%' % distroseries_language.translatedPercentage()"
+              style="--meter-width: 100%; vertical-align: middle;">
             </meter>
           </td>
-          <td tal:content="drlang/contributor_count">0</td>
+          <td tal:content="distroseries_language/contributor_count">0</td>
           <td>
-            <a tal:attributes="href string:${drlang/fmt:url}">Contribute</a>
+            <a tal:attributes="href string:${distroseries_language/fmt:url}">Contribute</a>
           </td>
         </tr>
       </tbody>
     </table>
-    <p tal:condition="not: distroseries_language" class="u-text--muted">
+    <p tal:condition="not: distroseries_languages" class="u-text--muted">
       No translations have been submitted for this series.
     </p>
-    <a tal:condition="distroseries_language"
+    <a tal:condition="distroseries_languages"
        tal:attributes="href string:${context/fmt:url}/+translations">
-      View all translations
+      All languages
     </a>
   </section>
 </tal:root>

@@ -5,6 +5,7 @@
 
 from datetime import datetime, timezone
 
+import transaction
 from zope.security.proxy import removeSecurityProxy
 
 from lp.bugs.interfaces.bugtask import BugTaskImportance, BugTaskStatus
@@ -961,3 +962,73 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         self.assertEqual(summary_b["critical_bugs_count"], 0)
         self.assertEqual(summary_b["high_bugs_count"], 1)
         self.assertEqual(summary_b["open_bugs_count"], 1)
+
+
+class TestSelectedBugsMilestone(TestCaseWithFactory):
+    """Tests for the ``selected_bugs_milestone`` view property."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.person = self.factory.makePerson()
+        self.distroseries = self.factory.makeDistroSeries()
+
+    def _getView(self, form=None):
+        return create_initialized_view(
+            self.distroseries,
+            "+vanilla-distroseries-bugs-summary",
+            principal=self.person,
+            form=form,
+        )
+
+    def test_returns_none_when_param_missing(self):
+        view = self._getView()
+        self.assertIsNone(view.selected_bugs_milestone)
+
+    def test_returns_none_when_param_empty(self):
+        view = self._getView(form={"bugs-milestone": ""})
+        self.assertIsNone(view.selected_bugs_milestone)
+
+    def test_returns_none_when_param_non_numeric(self):
+        view = self._getView(form={"bugs-milestone": "not-a-number"})
+        self.assertIsNone(view.selected_bugs_milestone)
+
+
+class TestBugsMilestones(TestCaseWithFactory):
+    """Tests for the ``bugs_milestones`` view property."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.person = self.factory.makePerson()
+        self.distroseries = self.factory.makeDistroSeries()
+
+    def _getView(self):
+        return create_initialized_view(
+            self.distroseries,
+            "+vanilla-distroseries-bugs-summary",
+            principal=self.person,
+        )
+
+    def test_empty_when_no_milestones(self):
+        self.assertEqual([], self._getView().bugs_milestones)
+
+    def test_returns_series_milestones(self):
+        milestone = self.factory.makeMilestone(distroseries=self.distroseries)
+        transaction.commit()
+        self.assertEqual([milestone], self._getView().bugs_milestones)
+
+    def test_excludes_other_series_milestones(self):
+        other_series = self.factory.makeDistroSeries()
+        self.factory.makeMilestone(distroseries=other_series)
+        mine = self.factory.makeMilestone(distroseries=self.distroseries)
+        transaction.commit()
+        self.assertEqual([mine], self._getView().bugs_milestones)
+
+    def test_limited_to_100(self):
+        for _ in range(101):
+            self.factory.makeMilestone(distroseries=self.distroseries)
+        transaction.commit()
+        self.assertEqual(100, len(self._getView().bugs_milestones))

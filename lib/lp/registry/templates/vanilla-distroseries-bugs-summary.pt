@@ -1,0 +1,30 @@
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal" xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
+  <tal:block tal:define="selected_bugs_milestone view/selected_bugs_milestone;
+    selected_bugs_milestone_id selected_bugs_milestone/id | nothing">
+    <form class="p-form p-form--inline" method="get">
+      <div class="p-form__group">
+        <label for="bugs-milestone" class="p-form__label u-text--muted">Milestone:</label>
+        <div class="form__control">
+          <select id="bugs-milestone" name="bugs-milestone" class="p-form__control"
+            swap-target="#bugs-summary" swap-style="innerHTML"
+            swap-param-key="bugs-milestone"
+            tal:attributes="swap-url string:${context/fmt:url}/+vanilla-distroseries-bugs-counts">
+            <option value="all" swap-default="swap-default"
+              tal:attributes="selected python: 'selected' if not selected_bugs_milestone_id else None">All</option>
+            <option tal:repeat="milestone view/bugs_milestones" tal:attributes="value milestone/id;
+                            swap-param-value milestone/id;
+                            selected python: 'selected' if milestone.id == selected_bugs_milestone_id else None"
+              tal:content="milestone/name">1.0</option>
+          </select>
+        </div>
+        <noscript>
+          <button type="submit" class="p-button--base is-inline">Apply</button>
+        </noscript>
+      </div>
+    </form>
+    <div id="bugs-summary">
+      <div tal:replace="structure context/@@+vanilla-distroseries-bugs-counts" />
+    </div>
+  </tal:block>
+</tal:root>

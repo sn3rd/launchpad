@@ -11,10 +11,10 @@ __all__ = [
 ]
 
 import collections
-from datetime import timezone
+from datetime import datetime, timezone
 from io import BytesIO
 from operator import itemgetter
-from typing import List
+from typing import List, Optional
 
 import apt_pkg
 from lazr.delegates import delegate_to
@@ -823,6 +823,33 @@ class DistroSeries(
     def _getMilestoneCondition(self):
         """See `HasMilestonesMixin`."""
         return Milestone.distroseries == self
+
+    def get_milestone(self, milestone_id: int) -> Optional[Milestone]:
+        """See `IDistroSeries`."""
+        return (
+            IStore(Milestone)
+            .find(
+                Milestone,
+                Milestone.distroseries == self,
+                Milestone.id == milestone_id,
+            )
+            .one()
+        )
+
+    def get_upcoming_milestone(self) -> Optional[Milestone]:
+        """See `IDistroSeries`."""
+        today = datetime.today().date()
+        return (
+            Store.of(self)
+            .find(
+                Milestone,
+                Milestone.distroseries == self,
+                Milestone.active == True,
+                Milestone.dateexpected >= today,
+            )
+            .order_by(Milestone.dateexpected, Milestone.name)
+            .first()
+        )
 
     def updatePackageCount(self):
         """See `IDistroSeries`."""

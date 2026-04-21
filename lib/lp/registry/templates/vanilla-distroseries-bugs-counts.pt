@@ -1,0 +1,28 @@
+<tal:root xmlns:tal="http://xml.zope.org/namespaces/tal" xmlns:metal="http://xml.zope.org/namespaces/metal"
+  xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="">
+  <tal:block tal:define="selected_bugs_milestone view/selected_bugs_milestone;
+                         bugs_summary python: view.get_bugs_summary(milestone=selected_bugs_milestone)">
+    <div class="description-list-layout">
+      <dl>
+        <dt>Critical</dt>
+        <dd class="u-flex--row">
+          <span tal:content="bugs_summary/critical_bugs_count/fmt:intcomma">0</span>
+          <span tal:condition="bugs_summary/critical_bugs_count" class="p-icon--warning-grey is-negative"></span>
+        </dd>
+        <dt>High importance</dt>
+        <dd class="u-flex--row">
+          <span tal:content="bugs_summary/high_bugs_count/fmt:intcomma">0</span>
+          <span tal:condition="bugs_summary/high_bugs_count" class="p-icon--warning-grey is-caution"></span>
+        </dd>
+        <dt>In progress</dt>
+        <dd tal:content="bugs_summary/inprogress_bugs_count/fmt:intcomma">
+          123
+        </dd>
+        <dt>Open</dt>
+        <dd tal:content="bugs_summary/open_bugs_count/fmt:intcomma">
+          2222
+        </dd>
+      </dl>
+    </div>
+  </tal:block>
+</tal:root>
