@@ -964,6 +964,177 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
         self.assertEqual(summary_b["open_bugs_count"], 1)
 
 
+class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
+    """Tests for the bugs list markup and URL view properties."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def _getView(self, distroseries, principal=None, form=None):
+        return create_initialized_view(
+            distroseries, "+vanilla", principal=principal, form=form
+        )
+
+    # -- bugs_*_markup --
+
+    def test_bugs_subscriptions_markup_empty(self):
+        """A logged-in user with no subscriptions sees the empty-state."""
+        distroseries = self.factory.makeDistroSeries()
+        person = self.factory.makePerson()
+        view = self._getView(distroseries, principal=person)
+        html = view.bugs_subscriptions_markup
+        self.assertIn("You have no bug subscriptions in this series", html)
+        self.assertNotIn("<table>", html)
+
+    def test_bugs_subscriptions_markup_renders_table(self):
+        """Subscribed bugs render in a table with bug id/title columns."""
+        distroseries = self.factory.makeDistroSeries()
+        person = self.factory.makePerson()
+        bugtask = self.factory.makeBugTask(target=distroseries)
+        with person_logged_in(person):
+            bugtask.bug.subscribe(person, subscribed_by=person)
+        view = self._getView(distroseries, principal=person)
+        html = view.bugs_subscriptions_markup
+        self.assertIn("<table>", html)
+        self.assertIn(">%d<" % bugtask.bug.id, html)
+        self.assertIn(bugtask.bug.title, html)
+
+    def test_bugs_important_markup_empty(self):
+        """Empty state appears when there are no critical bugs."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries)
+        html = view.bugs_important_markup
+        self.assertIn("No critical bugs in this series", html)
+        self.assertNotIn("<table>", html)
+
+    def test_bugs_important_markup_renders_table(self):
+        """Critical bugs render as a table."""
+        distroseries = self.factory.makeDistroSeries()
+        bugtask = self.factory.makeBugTask(target=distroseries)
+        with person_logged_in(bugtask.target.owner):
+            bugtask.transitionToImportance(
+                BugTaskImportance.CRITICAL, bugtask.target.owner
+            )
+        view = self._getView(distroseries)
+        html = view.bugs_important_markup
+        self.assertIn("<table>", html)
+        self.assertIn(">%d<" % bugtask.bug.id, html)
+
+    def test_bugs_new_markup_empty(self):
+        """Empty state appears when there are no new bugs."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries)
+        html = view.bugs_new_markup
+        self.assertIn("No new bugs in this series", html)
+        self.assertNotIn("<table>", html)
+
+    def test_bugs_new_markup_renders_table(self):
+        """New bugs render as a table."""
+        distroseries = self.factory.makeDistroSeries()
+        bugtask = self.factory.makeBugTask(
+            target=distroseries, status=BugTaskStatus.NEW
+        )
+        view = self._getView(distroseries)
+        html = view.bugs_new_markup
+        self.assertIn("<table>", html)
+        self.assertIn(">%d<" % bugtask.bug.id, html)
+
+    # -- tab ordering --
+
+    def test_bugs_list_tabs_anonymous_orders_subscriptions_last(self):
+        """Anonymous users see important/new before subscriptions."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries, principal=None)
+        tab_ids = [tab[0] for tab in view.bugs_list_tabs._tabs]
+        self.assertEqual(["important", "new", "subscriptions"], tab_ids)
+        self.assertEqual("important", view.bugs_list_tabs._default)
+
+    def test_bugs_list_tabs_logged_in_orders_subscriptions_first(self):
+        """Logged-in users see subscriptions first."""
+        distroseries = self.factory.makeDistroSeries()
+        person = self.factory.makePerson()
+        with person_logged_in(person):
+            view = self._getView(distroseries, principal=person)
+            tab_ids = [tab[0] for tab in view.bugs_list_tabs._tabs]
+            default = view.bugs_list_tabs._default
+        self.assertEqual(["subscriptions", "important", "new"], tab_ids)
+        self.assertEqual("subscriptions", default)
+
+    def test_packages_list_tabs_anonymous_orders_my_uploads_last(self):
+        """Anonymous users see latest uploads before my uploads."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries, principal=None)
+        tab_ids = [tab[0] for tab in view.packages_list_tabs._tabs]
+        self.assertEqual(["latest", "my-uploads"], tab_ids)
+        self.assertEqual("latest", view.packages_list_tabs._default)
+
+    def test_packages_list_tabs_logged_in_orders_my_uploads_first(self):
+        """Logged-in users see my uploads first."""
+        distroseries = self.factory.makeDistroSeries()
+        person = self.factory.makePerson()
+        with person_logged_in(person):
+            view = self._getView(distroseries, principal=person)
+            tab_ids = [tab[0] for tab in view.packages_list_tabs._tabs]
+            default = view.packages_list_tabs._default
+        self.assertEqual(["my-uploads", "latest"], tab_ids)
+        self.assertEqual("my-uploads", default)
+
+    # -- bugs_*_url --
+
+    def test_bugs_important_url_filters_by_critical(self):
+        """Important URL points at +bugs on the bugs rootsite, filtered."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries)
+        url = view.bugs_important_url
+        self.assertIn("://bugs.", url)
+        self.assertIn("/+bugs?", url)
+        self.assertIn("field.importance=Critical", url)
+
+    def test_bugs_new_url_orders_by_datecreated(self):
+        """New URL orders +bugs by newest first on the bugs rootsite."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries)
+        url = view.bugs_new_url
+        self.assertIn("://bugs.", url)
+        self.assertIn("/+bugs?", url)
+        self.assertIn("orderby=-datecreated", url)
+
+    def test_bugs_subscriptions_url_anonymous_returns_none(self):
+        """Without a logged-in user, the subscriptions URL is None."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries, principal=None)
+        self.assertIsNone(view.bugs_subscriptions_url)
+
+    def test_bugs_subscriptions_url_includes_subscriber(self):
+        """Subscriptions URL encodes the logged-in user as subscriber."""
+        distroseries = self.factory.makeDistroSeries()
+        person = self.factory.makePerson()
+        with person_logged_in(person):
+            view = self._getView(distroseries, principal=person)
+            url = view.bugs_subscriptions_url
+        self.assertIn("://bugs.", url)
+        self.assertIn("/+bugs?", url)
+        self.assertIn("field.subscriber=%s" % person.name, url)
+
+    def test_selected_bugs_milestone_url_none_when_no_milestone(self):
+        """Without a selected milestone, the URL is None."""
+        distroseries = self.factory.makeDistroSeries()
+        view = self._getView(distroseries)
+        self.assertIsNone(view.selected_bugs_milestone_url)
+
+    def test_selected_bugs_milestone_url_includes_milestone(self):
+        """Selected milestone URL encodes milestone id on the bugs rootsite."""
+        distroseries = self.factory.makeDistroSeries()
+        milestone = self.factory.makeMilestone(distroseries=distroseries)
+        transaction.commit()
+        view = self._getView(
+            distroseries, form={"bugs-milestone": str(milestone.id)}
+        )
+        url = view.selected_bugs_milestone_url
+        self.assertIn("://bugs.", url)
+        self.assertIn("/+bugs?", url)
+        self.assertIn("field.milestone%%3Alist=%d" % milestone.id, url)
+
+
 class TestSelectedBugsMilestone(TestCaseWithFactory):
     """Tests for the ``selected_bugs_milestone`` view property."""
 

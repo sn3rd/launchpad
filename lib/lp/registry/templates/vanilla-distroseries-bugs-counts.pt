@@ -24,5 +24,10 @@
         </dd>
       </dl>
     </div>
+    <p tal:condition="selected_bugs_milestone">
+      <a tal:attributes="href view/selected_bugs_milestone_url">
+        View bugs for <tal:name replace="selected_bugs_milestone/name" />
+      </a>
+    </p>
   </tal:block>
 </tal:root>

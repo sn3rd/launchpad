@@ -16,6 +16,7 @@ from markupsafe import Markup, escape
 from zope.component import getUtility
 
 from lp.app.browser.vanilla import Tabs
+from lp.bugs.browser.buglisting import get_buglisting_search_filter_url
 from lp.bugs.interfaces.bugtask import (
     BugTaskImportance,
     BugTaskStatus,
@@ -116,14 +117,19 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             swap_target="#packages-chart",
             swap_style="outerHTML",
         )
+        latest_uploads_tab = ("latest", "Latest uploads")
+        my_uploads_tab = ("my-uploads", "My uploads")
+        if self.user is not None:
+            packages_list_tabs = [my_uploads_tab, latest_uploads_tab]
+            packages_list_default = "my-uploads"
+        else:
+            packages_list_tabs = [latest_uploads_tab, my_uploads_tab]
+            packages_list_default = "latest"
         self.packages_list_tabs = Tabs(
             param="packages-list",
             aria_label="Package uploads",
-            tabs=[
-                ("latest", "Latest uploads"),
-                ("my-uploads", "My uploads"),
-            ],
-            default="latest",
+            tabs=packages_list_tabs,
+            default=packages_list_default,
             request=self.request,
             base_url=base_url,
             swap_url=canonical_url(
@@ -131,6 +137,29 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 view_name="+vanilla-distroseries-packages-list",
             ),
             swap_target="#packages-list",
+            swap_style="outerHTML",
+        )
+        subscriptions_tab = ("subscriptions", "Subscriptions")
+        important_tab = ("important", "Important")
+        new_tab = ("new", "New")
+        if self.user is not None:
+            bugs_list_tabs = [subscriptions_tab, important_tab, new_tab]
+            bugs_list_default = "subscriptions"
+        else:
+            bugs_list_tabs = [important_tab, new_tab, subscriptions_tab]
+            bugs_list_default = "important"
+        self.bugs_list_tabs = Tabs(
+            param="bugs-list",
+            aria_label="Bug tasks",
+            tabs=bugs_list_tabs,
+            default=bugs_list_default,
+            request=self.request,
+            base_url=base_url,
+            swap_url=canonical_url(
+                self.context,
+                view_name="+vanilla-distroseries-bugs-list",
+            ),
+            swap_target="#bugs-list",
             swap_style="outerHTML",
         )
 
@@ -173,6 +202,75 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             status=BugTaskStatus.NEW,
             limit=limit,
             offset=offset,
+        )
+
+    def _build_bugs_list_markup(self, bugtasks, empty_message):
+        """Return an HTML table of bug tasks, or an empty-state ``<p>``."""
+        bugtasks = list(bugtasks)
+        if not bugtasks:
+            return Markup('<p class="u-text--muted">{}</p>').format(
+                empty_message
+            )
+
+        rows = []
+        for bugtask in bugtasks:
+            bug_url = canonical_url(bugtask.bug)
+            cells = [
+                Markup("<a class='p-link--soft' href='{}'>{}</a>").format(
+                    bug_url, bugtask.bug.id
+                ),
+                Markup('<a class="p-link--soft" href="{}">{}</a>').format(
+                    bug_url, bugtask.bug.title
+                ),
+                escape(bugtask.importance.title),
+                escape(bugtask.status.title),
+            ]
+            rows.append(
+                Markup("<tr>{}</tr>").format(
+                    Markup("").join(
+                        Markup("<td>{}</td>").format(cell) for cell in cells
+                    )
+                )
+            )
+
+        col_widths = ["10%", "55%", "15%", "20%"]
+        colgroup = Markup("").join(
+            Markup('<col style="width: {}">').format(w) for w in col_widths
+        )
+        headers = ["Bug", "Title", "Importance", "Status"]
+        header_row = Markup("").join(
+            Markup("<th>{}</th>").format(h) for h in headers
+        )
+        return Markup(
+            "<table>"
+            "<colgroup>{}</colgroup>"
+            "<thead><tr>{}</tr></thead>"
+            "<tbody>{}</tbody>"
+            "</table>"
+        ).format(colgroup, header_row, Markup("").join(rows))
+
+    @property
+    def bugs_subscriptions_markup(self):
+        """Return the user's subscribed bugs table HTML."""
+        return self._build_bugs_list_markup(
+            self.list_bugs_subscriptions(),
+            empty_message="You have no bug subscriptions in this series.",
+        )
+
+    @property
+    def bugs_important_markup(self):
+        """Return the critical bugs table HTML."""
+        return self._build_bugs_list_markup(
+            self.list_bugs_important(),
+            empty_message="No critical bugs in this series.",
+        )
+
+    @property
+    def bugs_new_markup(self):
+        """Return the new bugs table HTML."""
+        return self._build_bugs_list_markup(
+            self.list_bugs_new(),
+            empty_message="No new bugs in this series.",
         )
 
     def _search_bug_tasks(self, limit=10, offset=0, **kwargs):
@@ -393,6 +491,41 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         )
 
     @property
+    def bugs_important_url(self):
+        """URL to the +bugs page filtered to critical bugs."""
+        search_filter = get_buglisting_search_filter_url(
+            importance=BugTaskImportance.CRITICAL.title,
+        )
+        return "%s/%s" % (
+            canonical_url(self.context, rootsite="bugs"),
+            search_filter,
+        )
+
+    @property
+    def bugs_new_url(self):
+        """URL to the +bugs page sorted by creation date."""
+        search_filter = get_buglisting_search_filter_url(
+            orderby="-datecreated",
+        )
+        return "%s/%s" % (
+            canonical_url(self.context, rootsite="bugs"),
+            search_filter,
+        )
+
+    @property
+    def bugs_subscriptions_url(self):
+        """URL to the +bugs page filtered to the user's subscriptions."""
+        if self.user is None:
+            return None
+        search_filter = get_buglisting_search_filter_url(
+            subscriber=self.user.name,
+        )
+        return "%s/%s" % (
+            canonical_url(self.context, rootsite="bugs"),
+            search_filter,
+        )
+
+    @property
     def packages_url(self):
         """URL to the upload queue for this distroseries."""
         return canonical_url(self.context, view_name="+queue")
@@ -431,6 +564,20 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             return None
 
         return self.context.get_milestone(milestone_id)
+
+    @property
+    def selected_bugs_milestone_url(self):
+        """URL to the +bugs page filtered by the selected milestone."""
+        milestone = self.selected_bugs_milestone
+        if milestone is None:
+            return None
+        search_filter = get_buglisting_search_filter_url(
+            milestone=milestone.id,
+        )
+        return "%s/%s" % (
+            canonical_url(self.context, rootsite="bugs"),
+            search_filter,
+        )
 
     @property
     def next_milestone(self):
