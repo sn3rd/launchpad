@@ -461,7 +461,7 @@ class Publisher:
         # modifications or internal code bypasses.
         # It's fine to proceed with additional checks for all other
         # pocket/series types so that "Valid-Until" tags can still be applied
-        # to pockets whereuploads are restricted.
+        # to pockets where uploads are restricted.
         if (
             pocket == PackagePublishingPocket.RELEASE
             and distroseries.status in STABLE_STATUSES
