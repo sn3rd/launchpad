@@ -38,8 +38,7 @@
           <time
             tal:attributes="datetime context/date_created/fmt:datetime"
             tal:content="context/date_created/fmt:displaydate"
-          />
-          .
+          />.
         </p>
         <div style="margin-bottom: -1.125rem;">
           <p tal:content="structure context/summary/fmt:text-to-html">

@@ -243,12 +243,14 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             Markup('<th scope="col">{}</th>').format(h) for h in headers
         )
         return Markup(
+            '<div class="table-container">'
             "<table>"
             '<caption class="u-off-screen">{}</caption>'
             "<colgroup>{}</colgroup>"
             "<thead><tr>{}</tr></thead>"
             "<tbody>{}</tbody>"
             "</table>"
+            "</div>"
         ).format(escape(caption), colgroup, header_row, Markup("").join(rows))
 
     @property
@@ -496,12 +498,14 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             Markup('<th scope="col">{}</th>').format(h) for h in headers
         )
         return Markup(
+            '<div class="table-container">'
             "<table>"
             '<caption class="u-off-screen">{}</caption>'
             "<colgroup>{}</colgroup>"
             "<thead><tr>{}</tr></thead>"
             "<tbody>{}</tbody>"
             "</table>"
+            "</div>"
         ).format(escape(caption), colgroup, header_row, Markup("").join(rows))
 
     @property

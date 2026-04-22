@@ -19,6 +19,9 @@
   font-size: 14px;
 
   body {
+    &.is-dark {
+      color-scheme: dark;
+    }
 
     // overrides to vanilla framework
     .u-fixed-width,
@@ -55,6 +58,7 @@
       bottom: 99%;
     }
   }
+
 }
 
 .hidden {
@@ -89,11 +93,15 @@
     row-gap: var(--dimension-spacing-block-l);
   }
 
-  // Make wide tables horizontally scrollable on narrow viewports.
-  table {
-    display: block;
-    max-width: 100%;
+  .table-container {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    table {
+      table-layout: auto;
+    }
+  }
+
+  .p-tabs__list {
+    scrollbar-width: thin;
   }
 }
+
