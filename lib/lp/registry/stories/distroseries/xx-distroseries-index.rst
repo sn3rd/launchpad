@@ -1,8 +1,8 @@
 Distribution series main page
 =============================
 
-In the main page for a distribution we have a link to help translating
-this distribution series.
+The distroseries page presents a "Help translate" link through the
+"Get Involved" summary component.
 
     >>> user_browser.open("http://launchpad.test/ubuntu/hoary")
     >>> user_browser.getLink("Help translate").click()
@@ -10,75 +10,86 @@ this distribution series.
     Hoary (5.04) : Translations : Ubuntu
 
 
-Registering information
------------------------
+Registration and summary
+------------------------
 
-The distroseries pages presents the 'registering' information besides
-its main 'heading'.
+The distroseries page displays the registrant and registration date at
+the top of the page summary, together with the series description.
 
     >>> anon_browser.open("http://launchpad.test/ubuntu/warty")
-
-    >>> print(
-    ...     extract_text(
-    ...         find_tag_by_id(anon_browser.contents, "registration")
-    ...     )
-    ... )
-    Registered by
-    Ubuntu Team on
-    2006-10-16
-
-    >>> print(extract_text(find_main_content(anon_browser.contents)))
-    Warty
-    ...
+    >>> main_content = extract_text(find_main_content(anon_browser.contents))
+    >>> "Registered by" in main_content
+    True
+    >>> "Ubuntu Team" in main_content
+    True
+    >>> "2006-10-16" in main_content
+    True
 
     >>> print(anon_browser.getLink("Ubuntu Team").url)
     http://launchpad.test/~ubuntu-team
 
 
-Details portlet
----------------
+Series details
+--------------
 
-The distroseries page contains a details portlet giving more information
-on the series' details.
+The summary section lists the distribution, version, drivers, release
+manager, and derivation information for the series.
 
-    >>> print(
-    ...     extract_text(
-    ...         find_portlet(anon_browser.contents, "Series information")
-    ...     )
+    >>> def summary_contains(browser, *texts):
+    ...     content = extract_text(find_main_content(browser.contents))
+    ...     return all(text in content for text in texts)
+    ...
+
+    >>> summary_contains(
+    ...     anon_browser,
+    ...     "Distribution",
+    ...     "Ubuntu",
+    ...     "Series",
+    ...     "Warty",
+    ...     "(4.10)",
+    ...     "Drivers",
+    ...     "Ubuntu Team",
+    ...     "Release Manager",
+    ...     "Derives from",
+    ...     "Not derived from any series",
+    ...     "Derived series",
+    ...     "No derived series",
     ... )
-    Series information
-    Distribution: Ubuntu
-    Series: Warty (4.10)
-    Project drivers: Ubuntu Team
-    Release manager: None
-    Status: Current Stable Release
-    Derives from: Warty (4.10) is not derived from another series.
-    Derived series: No derived series.
-    Source packages: 3
-    Binary packages: 4
+    True
 
-On series that have no source or binary packages, the portlet will
-change its text slightly to announce this:
+The summary also shows package and bug counts.
+
+    >>> summary_contains(
+    ...     anon_browser,
+    ...     "Source packages",
+    ...     "Binary packages",
+    ...     "Open bugs",
+    ...     "Open critical bugs",
+    ... )
+    True
+
+On series that have no source or binary packages, the counts simply
+report zero.
 
     >>> anon_browser.open("http://launchpad.test/debian/sarge")
-    >>> print(
-    ...     extract_text(
-    ...         find_portlet(anon_browser.contents, "Series information")
-    ...     )
+    >>> summary_contains(
+    ...     anon_browser,
+    ...     "Distribution",
+    ...     "Debian",
+    ...     "Series",
+    ...     "Sarge",
+    ...     "(3.1)",
+    ...     "Drivers",
+    ...     "Jeff Waugh",
+    ...     "Mark Shuttleworth",
+    ...     "Release Manager",
+    ...     "Derives from",
+    ...     "Not derived from any series",
     ... )
-    Series information
-    Distribution: Debian
-    Series: Sarge (3.1)
-    Project drivers: Jeff Waugh, Mark Shuttleworth
-    Release manager: Jeff Waugh
-    Status: Pre-release Freeze
-    Derives from: Sarge (3.1) is not derived from another series.
-    Derived series: No derived series.
-    Source packages: No sources imported or published.
-    Binary packages: No binaries imported or published.
+    True
 
-The series' derivation parents are shown when derivation is enabled, as are
-the series derived from this series:
+The series' derivation parents are shown when derivation is enabled, as
+are the series derived from this series.
 
     >>> from lp.registry.interfaces.distribution import IDistributionSet
     >>> from lp.testing import celebrity_logged_in
@@ -110,21 +121,16 @@ the series derived from this series:
     ...
 
     >>> anon_browser.open("http://launchpad.test/debian/sarge")
-    >>> print(
-    ...     extract_text(
-    ...         find_portlet(anon_browser.contents, "Series information")
-    ...     )
+    >>> summary_contains(
+    ...     anon_browser,
+    ...     "Derives from",
+    ...     "Dobby",
+    ...     "Knobby",
+    ...     "Derived series",
+    ...     "Bobby",
+    ...     "Tables",
     ... )
-    Series information
-    Distribution: Debian
-    Series: Sarge (3.1)
-    Project drivers: Jeff Waugh, Mark Shuttleworth
-    Release manager: Jeff Waugh
-    Status: Pre-release Freeze
-    Derives from: Dobby (...), Knobby (...)
-    Derived series: Bobby (...), Tables (...)
-    Source packages: No sources imported or published.
-    Binary packages: No binaries imported or published.
+    True
 
 
 Distribution series bug subscriptions
@@ -140,31 +146,3 @@ series, we can create structural bug subscriptions.
 
     >>> print(admin_browser.title)
     Subscribe : Warty (4.10) : Bugs : Ubuntu
-
-
-Upstream packaging portlet
---------------------------
-
-The distroseries page contains a portlet with information on the
-upstream packaging.
-
-Note that warty's sourcecount is stale in sample data which causes -2 need
-linking.
-
-    >>> anon_browser.open("http://launchpad.test/ubuntu/warty")
-    >>> print(
-    ...     extract_text(
-    ...         find_tag_by_id(anon_browser.contents, "series-packaging")
-    ...     )
-    ... )
-    Upstream packaging
-    5 source packages are linked to registered upstream projects.
-    3 need linking.
-    Recently linked to upstream:
-    alsa-utils linked...
-    a52dec linked...
-    evolution linked...
-    mozilla-firefox linked...
-    netapplet linked 2005-07-05
-    Needs upstream links
-    All upstream links

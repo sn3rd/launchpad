@@ -1,11 +1,10 @@
 Distro series packaging
 =======================
 
-The distro series packaging page is accessible to any user from the distro
-series +index page.
+The distro series packaging page is accessible to any user at the
++packaging URL under a distro series.
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> anon_browser.getLink("All upstream links").click()
+    >>> anon_browser.open("http://launchpad.test/ubuntu/hoary/+packaging")
     >>> print(anon_browser.title)
     All upstream links : ...
 
@@ -82,8 +81,9 @@ packages with the greatest need are listed first.
     >>> removeSecurityProxy(dsp).bug_count = 1
     >>> logout()
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> anon_browser.getLink("Needs upstream links").click()
+    >>> anon_browser.open(
+    ...     "http://launchpad.test/ubuntu/hoary/+needs-packaging"
+    ... )
     >>> print(anon_browser.title)
     Needs upstream links : ...
 
