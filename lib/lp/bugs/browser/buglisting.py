@@ -591,6 +591,8 @@ def get_buglisting_search_filter_url(
     bug_reporter=None,
     affecting_me=None,
     orderby=None,
+    subscriber=None,
+    milestone=None,
 ):
     """Return the given URL with the search parameters specified."""
     search_params = []
@@ -611,6 +613,10 @@ def get_buglisting_search_filter_url(
         search_params.append(("field.affects_me", "on"))
     if orderby is not None:
         search_params.append(("orderby", orderby))
+    if subscriber is not None:
+        search_params.append(("field.subscriber", subscriber))
+    if milestone is not None:
+        search_params.append(("field.milestone:list", milestone))
 
     query_string = urlencode(search_params, doseq=True)
 

@@ -519,9 +519,19 @@ the query string.
     ... )
     +bugs?search=Search&field.status_upstream=open_upstream
 
+Passing a subscriber will add a subscriber field to the query string.
+
+    >>> print(get_buglisting_search_filter_url(subscriber="mark"))
+    +bugs?search=Search&field.subscriber=mark
+
+Passing a milestone will add a milestone field to the query string.
+
+    >>> print(get_buglisting_search_filter_url(milestone=42))
+    +bugs?search=Search&field.milestone%3Alist=42
+
 The fields will always be rendered in the order assignee, importance,
-status, status_upstream, regardless of what order they're passed to
-get_buglisting_search_filter_url().
+status, status_upstream, subscriber, milestone, regardless of what order
+they're passed to get_buglisting_search_filter_url().
 
     >>> print(
     ...     get_buglisting_search_filter_url(
@@ -529,6 +539,8 @@ get_buglisting_search_filter_url().
     ...         status="NEW",
     ...         importance="WISHLIST",
     ...         assignee="mark",
+    ...         subscriber="gmb",
+    ...         milestone=42,
     ...     )
     ... )  # noqa
-    +bugs?search=Search&field.assignee=mark&field.importance=WISHLIST&field.status=NEW&field.status_upstream=open_upstream
+    +bugs?search=Search&field.assignee=mark&field.importance=WISHLIST&field.status=NEW&field.status_upstream=open_upstream&field.subscriber=gmb&field.milestone%3Alist=42

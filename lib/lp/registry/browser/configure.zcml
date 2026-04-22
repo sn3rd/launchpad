@@ -182,6 +182,10 @@
             template="../templates/vanilla-distroseries-bugs-counts.pt"
         />
         <browser:page
+            name="+vanilla-distroseries-bugs-list"
+            template="../templates/vanilla-distroseries-bugs-list.pt"
+        />
+        <browser:page
             name="+vanilla-distroseries-milestones"
             template="../templates/vanilla-distroseries-milestones.pt"
         />
