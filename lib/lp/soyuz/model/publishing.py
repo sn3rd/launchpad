@@ -61,6 +61,7 @@ from lp.services.librarian.browser import ProxiedLibraryFileAlias
 from lp.services.librarian.model import LibraryFileAlias, LibraryFileContent
 from lp.services.propertycache import cachedproperty, get_property_cache
 from lp.services.timeline.requesttimeline import temporary_request_timeline
+from lp.services.webapp import canonical_url
 from lp.services.webapp.errorlog import ErrorReportingUtility, ScriptRequest
 from lp.services.worlddata.model.country import Country
 from lp.soyuz.adapters.proxiedsourcefiles import ProxiedSourceLibraryFileAlias
@@ -2435,7 +2436,7 @@ class PublishingSet:
                 SourceUploadBuildInfo(
                     arch_tag=das.architecturetag,
                     build_status=build.status,
-                    build_id=build.id,
+                    build_url=canonical_url(build),
                 )
             )
 

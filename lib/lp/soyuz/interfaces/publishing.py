@@ -130,7 +130,7 @@ class SourceUploadBuildInfo(TypedDict):
 
     arch_tag: str
     build_status: BuildStatus
-    build_id: int
+    build_url: str
 
 
 class SourceUploadInfo(TypedDict):
