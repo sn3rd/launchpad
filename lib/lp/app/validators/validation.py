@@ -156,7 +156,7 @@ def validate_valid_until_config(value):
     """
     # Avoid circular imports
     from lp.registry.interfaces.pocket import PackagePublishingPocket
-    from lp.registry.model.distroseries import ACTIVE_UNRELEASED_STATUSES
+    from lp.registry.model.distroseries import UNSTABLE_STATUSES
 
     errors = []
 
@@ -165,9 +165,9 @@ def validate_valid_until_config(value):
 
         if pocket == PackagePublishingPocket.RELEASE:
             distroseries = getUtility(ILaunchBag).distroseries
-            if distroseries.status not in ACTIVE_UNRELEASED_STATUSES:
+            if distroseries.status not in UNSTABLE_STATUSES:
                 allowed_statuses = ", ".join(
-                    status.name for status in ACTIVE_UNRELEASED_STATUSES
+                    status.name for status in UNSTABLE_STATUSES
                 )
                 errors.append(
                     f"Release pocket configuration can only be specified for "

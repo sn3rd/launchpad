@@ -69,7 +69,7 @@ from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pocket import PackagePublishingPocket, pocketsuffix
 from lp.registry.interfaces.series import SeriesStatus
-from lp.registry.model.distroseries import ACTIVE_RELEASED_STATUSES
+from lp.registry.model.distroseries import STABLE_STATUSES
 from lp.services.config import config
 from lp.services.database.constants import UTC_NOW
 from lp.services.database.interfaces import IStore
@@ -3916,7 +3916,7 @@ class TestValidUntil(TestPublisherBase):
             self.ubuntutest.main_archive,
         )
 
-        for status in ACTIVE_RELEASED_STATUSES:
+        for status in STABLE_STATUSES:
 
             self.breezy_autotest.status = status
             self.breezy_autotest.valid_until_config = {

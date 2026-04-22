@@ -11,10 +11,7 @@ from lp.app.validators.validation import (
     validate_valid_until_config,
 )
 from lp.registry.interfaces.pocket import PackagePublishingPocket
-from lp.registry.model.distroseries import (
-    ACTIVE_RELEASED_STATUSES,
-    ACTIVE_UNRELEASED_STATUSES,
-)
+from lp.registry.model.distroseries import STABLE_STATUSES, UNSTABLE_STATUSES
 from lp.services.webapp.interfaces import ILaunchBag
 from lp.testing import TestCase, TestCaseWithFactory
 from lp.testing.layers import BaseLayer, ZopelessDatabaseLayer
@@ -129,7 +126,7 @@ class TestValidUntilConfigValidation(TestCaseWithFactory):
         distroseries = self.factory.makeDistroSeries()
         getUtility(ILaunchBag).add(distroseries)
 
-        for status in ACTIVE_UNRELEASED_STATUSES:
+        for status in UNSTABLE_STATUSES:
             distroseries.status = status
             config = {RELEASE: {"refresh_threshold": 3, "validity_period": 7}}
             self.assertTrue(validate_valid_until_config(config))
@@ -139,7 +136,7 @@ class TestValidUntilConfigValidation(TestCaseWithFactory):
         distroseries = self.factory.makeDistroSeries()
         getUtility(ILaunchBag).add(distroseries)
 
-        for status in ACTIVE_RELEASED_STATUSES:
+        for status in STABLE_STATUSES:
             distroseries.status = status
             config = {RELEASE: {"refresh_threshold": 3, "validity_period": 7}}
             self.assertRaises(

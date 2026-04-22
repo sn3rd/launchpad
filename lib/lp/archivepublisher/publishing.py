@@ -53,10 +53,7 @@ from lp.archivepublisher.model.ftparchive import FTPArchiveHandler
 from lp.archivepublisher.utils import RepositoryIndexFile, get_ppa_reference
 from lp.registry.interfaces.pocket import PackagePublishingPocket, pocketsuffix
 from lp.registry.interfaces.series import SeriesStatus
-from lp.registry.model.distroseries import (
-    ACTIVE_RELEASED_STATUSES,
-    DistroSeries,
-)
+from lp.registry.model.distroseries import STABLE_STATUSES, DistroSeries
 from lp.services.database.bulk import load
 from lp.services.database.constants import UTC_NOW
 from lp.services.database.interfaces import IStore
@@ -462,9 +459,12 @@ class Publisher:
         # While the validator prevents users from configuring this via the API,
         # we perform this check as a safety measure against direct database
         # modifications or internal code bypasses.
+        # It's fine to proceed with additional checks for all other
+        # pocket/series types so that "Valid-Until" tags can still be applied
+        # to pockets whereuploads are restricted.
         if (
             pocket == PackagePublishingPocket.RELEASE
-            and distroseries.status in ACTIVE_RELEASED_STATUSES
+            and distroseries.status in STABLE_STATUSES
         ):
             return False
 
