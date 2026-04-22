@@ -101,6 +101,19 @@ class TestProcessAccepted(TestCaseWithFactory):
             error_report["req_vars"]["error-explanation"], expected_error
         )
 
+    def test_skips_obsolete_series(self):
+        distroseries = self.factory.makeDistroSeries(distribution=self.distro)
+        self.createWaitingAcceptancePackage(distroseries=distroseries)
+        distroseries.status = SeriesStatus.OBSOLETE
+        script = self.getScript([])
+        switch_dbuser(self.dbuser)
+        script.main()
+
+        published_main = self.distro.main_archive.getPublishedSources(
+            name=self.test_package_name
+        )
+        self.assertTrue(published_main.is_empty())
+
     def test_accept_copy_archives(self):
         """Test that publications in a copy archive are accepted properly."""
         # Upload some pending packages in a copy archive.

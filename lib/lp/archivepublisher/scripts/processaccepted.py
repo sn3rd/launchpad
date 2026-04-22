@@ -15,6 +15,7 @@ from zope.security.proxy import removeSecurityProxy
 
 from lp.archivepublisher.publishing import GLOBAL_PUBLISHER_LOCK
 from lp.archivepublisher.scripts.base import PublisherScript
+from lp.registry.model.distroseries import INACTIVE_STATUSES
 from lp.services.limitedlist import LimitedList
 from lp.services.webapp.adapter import (
     clear_request_started,
@@ -151,6 +152,8 @@ class ProcessAccepted(PublisherScript):
             )
             try:
                 for distroseries in distribution.series:
+                    if distroseries.status in INACTIVE_STATUSES:
+                        continue
                     self.logger.debug(
                         "Processing queue for %s %s"
                         % (archive.reference, distroseries.name)
