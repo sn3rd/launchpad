@@ -18,7 +18,11 @@
         </thead>
         <tbody>
           <tr tal:repeat="milestone milestones">
-            <td tal:content="milestone/name">1.0</td>
+            <td>
+              <a class="p-link--soft" tal:attributes="href milestone/fmt:url" tal:content="milestone/name">
+                1.0
+              </a>
+            </td>
             <td tal:content="milestone/dateexpected/fmt:approximatedate">2026-01-01</td>
             <td tal:content="milestone/summary">Summary</td>
           </tr>

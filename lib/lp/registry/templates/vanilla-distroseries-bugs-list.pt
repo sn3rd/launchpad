@@ -12,18 +12,18 @@
       </tal:not-logged-in>
       <tal:logged-in tal:condition="view/user">
         <tal:table tal:replace="structure view/bugs_subscriptions_markup" />
-        <a tal:attributes="href view/bugs_subscriptions_url">View all subscribed bugs</a>
+        <a tal:attributes="href view/bugs_url/subscriptions">View all subscribed bugs</a>
       </tal:logged-in>
     </div>
     <div tal:attributes="id view/bugs_list_tabs/active_panel_id"
          tal:condition="python:view.bugs_list_tabs.active == 'important'">
       <tal:table tal:replace="structure view/bugs_important_markup" />
-      <a tal:attributes="href view/bugs_important_url">View all important bugs</a>
+      <a tal:attributes="href view/bugs_url/critical">View all important bugs</a>
     </div>
     <div tal:attributes="id view/bugs_list_tabs/active_panel_id"
          tal:condition="python:view.bugs_list_tabs.active == 'new'">
       <tal:table tal:replace="structure view/bugs_new_markup" />
-      <a tal:attributes="href view/bugs_new_url">View all new bugs</a>
+      <a tal:attributes="href view/bugs_url/latest">View all new bugs</a>
     </div>
   </div>
 </tal:root>

@@ -58,7 +58,7 @@
         <div class="description-list__item">
           <dt>Distribution</dt>
           <dd>
-            <div class="u-flex--row">
+            <a class="p-link--soft u-flex--row" tal:attributes="href context/distribution/fmt:url">
               <img
                 tal:attributes="src context/distribution/image:logo_src"
                 alt="Distribution icon"
@@ -67,7 +67,7 @@
               <span tal:content="context/distribution/displayname">
                 Ubuntu
               </span>
-            </div>
+            </a>
           </dd>
         </div>
         <div class="description-list__item">
@@ -109,7 +109,7 @@
               class="p-list u-no-margin u-no-padding"
             >
               <li class="p-list__item">
-                <a tal:attributes="href driver/fmt:url" class="u-flex--row">
+                <a tal:attributes="href driver/fmt:url" class="u-flex--row" style="flex-wrap: nowrap;">
                   <img
                     tal:attributes="src driver/image:logo_src"
                     alt="Driver icon"
@@ -177,28 +177,37 @@
         >
           <div class="description-list__item">
             <dt>Open critical bugs</dt>
-            <dd class="u-flex--row">
-              <i class="p-icon--circle is-negative"></i>
-              <span
-                class="p-heading--3 u-no-margin u-no-padding"
-                tal:content="bugs_summary/critical_bugs_count/fmt:intcomma"
-              >
-                0
-              </span>
+            <dd>
+              <a class="p-link--soft u-flex--row" tal:attributes="href view/bugs_url/critical">
+                <i class="p-icon--circle is-negative"></i>
+                <span
+                  class="p-heading--3 u-no-margin u-no-padding"
+                  tal:content="bugs_summary/critical_bugs_count/fmt:intcomma"
+                >
+                  0
+                </span>
+              </a>
             </dd>
           </div>
           <div class="description-list__item">
             <dt>Open bugs</dt>
-            <dd tal:content="bugs_summary/open_bugs_count/fmt:intcomma">
-              0
+            
+            <dd>
+              <a class="p-link--soft" tal:attributes="href view/bugs_url/latest"
+                tal:content="bugs_summary/open_bugs_count/fmt:intcomma"
+              >
+                0
+              </a>
             </dd>
           </div>
           <div class="description-list__item">
             <dt>In progress bugs</dt>
-            <dd
-              tal:content="bugs_summary/inprogress_bugs_count/fmt:intcomma"
-            >
-              0
+            <dd>
+              <a class="p-link--soft" tal:attributes="href view/bugs_url/in_progress"
+                tal:content="bugs_summary/inprogress_bugs_count/fmt:intcomma"
+              >
+                0
+              </a>
             </dd>
           </div>
         </div>
@@ -207,12 +216,14 @@
           <div class="description-list__item">
             <dt>Packages built (24h)</dt>
             <dd>
-              <span
-                class="p-heading--3"
-                tal:content="string:${view/packages_summary_24h/built_packages_percentage} %"
-              >
-                0%
-              </span>
+              <a class="p-link--soft" tal:attributes="href view/packages_url">
+                <span
+                  class="p-heading--3"
+                  tal:content="string:${view/packages_summary_24h/built_packages_percentage} %"
+                >
+                  0%
+                </span>
+              </a>
             </dd>
           </div>
           <div class="description-list__item">
@@ -255,13 +266,14 @@
           <div class="description-list__item">
             <dt>Next milestone</dt>
             <dd>
-              <span
-                class="p-heading--3"
+              <a
+                class="p-heading--3 p-link--soft"
                 tal:condition="view/next_milestone"
                 tal:content="view/next_milestone/name"
+                tal:attributes="href view/next_milestone/fmt:url"
               >
                 Next milestone
-              </span>
+              </a>
               <span
                 class="p-heading--3 u-text--muted"
                 tal:condition="not: view/next_milestone"
