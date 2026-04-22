@@ -974,8 +974,6 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
             distroseries, "+vanilla", principal=principal, form=form
         )
 
-    # -- bugs_*_markup --
-
     def test_bugs_subscriptions_markup_empty(self):
         """A logged-in user with no subscriptions sees the empty-state."""
         distroseries = self.factory.makeDistroSeries()

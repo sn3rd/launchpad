@@ -178,8 +178,8 @@
             template="../templates/vanilla-distroseries-bugs-summary.pt"
         />
         <browser:page
-        name="+vanilla-distroseries-bugs-counts"
-        template="../templates/vanilla-distroseries-bugs-counts.pt"
+            name="+vanilla-distroseries-bugs-counts"
+            template="../templates/vanilla-distroseries-bugs-counts.pt"
         />
         <browser:page
             name="+vanilla-distroseries-bugs-list"

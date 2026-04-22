@@ -119,12 +119,13 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         )
         latest_uploads_tab = ("latest", "Latest uploads")
         my_uploads_tab = ("my-uploads", "My uploads")
-        if self.user is not None:
-            packages_list_tabs = [my_uploads_tab, latest_uploads_tab]
-            packages_list_default = "my-uploads"
-        else:
-            packages_list_tabs = [latest_uploads_tab, my_uploads_tab]
-            packages_list_default = "latest"
+        # Conditionally order the default tab based on the user's login status.
+        packages_list_tabs = (
+            [my_uploads_tab, latest_uploads_tab]
+            if self.user is not None
+            else [latest_uploads_tab, my_uploads_tab]
+        )
+        packages_list_default = packages_list_tabs[0][0]
         self.packages_list_tabs = Tabs(
             param="packages-list",
             aria_label="Package uploads",
@@ -142,12 +143,12 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         subscriptions_tab = ("subscriptions", "Subscriptions")
         important_tab = ("important", "Important")
         new_tab = ("new", "New")
-        if self.user is not None:
-            bugs_list_tabs = [subscriptions_tab, important_tab, new_tab]
-            bugs_list_default = "subscriptions"
-        else:
-            bugs_list_tabs = [important_tab, new_tab, subscriptions_tab]
-            bugs_list_default = "important"
+        bugs_list_tabs = (
+            [subscriptions_tab, important_tab, new_tab]
+            if self.user is not None
+            else [important_tab, new_tab, subscriptions_tab]
+        )
+        bugs_list_default = bugs_list_tabs[0][0]
         self.bugs_list_tabs = Tabs(
             param="bugs-list",
             aria_label="Bug tasks",
