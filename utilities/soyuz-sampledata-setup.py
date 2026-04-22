@@ -325,8 +325,11 @@ def create_sample_series(original_series, log):
         ("Lunar Lobster", SeriesStatus.OBSOLETE, "23.04"),
         ("Mantic Minotaur", SeriesStatus.OBSOLETE, "23.10"),
         ("Noble Numbat", SeriesStatus.SUPPORTED, "24.04"),
-        ("Oracular Oriole", SeriesStatus.CURRENT, "24.10"),
-        ("Plucky Puffin", SeriesStatus.DEVELOPMENT, "25.04"),
+        ("Oracular Oriole", SeriesStatus.OBSOLETE, "24.10"),
+        ("Plucky Puffin", SeriesStatus.OBSOLETE, "25.04"),
+        ("Questing Quokka", SeriesStatus.SUPPORTED, "25.10"),
+        ("Resolute Raccoon", SeriesStatus.CURRENT, "26.04"),
+        ("Stonking Stingray", SeriesStatus.DEVELOPMENT, "26.10"),
     ]
 
     parent = original_series
