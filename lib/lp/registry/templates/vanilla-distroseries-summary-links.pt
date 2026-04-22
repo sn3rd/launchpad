@@ -1,7 +1,7 @@
 <tal:root xmlns:tal="http://xml.zope.org/namespaces/tal"
   xmlns:metal="http://xml.zope.org/namespaces/metal"
   xmlns:i18n="http://xml.zope.org/namespaces/i18n" omit-tag="" define="overview_menu context/menu:overview">
-  <ul class="p-list">
+  <ul class="p-list u-no-margin">
     <li class="p-list__item" tal:condition="overview_menu/edit/enabled">
       <a tal:attributes="href overview_menu/edit/url"> Edit details </a>
     </li>

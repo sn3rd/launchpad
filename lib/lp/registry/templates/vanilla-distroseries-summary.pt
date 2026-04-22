@@ -35,16 +35,17 @@
             tal:content="context/registrant/displayname"
             >Mark Shuttleworth</a
           >
-          on
-          <tal:created
-            replace="structure context/date_created/fmt:displaydatetitle"
-          />
-          .
+          <time
+            tal:attributes="datetime context/date_created/fmt:datetime"
+            tal:content="context/date_created/fmt:displaydate"
+          />.
         </p>
-        <p tal:content="structure context/summary/fmt:text-to-html">
-          The Ubuntu release that will be delivered in April 2026, designated
-          26.04.
-        </p>
+        <div style="margin-bottom: -1.125rem;">
+          <p tal:content="structure context/summary/fmt:text-to-html">
+            The Ubuntu release that will be delivered in April 2026, designated
+            26.04.
+          </p>
+        </div>
       </div>
     </div>
     <div class="links">
@@ -73,9 +74,7 @@
           <dt>Series</dt>
           <dd>
             <span tal:content="context/displayname"> Resolute </span>
-            (
-            <span tal:content="context/version"> 26.04 </span>
-            )
+            (<span tal:content="context/version"> 26.04 </span>)
           </dd>
         </div>
         <div
@@ -259,7 +258,7 @@
               <span
                 class="p-heading--3"
                 tal:condition="view/next_milestone"
-                tal:content="view/next_milestone/displayname"
+                tal:content="view/next_milestone/name"
               >
                 Next milestone
               </span>
@@ -276,15 +275,19 @@
             tal:condition="view/next_milestone"
           >
             <dt>Expected</dt>
-            <dd tal:content="view/next_milestone/dateexpected/fmt:displaydate">
-              Expected
+            <dd>
+              <time
+                tal:attributes="datetime view/next_milestone/dateexpected/fmt:datetime"
+                tal:content="view/next_milestone/dateexpected/fmt:displaydate"
+              >
+                2026-04-21
+              </time>
             </dd>
           </div>
         </div>
       </dl>
     </div>
     <div class="links-mobile">
-      <hr class="p-rule" />
       <div
         tal:replace="structure context/@@+vanilla-distroseries-summary-links"
       />

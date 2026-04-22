@@ -205,7 +205,7 @@ class TestVanillaDistroSeriesPackagesList(TestCaseWithFactory):
         view = self._getView(distroseries)
         html = view.packages_list_data
         for header in ("Source package", "Version", "Pocket", "Builds"):
-            self.assertIn("<th>%s</th>" % header, html)
+            self.assertIn('<th scope="col">%s</th>' % header, html)
 
     def test_packages_list_data_shows_package_info(self):
         """The table row contains the source package name and version."""

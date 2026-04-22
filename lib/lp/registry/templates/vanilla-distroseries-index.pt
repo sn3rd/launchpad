@@ -28,7 +28,7 @@
         </nav>
       </div>
     </tal:breadcrumbs>
-    <section class="p-section" metal:fill-slot="main">
+    <section class="p-section u-no-padding--bottom" metal:fill-slot="main">
       <div tal:replace="structure context/@@+vanilla-distroseries-summary" />
       <section class="p-section">
         <div class="grid-row">
