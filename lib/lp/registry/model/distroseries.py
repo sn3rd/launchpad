@@ -162,6 +162,9 @@ ACTIVE_UNRELEASED_STATUSES = [
 ]
 
 
+INACTIVE_STATUSES = [SeriesStatus.OBSOLETE]
+
+
 DEFAULT_INDEX_COMPRESSORS = [
     IndexCompressionType.GZIP,
     IndexCompressionType.BZIP2,
