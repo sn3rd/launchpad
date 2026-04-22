@@ -3372,7 +3372,7 @@ class TestValidUntil(TestPublisherBase):
             publisher, self.hoary_test, SECURITY, is_present=False
         )
 
-    def testValidUntilRefreshsWhenExpiring(self):
+    def testValidUntilRefreshesWhenExpiring(self):
         """Test that Valid-Until is refreshed when close to expiry.
 
         This tests the scenario where a Release file has a Valid-Until
@@ -3841,7 +3841,7 @@ class TestValidUntil(TestPublisherBase):
             "is close to expiring",
         )
 
-    def testCheckValidUntilNeedsRefreshWhenFresh(self):
+    def testCheckValidUntilNeedsRefreshReturnsFalseWhenFresh(self):
         """
         checkValidUntilNeedsRefresh returns False when Valid-Until is still
         fresh (far from expiring).
@@ -3879,7 +3879,7 @@ class TestValidUntil(TestPublisherBase):
             "is still fresh",
         )
 
-    def testCheckValidUntilNeedsRefreshForPPA(self):
+    def testCheckValidUntilNeedsRefreshAlwaysReturnsFalseForPPA(self):
         """
         Test that checkValidUntilNeedsRefresh returns False for PPA archives.
 
@@ -3899,7 +3899,7 @@ class TestValidUntil(TestPublisherBase):
             "checkValidUntilNeedsRefresh should return False for PPA archives",
         )
 
-    def testCheckValidUntilNeedsRefreshForCurrentSeriesReleasePocket(
+    def testCheckValidUntilNeedsRefreshReturnsFalseWhenStableReleasePocket(
         self,
     ):
         """
@@ -3907,7 +3907,7 @@ class TestValidUntil(TestPublisherBase):
         pocket in CURRENT series.
 
         Even if valid_until_config includes RELEASE pocket, it should not be
-        used for stable (CURRENT/SUPPORTED) series.
+        used for stable (CURRENT/SUPPORTED/OSBOLETE) series.
         """
         publisher = Publisher(
             self.logger,

@@ -644,6 +644,11 @@ class IDistroSeriesPublic(
                         "validity_period": 10
                       }
                     }
+
+                Note: Setting this attribute will overwrite the existing value
+                entirely. To update the existing configuration, retrieve the
+                current value first, update it, and then set the complete
+                configuration.
                 """
             ),
         )

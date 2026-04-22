@@ -484,14 +484,12 @@ class Publisher:
             ):
                 return True
 
-        # The configuration is unset, valid-until disabled completely
-        if not distroseries.valid_until_config:
-            return False
-
         # check if the intended pockets are there
         if pocket not in distroseries.valid_until_config:
             return False
 
+        # Check if the tag is not present in the release file, but a Release
+        # file exists
         if "Valid-Until" not in release_data:
             return True
 
