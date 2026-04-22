@@ -19,9 +19,9 @@
           </span>
         </span>
         <a
-          tal:attributes="
-        href context/menu:overview/edit/url;
-        title context/menu:overview/edit/summary;"
+          class="p-button--base is-inline has-icon u-no-margin"
+          tal:attributes="href context/menu:overview/edit/url;
+            title context/menu:overview/edit/summary;"
           tal:condition="context/menu:overview/edit/enabled"
         >
           <i class="p-icon--edit"></i>
@@ -128,6 +128,7 @@
               tal:attributes="href context/menu:overview/driver/url"
               tal:condition="context/menu:overview/driver/enabled"
               title="Appoint driver"
+              class="p-button--base is-inline has-icon u-no-margin"
             >
               <i class="p-icon--edit"></i>
             </a>

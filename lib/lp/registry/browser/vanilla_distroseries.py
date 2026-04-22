@@ -119,14 +119,10 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             swap_target="#packages-chart",
             swap_style="outerHTML",
         )
+
         latest_uploads_tab = ("latest", "Latest uploads")
         my_uploads_tab = ("my-uploads", "My uploads")
-        # Conditionally order the default tab based on the user's login status.
-        packages_list_tabs = (
-            [my_uploads_tab, latest_uploads_tab]
-            if self.user is not None
-            else [latest_uploads_tab, my_uploads_tab]
-        )
+        packages_list_tabs = [latest_uploads_tab, my_uploads_tab]
         packages_list_default = packages_list_tabs[0][0]
         self.packages_list_tabs = Tabs(
             param="packages-list",
@@ -142,14 +138,11 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
             swap_target="#packages-list",
             swap_style="outerHTML",
         )
-        subscriptions_tab = ("subscriptions", "Subscriptions")
+
+        subscriptions_tab = ("subscriptions", "My Subscriptions")
         important_tab = ("important", "Important")
         new_tab = ("new", "New")
-        bugs_list_tabs = (
-            [subscriptions_tab, important_tab, new_tab]
-            if self.user is not None
-            else [important_tab, new_tab, subscriptions_tab]
-        )
+        bugs_list_tabs = [important_tab, new_tab, subscriptions_tab]
         bugs_list_default = bugs_list_tabs[0][0]
         self.bugs_list_tabs = Tabs(
             param="bugs-list",
@@ -531,21 +524,23 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         """Mapping of named bug filters to +bugs URLs on the bugs rootsite."""
         base_url = canonical_url(self.context, rootsite="bugs")
 
-        def build(**kwargs):
+        def build_bugs_url(**kwargs):
             return "%s/%s" % (
                 base_url,
                 get_buglisting_search_filter_url(**kwargs),
             )
 
         urls = {
-            "critical": build(importance=BugTaskImportance.CRITICAL.title),
-            "high": build(importance="High"),
-            "in_progress": build(status="In Progress"),
-            "new": build(status="New"),
-            "latest": build(orderby="-datecreated"),
+            "critical": build_bugs_url(
+                importance=BugTaskImportance.CRITICAL.title
+            ),
+            "high": build_bugs_url(importance="High"),
+            "in_progress": build_bugs_url(status="In Progress"),
+            "new": build_bugs_url(status="New"),
+            "latest": build_bugs_url(orderby="-datecreated"),
         }
         if self.user is not None:
-            urls["subscriptions"] = build(subscriber=self.user.name)
+            urls["subscriptions"] = build_bugs_url(subscriber=self.user.name)
         return urls
 
     @property
@@ -555,10 +550,10 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
 
     @property
     def my_related_packages_url(self):
-        """URL to the current user's +related-packages page, or None."""
+        """URL to the current user's +uploaded-packages page, or None."""
         if self.user is None:
             return None
-        return canonical_url(self.user, view_name="+related-packages")
+        return canonical_url(self.user, view_name="+uploaded-packages")
 
     @property
     def distroserieslanguages(self):

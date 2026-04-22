@@ -5,7 +5,17 @@
   <section class="p-section"
     tal:define="milestones python: list(context.all_milestones[:10])">
     <hr class="p-rule" />
-    <h3>Milestones</h3>
+    <h3 class="u-flex--row">
+      Milestones
+      <a
+      tal:attributes="href context/menu:overview/create_milestone/url"
+      tal:condition="context/menu:overview/create_milestone/enabled"
+      title="Create milestone"
+      class="p-button--base is-inline has-icon u-no-margin"
+      >
+        <i class="p-icon--add"></i>
+      </a>
+    </h3>
     <div class="table-container" tal:condition="milestones">
       <table>
         <caption class="u-off-screen">Milestones for this series</caption>
