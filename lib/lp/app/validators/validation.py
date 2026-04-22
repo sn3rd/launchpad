@@ -177,12 +177,12 @@ def validate_valid_until_config(value):
                 )
                 continue
 
-        expected_keys = {"refresh_threshold", "validity_period"}
+        required_keys = {"refresh_threshold", "validity_period"}
         actual_keys = set(config.keys())
 
-        if actual_keys != expected_keys:
-            extra_keys = actual_keys - expected_keys
-            missing_keys = expected_keys - actual_keys
+        if actual_keys != required_keys:
+            extra_keys = actual_keys - required_keys
+            missing_keys = required_keys - actual_keys
             error_parts = []
             if extra_keys:
                 error_parts.append(f"unexpected keys: {sorted(extra_keys)}")
