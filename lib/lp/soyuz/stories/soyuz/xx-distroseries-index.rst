@@ -1,12 +1,10 @@
 DistroSeries page is reached by traversing the Distribution page with
 a given name.
 
-As it's main functionality this page allow users to search for binary
-packages within the distroseries in context:
+The distroseries provides a binary package search endpoint that allows
+users to search for binary packages within the distroseries in context:
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/warty")
-    >>> anon_browser.getControl(name="text").value = "a"
-    >>> anon_browser.getControl("Find a Package").click()
+    >>> anon_browser.open("http://launchpad.test/ubuntu/warty/+search?text=a")
     >>> anon_browser.url
     'http://launchpad.test/ubuntu/warty/+search?text=a'
     >>> print(

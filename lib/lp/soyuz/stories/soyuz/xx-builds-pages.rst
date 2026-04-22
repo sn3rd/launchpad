@@ -52,8 +52,7 @@ For Distribution, it's possible to filter build results by state and name:
 
 For DistroSeries, an architecture filter is also presented:
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> anon_browser.getLink("Show builds").click()
+    >>> anon_browser.open("http://launchpad.test/ubuntu/hoary/+builds")
     >>> print(anon_browser.title)
     Builds : Hoary (5.04) : Ubuntu
 

@@ -9,13 +9,9 @@ DistroArchSeries Index
 ----------------------
 
 The distroarchseries is reachable following the distribution ->
-distroseries chain. We encode the DistroArchSeries details in the list
-presented in the DistroSeries page. See further details of this
-feature in 'DistroArchSeries Actions'.
+distroseries chain.
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/")
-    >>> anon_browser.getLink("4.10").click()
-    >>> anon_browser.getLink("i386").click()
+    >>> anon_browser.open("http://launchpad.test/ubuntu/warty/i386")
 
     >>> print(anon_browser.title)
     i386 : Warty (4.10) : Ubuntu
@@ -165,33 +161,37 @@ planned and done carefully.
     Changing the architecture tag will use large amounts of archive
     disk space, and may affect many people. Please be very careful.
 
-This change also affects the way distroarchseries are listed in the
-distroseries page. We will use a small helper function to extract the
-current distroseries architecture list.
+The official flag affects which architectures are reported as officially
+supported by the DistroSeries.
 
-    >>> def check_arch_list(distroseries="warty"):
-    ...     anon_browser.open(
-    ...         "http://launchpad.test/ubuntu/%s" % distroseries
+    >>> def check_arch_official(distroseries="warty", arch="i386"):
+    ...     from zope.component import getUtility
+    ...     from lp.registry.interfaces.distribution import IDistributionSet
+    ...
+    ...     series = (
+    ...         getUtility(IDistributionSet)
+    ...         .getByName("ubuntu")
+    ...         .getSeries(distroseries)
     ...     )
+    ...     das = series.getDistroArchSeries(arch)
     ...     print(
-    ...         extract_text(
-    ...             find_tag_by_id(
-    ...                 anon_browser.contents, "portlet-architectures-list"
-    ...             )
-    ...         )
+    ...         "%s: %s"
+    ...         % (arch, "official" if das.official else "unofficial")
     ...     )
     ...
 
-    >>> check_arch_list()
-    hppa (unofficial)
-    i386 (unofficial)
+    >>> login("admin@canonical.com")
+    >>> check_arch_official()
+    i386: unofficial
+    >>> logout()
 
     >>> admin_browser.getControl("Official Support").selected = True
     >>> admin_browser.getControl("Change").click()
 
-    >>> check_arch_list()
-    i386
-    hppa (unofficial)
+    >>> login("admin@canonical.com")
+    >>> check_arch_official()
+    i386: official
+    >>> logout()
 
 
 Creating a new DistroArchSeries
@@ -200,18 +200,12 @@ Creating a new DistroArchSeries
 Users with administrative privileges on a DistroSeries can open new
 architectures in this DistroSeries.
 
-    >>> admin_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> admin_browser.getLink("Add architecture").click()
+    >>> admin_browser.open("http://launchpad.test/ubuntu/hoary/+addport")
     >>> print(admin_browser.title)
     Add a port of The Hoary Hedgehog...
 
 Ubuntu hoary already has i386 & hppa distroarchseries and should not
 allow duplications.
-
-    >>> check_arch_list(distroseries="hoary")
-    i386
-    hppa
-    (unofficial)
 
     >>> admin_browser.getControl("Architecture Tag").value = "i386"
     >>> admin_browser.getControl("Processor:").value = ["386"]
@@ -241,8 +235,7 @@ I will address it one 1.1.12 is gone.
 An administrator can open new distinct architecture, for instance,
 'amd64'.
 
-    >>> admin_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> admin_browser.getLink("Add architecture").click()
+    >>> admin_browser.open("http://launchpad.test/ubuntu/hoary/+addport")
 
     >>> admin_browser.getControl("Architecture Tag").value = "amd64"
     >>> admin_browser.getControl("Processor:").value = ["amd64"]
@@ -255,11 +248,9 @@ administrator.
     >>> print(admin_browser.title)
     amd64 : Hoary (5.04) : Ubuntu
 
-And other users can see the just-created architecture listed in the
-distroseries page.
+And the new architecture is now registered in the DistroSeries.
 
-    >>> check_arch_list(distroseries="hoary")
-    amd64
-    i386
-    hppa
-    (unofficial)
+    >>> login("admin@canonical.com")
+    >>> check_arch_official(distroseries="hoary", arch="amd64")
+    amd64: official
+    >>> logout()

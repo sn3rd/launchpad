@@ -42,11 +42,6 @@ see the link to add a milestone nor access the page directly.
       ...
     zope.security.interfaces.Unauthorized: ...
 
-    >>> user_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> user_browser.getLink("Create milestone").click()
-    Traceback (most recent call last):
-      ...
-    zope.testbrowser.browser.LinkNotFoundError
     >>> user_browser.open("http://launchpad.test/ubuntu/hoary/+addmilestone")
     Traceback (most recent call last):
       ...
@@ -61,8 +56,7 @@ create a new milestone.
     >>> test_browser.url
     'http://launchpad.test/alsa-utils/trunk/+addmilestone'
 
-    >>> test_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> test_browser.getLink("Create milestone").click()
+    >>> test_browser.open("http://launchpad.test/ubuntu/hoary/+addmilestone")
     >>> test_browser.url
     'http://launchpad.test/ubuntu/hoary/+addmilestone'
 

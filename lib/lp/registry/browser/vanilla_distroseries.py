@@ -103,7 +103,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def initialize(self):
         super().initialize()
         setAdditionalLayer(self.request, VanillaLayer)
-        base_url = canonical_url(self.context, view_name="+vanilla")
+        base_url = canonical_url(self.context)
         self.packages_chart_tabs = Tabs(
             param="packages-chart",
             aria_label="Package builds",

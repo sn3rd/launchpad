@@ -5,12 +5,12 @@ Administrators
 --------------
 
 Launchpad administrators can edit distroseries via two different
-pages: 'Change details' and 'Administer'.
+pages: 'Edit details' and 'Admin'.
 
     >>> admin_browser.open("http://launchpad.test/ubuntu/hoary")
     >>> print(admin_browser.title)
-    Hoary (5.04)...
-    >>> admin_browser.getLink("Change details").click()
+    Hoary (5.04) : Ubuntu
+    >>> admin_browser.getLink("Edit details").click()
     >>> print(admin_browser.url)
     http://launchpad.test/ubuntu/hoary/+edit
 
@@ -20,12 +20,12 @@ pages: 'Change details' and 'Administer'.
     >>> admin_browser.getControl("Display name", index=0).value = "Happy"
     >>> admin_browser.getControl("Change").click()
     >>> print(admin_browser.title)
-    Happy (5.04)...
+    Happy (5.04) : Ubuntu
 
-A separate administration page is available via the 'Administer' link.
+A separate administration page is available via the 'Admin' link.
 
     >>> admin_browser.open("http://launchpad.test/ubuntu/hoary")
-    >>> admin_browser.getLink("Administer").click()
+    >>> admin_browser.getLink("Admin").click()
     >>> print(admin_browser.url)
     http://launchpad.test/ubuntu/hoary/+admin
 
@@ -38,20 +38,20 @@ A separate administration page is available via the 'Administer' link.
     >>> print(admin_browser.url)
     http://launchpad.test/ubuntu/happy
     >>> print(admin_browser.title)
-    Happy (5.05)...
+    Happy (5.05) : Ubuntu
 
 
 Registry experts
 ----------------
 
-Registry experts do not have access to the 'Change details' link.
+Registry experts do not have access to the 'Edit details' link.
 
     >>> email = "expert@example.com"
     >>> registry = factory.makeRegistryExpert(email=email)
     >>> logout()
     >>> registry_browser = setupBrowser(auth="Basic %s:test" % email)
     >>> registry_browser.open("http://launchpad.test/ubuntu/happy")
-    >>> registry_browser.getLink("Change details").click()
+    >>> registry_browser.getLink("Edit details").click()
     Traceback (most recent call last):
     ...
     zope.testbrowser.browser.LinkNotFoundError
@@ -66,7 +66,7 @@ And navigating directly to +edit is thwarted.
 Registry experts do have access to the administration page.
 
     >>> registry_browser.open("http://launchpad.test/ubuntu/happy")
-    >>> registry_browser.getLink("Administer").click()
+    >>> registry_browser.getLink("Admin").click()
     >>> print(registry_browser.url)
     http://launchpad.test/ubuntu/happy/+admin
 
@@ -79,4 +79,4 @@ Registry experts do have access to the administration page.
     >>> print(registry_browser.url)
     http://launchpad.test/ubuntu/hoary
     >>> print(registry_browser.title)
-    Happy (5.04)...
+    Happy (5.04) : Ubuntu
