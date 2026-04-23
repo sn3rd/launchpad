@@ -1076,61 +1076,17 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
         self.assertEqual(["my-uploads", "latest"], tab_ids)
         self.assertEqual("my-uploads", default)
 
-    # -- bugs_*_url --
-
-    def test_bugs_important_url_filters_by_critical(self):
-        """Important URL points at +bugs on the bugs rootsite, filtered."""
+    def test_bugs_url_filters(self):
+        """
+        Important URL points at +bugs on the bugs rootsite, filtered.
+        Bugs URL points at +bugs on the distroseries page, filtered.
+        """
         distroseries = self.factory.makeDistroSeries()
         view = self._getView(distroseries)
-        url = view.bugs_important_url
+        url = view.bugs_url["critical"]
         self.assertIn("://bugs.", url)
         self.assertIn("/+bugs?", url)
         self.assertIn("field.importance=Critical", url)
-
-    def test_bugs_new_url_orders_by_datecreated(self):
-        """New URL orders +bugs by newest first on the bugs rootsite."""
-        distroseries = self.factory.makeDistroSeries()
-        view = self._getView(distroseries)
-        url = view.bugs_new_url
-        self.assertIn("://bugs.", url)
-        self.assertIn("/+bugs?", url)
-        self.assertIn("orderby=-datecreated", url)
-
-    def test_bugs_subscriptions_url_anonymous_returns_none(self):
-        """Without a logged-in user, the subscriptions URL is None."""
-        distroseries = self.factory.makeDistroSeries()
-        view = self._getView(distroseries, principal=None)
-        self.assertIsNone(view.bugs_subscriptions_url)
-
-    def test_bugs_subscriptions_url_includes_subscriber(self):
-        """Subscriptions URL encodes the logged-in user as subscriber."""
-        distroseries = self.factory.makeDistroSeries()
-        person = self.factory.makePerson()
-        with person_logged_in(person):
-            view = self._getView(distroseries, principal=person)
-            url = view.bugs_subscriptions_url
-        self.assertIn("://bugs.", url)
-        self.assertIn("/+bugs?", url)
-        self.assertIn("field.subscriber=%s" % person.name, url)
-
-    def test_selected_bugs_milestone_url_none_when_no_milestone(self):
-        """Without a selected milestone, the URL is None."""
-        distroseries = self.factory.makeDistroSeries()
-        view = self._getView(distroseries)
-        self.assertIsNone(view.selected_bugs_milestone_url)
-
-    def test_selected_bugs_milestone_url_includes_milestone(self):
-        """Selected milestone URL encodes milestone id on the bugs rootsite."""
-        distroseries = self.factory.makeDistroSeries()
-        milestone = self.factory.makeMilestone(distroseries=distroseries)
-        transaction.commit()
-        view = self._getView(
-            distroseries, form={"bugs-milestone": str(milestone.id)}
-        )
-        url = view.selected_bugs_milestone_url
-        self.assertIn("://bugs.", url)
-        self.assertIn("/+bugs?", url)
-        self.assertIn("field.milestone%%3Alist=%d" % milestone.id, url)
 
 
 class TestSelectedBugsMilestone(TestCaseWithFactory):

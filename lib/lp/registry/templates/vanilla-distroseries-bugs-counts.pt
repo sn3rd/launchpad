@@ -4,21 +4,29 @@
                          bugs_summary python: view.get_bugs_summary(milestone=selected_bugs_milestone)">
     <div class="description-list-layout">
       <dl>
-        <dt>Critical</dt>
-        <dd class="u-flex--row">
-          <span tal:content="bugs_summary/critical_bugs_count/fmt:intcomma">0</span>
-          <span tal:condition="bugs_summary/critical_bugs_count" class="p-icon--warning-grey is-negative"></span>
-        </dd>
-        <dt>High importance</dt>
+        <a class="p-link--soft" tal:attributes="href view/bugs_url/critical">
+          <dt>Critical</dt>
+        </a>
+          <dd class="u-flex--row">
+            <span tal:content="bugs_summary/critical_bugs_count/fmt:intcomma">0</span>
+            <span tal:condition="bugs_summary/critical_bugs_count" class="p-icon--warning-grey is-negative"></span>
+          </dd>
+        <a class="p-link--soft" tal:attributes="href view/bugs_url/high">
+          <dt>High importance</dt>
+        </a>
         <dd class="u-flex--row">
           <span tal:content="bugs_summary/high_bugs_count/fmt:intcomma">0</span>
           <span tal:condition="bugs_summary/high_bugs_count" class="p-icon--warning-grey is-caution"></span>
         </dd>
-        <dt>In progress</dt>
+        <a class="p-link--soft" tal:attributes="href view/bugs_url/in_progress">
+          <dt>In progress</dt>
+        </a>
         <dd tal:content="bugs_summary/inprogress_bugs_count/fmt:intcomma">
           123
         </dd>
-        <dt>Open</dt>
+        <a class="p-link--soft" tal:attributes="href view/bugs_url/new">
+          <dt>Open</dt>
+        </a>
         <dd tal:content="bugs_summary/open_bugs_count/fmt:intcomma">
           2222
         </dd>
