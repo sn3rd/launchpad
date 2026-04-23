@@ -5,8 +5,18 @@
       chart python:view.packages_summary_all_time_chart(tab);
       total python:chart[1];
       segments python:chart[0]">
-    <tal:tabs tal:replace="structure view/packages_chart_tabs/render" />
-    <div tal:attributes="id view/packages_chart_tabs/active_panel_id">
+    <!-- TODO: re-enable tabs when the binary tab is fixed -->
+    <!-- <tal:tabs tal:replace="structure view/packages_chart_tabs/render" /> -->
+
+    <div>
+      <p style="padding-block: 0.7rem; margin: 0">
+        <strong>
+          Source packages in pockets
+        </strong>
+      </p>
+      <hr class="p-rule" />
+    </div>
+    <div tal:attributes="id view/packages_chart_tabs/active_panel_id" class="tab-panel">
       <tal:has-data tal:condition="total">
         <div class="chart-container">
           <svg width="160" height="160" chart="donut" chart-radius="100" tal:attributes="chart-title total/fmt:intcomma;
@@ -21,7 +31,8 @@
             value python:seg.get('value');
             pct python:seg.get('percentage')">
               <dt>
-                <i class="donut-chart-legends__icon p-icon--circle" tal:attributes="style string:background-color: ${fill};"></i>
+                <i class="donut-chart-legends__icon p-icon--circle"
+                  tal:attributes="style string:background-color: ${fill};"></i>
                 <span class="donut-chart-legends__name" tal:content="name">Release</span>
               </dt>
               <dd>
