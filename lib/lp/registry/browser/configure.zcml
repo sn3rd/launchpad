@@ -155,6 +155,10 @@
         permission="zope.Public">
         <browser:page
             name="+index"
+            attribute="index"
+        />
+        <browser:page
+            name="+vanilla"
             template="../templates/vanilla-distroseries-index.pt"
         />
         <browser:page

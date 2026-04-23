@@ -6,6 +6,7 @@
 __all__ = [
     "ACTIVE_RELEASED_STATUSES",
     "ACTIVE_UNRELEASED_STATUSES",
+    "INACTIVE_STATUSES",
     "DistroSeries",
     "DistroSeriesSet",
 ]

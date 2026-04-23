@@ -29,6 +29,9 @@ from lp.registry.browser.distroseries import (
     RESOLVED,
     seriesToVocab,
 )
+from lp.registry.browser.vanilla_distroseries import (
+    CLASSIC_DISTROSERIES_INDEX_FEATURE_FLAG,
+)
 from lp.registry.enums import (
     DistroSeriesDifferenceStatus,
     DistroSeriesDifferenceType,
@@ -224,6 +227,45 @@ class TestDistroSeriesView(TestCaseWithFactory):
         view = self._createDifferenceAndGetView(diff_type)
         link = view.link_to_differences_in_child
         self.assertThat(link, EndsWith("/+uniquepackages"))
+
+
+class TestDistroSeriesIndexTemplateSelection(TestCaseWithFactory):
+    """Tests for feature-flag-controlled distroseries index templates."""
+
+    layer = LaunchpadZopelessLayer
+
+    def test_index_renders_vanilla_by_default(self):
+        distroseries = self.factory.makeDistroSeries()
+        index_view = create_initialized_view(distroseries, "+index")
+        vanilla_view = create_initialized_view(
+            distroseries, "+vanilla", request=index_view.request
+        )
+
+        index_content = index_view()
+        vanilla_content = vanilla_view()
+
+        self.assertEqual(
+            normalize_whitespace(vanilla_content),
+            normalize_whitespace(index_content),
+        )
+
+    def test_index_renders_classic_when_feature_flag_is_on(self):
+        self.useFixture(
+            FeatureFixture({CLASSIC_DISTROSERIES_INDEX_FEATURE_FLAG: "on"})
+        )
+        distroseries = self.factory.makeDistroSeries()
+        index_view = create_initialized_view(distroseries, "+index")
+        classic_view = create_initialized_view(
+            distroseries, "+classic", request=index_view.request
+        )
+
+        index_content = index_view()
+        classic_content = classic_view()
+
+        self.assertEqual(
+            normalize_whitespace(classic_content),
+            normalize_whitespace(index_content),
+        )
 
 
 class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
