@@ -118,6 +118,29 @@ class TestVanillaDistroSeriesPackagesList(TestCaseWithFactory):
         for bugtask in important_tasks:
             self.assertEqual(BugTaskImportance.CRITICAL, bugtask.importance)
 
+    def test_list_bugs_important_excludes_fix_released(self):
+        """Critical bugs with FIXRELEASED status are excluded."""
+        distroseries = self._makeDistroSeries()
+
+        open_critical = self.factory.makeBugTask(target=distroseries)
+        fixed_critical = self.factory.makeBugTask(target=distroseries)
+        with person_logged_in(open_critical.target.owner):
+            open_critical.transitionToImportance(
+                BugTaskImportance.CRITICAL, open_critical.target.owner
+            )
+            fixed_critical.transitionToImportance(
+                BugTaskImportance.CRITICAL, fixed_critical.target.owner
+            )
+            fixed_critical.transitionToStatus(
+                BugTaskStatus.FIXRELEASED, fixed_critical.target.owner
+            )
+
+        view = self._getView(distroseries)
+        important_tasks = list(view.list_bugs_important())
+
+        self.assertIn(open_critical, important_tasks)
+        self.assertNotIn(fixed_critical, important_tasks)
+
     def test_list_bugs_important_limit_and_offset(self):
         """Important bugs are paginated with limit and offset."""
         distroseries = self._makeDistroSeries()
