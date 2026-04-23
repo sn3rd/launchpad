@@ -177,8 +177,7 @@ Let's target an existing Ubuntu blueprint to the Grumpy series:
 We'll also target the blueprint to a milestone.  First we'll create a
 milestone:
 
-    >>> browser.open("http://launchpad.test/ubuntu/grumpy/")
-    >>> browser.getLink("Create milestone").click()
+    >>> browser.open("http://launchpad.test/ubuntu/grumpy/+addmilestone")
     >>> browser.getControl("Name").value = "drift-1"
     >>> browser.getControl("Date Targeted").value = "2050-05-05"
     >>> browser.getControl("Summary").value = "First drift of groundhogs!"

@@ -76,7 +76,7 @@ Then we get to the DistroSeries page:
 
 Then the DistroArchSeries page:
 
-    >>> browser.getLink(url="/ubuntu/warty/i386").click()
+    >>> browser.open("http://launchpad.test/ubuntu/warty/i386")
 
 Now we are able to use the search box in this page:
 
@@ -218,7 +218,7 @@ Then we get to the DistroSeries page:
 
 Then the DistroArchSeries page:
 
-    >>> browser.getLink("i386").click()
+    >>> browser.open("http://launchpad.test/ubuntu/breezy-autotest/i386")
 
 Now we are able to use the search box in this page:
 

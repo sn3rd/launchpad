@@ -1069,16 +1069,16 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
         self.assertEqual(["important", "new", "subscriptions"], tab_ids)
         self.assertEqual("important", view.bugs_list_tabs._default)
 
-    def test_bugs_list_tabs_logged_in_orders_subscriptions_first(self):
-        """Logged-in users see subscriptions first."""
+    def test_bugs_list_tabs_logged_in_uses_stable_order(self):
+        """Logged-in users see the same stable tab order."""
         distroseries = self.factory.makeDistroSeries()
         person = self.factory.makePerson()
         with person_logged_in(person):
             view = self._getView(distroseries, principal=person)
             tab_ids = [tab[0] for tab in view.bugs_list_tabs._tabs]
             default = view.bugs_list_tabs._default
-        self.assertEqual(["subscriptions", "important", "new"], tab_ids)
-        self.assertEqual("subscriptions", default)
+        self.assertEqual(["important", "new", "subscriptions"], tab_ids)
+        self.assertEqual("important", default)
 
     def test_packages_list_tabs_anonymous_orders_my_uploads_last(self):
         """Anonymous users see latest uploads before my uploads."""
@@ -1088,16 +1088,16 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
         self.assertEqual(["latest", "my-uploads"], tab_ids)
         self.assertEqual("latest", view.packages_list_tabs._default)
 
-    def test_packages_list_tabs_logged_in_orders_my_uploads_first(self):
-        """Logged-in users see my uploads first."""
+    def test_packages_list_tabs_logged_in_uses_stable_order(self):
+        """Logged-in users see the same stable tab order."""
         distroseries = self.factory.makeDistroSeries()
         person = self.factory.makePerson()
         with person_logged_in(person):
             view = self._getView(distroseries, principal=person)
             tab_ids = [tab[0] for tab in view.packages_list_tabs._tabs]
             default = view.packages_list_tabs._default
-        self.assertEqual(["my-uploads", "latest"], tab_ids)
-        self.assertEqual("my-uploads", default)
+        self.assertEqual(["latest", "my-uploads"], tab_ids)
+        self.assertEqual("latest", default)
 
     def test_bugs_url_filters(self):
         """

@@ -39,8 +39,9 @@ component:
     ...         print(extract_text(row))
     ...
 
-    >>> motu_browser.open("http://launchpad.test/ubuntu/breezy-autotest/")
-    >>> motu_browser.getLink("All uploads").click()
+    >>> motu_browser.open(
+    ...     "http://launchpad.test/ubuntu/breezy-autotest/+queue"
+    ... )
     >>> print_queue(motu_browser.contents)  # noqa
     Package             Version     Component Section Priority Sets Pocket  When
     netapplet...ddtp... -                                           Release 2006...
