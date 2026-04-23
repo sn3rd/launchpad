@@ -88,6 +88,14 @@
   }
 }
 
+table {
+  margin-bottom: var(--dimension-spacing-block-xxs);
+}
+
+.table-container+a {
+  padding-inline: var(--dimension-spacing-inline-xxs);
+}
+
 @media (max-width: 621px) {
   .grid-row {
     row-gap: var(--dimension-spacing-block-l);
@@ -95,13 +103,15 @@
 
   .table-container {
     overflow-x: auto;
+
     table {
       table-layout: auto;
     }
+
   }
+
 
   .p-tabs__list {
     scrollbar-width: thin;
   }
 }
-

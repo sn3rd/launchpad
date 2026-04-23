@@ -78,6 +78,16 @@ PENDING_ICON = "p-icon--loading-step"
 SKIP_ICON = "p-icon--skip is-muted"
 HELP_ICON = "p-icon--help"
 
+IMPORTANCE_ICONS = {
+    BugTaskImportance.CRITICAL: "p-icon--warning-grey is-negative",
+    BugTaskImportance.HIGH: "p-icon--warning-grey is-caution",
+    BugTaskImportance.MEDIUM: "p-icon--warning-grey is-caution",
+    BugTaskImportance.LOW: "p-icon--circle is-information",
+    BugTaskImportance.WISHLIST: "p-icon--circle is-muted",
+    BugTaskImportance.UNDECIDED: "p-icon--help is-muted",
+    BugTaskImportance.UNKNOWN: "p-icon--help",
+}
+
 BUILD_STATUS_ICONS = {
     BuildStatus.FULLYBUILT: SUCCESS_ICON,
     BuildStatus.FAILEDTOBUILD: ERROR_ICON,
@@ -229,7 +239,29 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
 
         rows = []
         for bugtask in bugtasks:
-            bug_url = canonical_url(bugtask.bug)
+            if bugtask.sourcepackagename is not None:
+                target_url = canonical_url(bugtask.target)
+                bug_url = "%s/+bug/%d" % (
+                    canonical_url(bugtask.target, rootsite="bugs"),
+                    bugtask.bug.id,
+                )
+                affects_cell = Markup(
+                    '<a class="p-link--soft" href="{}">{}</a>'
+                ).format(target_url, escape(bugtask.sourcepackagename.name))
+            # affects the series itself, no other cases are
+            # possible in this context
+            else:
+                bug_url = canonical_url(bugtask.bug)
+                affects_cell = Markup("-")
+            importance_icon = IMPORTANCE_ICONS.get(
+                bugtask.importance, "p-icon--help"
+            )
+            importance_cell = Markup(
+                '<span class="u-flex--row"'
+                ' style="gap: var(--dimension-spacing-inline-xs);'
+                ' align-items: center;">'
+                '<i class="{}"></i>{}</span>'
+            ).format(importance_icon, escape(bugtask.importance.title))
             cells = [
                 Markup("<a class='p-link--soft' href='{}'>{}</a>").format(
                     bug_url, bugtask.bug.id
@@ -237,7 +269,8 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 Markup('<a class="p-link--soft" href="{}">{}</a>').format(
                     bug_url, bugtask.bug.title
                 ),
-                escape(bugtask.importance.title),
+                affects_cell,
+                importance_cell,
                 escape(bugtask.status.title),
             ]
             rows.append(
@@ -248,11 +281,11 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                 )
             )
 
-        col_widths = ["10%", "55%", "15%", "20%"]
+        col_widths = ["8%", "42%", "15%", "15%", "20%"]
         colgroup = Markup("").join(
             Markup('<col style="width: {}">').format(w) for w in col_widths
         )
-        headers = ["Bug", "Title", "Importance", "Status"]
+        headers = ["Bug", "Title", "Affects", "Importance", "Status"]
         header_row = Markup("").join(
             Markup('<th scope="col">{}</th>').format(h) for h in headers
         )
