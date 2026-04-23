@@ -14,6 +14,7 @@ from lp.registry.browser.vanilla_distroseries import (
     BUILD_STATUS_ICONS,
     ERROR_ICON,
     HELP_ICON,
+    IMPORTANCE_ICONS,
     LOADING_ICON,
     PENDING_ICON,
     POCKET_CHART_COLORS,
@@ -1057,6 +1058,46 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
         view = self._getView(distroseries)
         html = view.bugs_new_markup
         self.assertIn("<table>", html)
+        self.assertIn(">%d<" % bugtask.bug.id, html)
+
+    def test_bugs_markup_table_headers(self):
+        """Bugs table exposes Bug/Title/Affects/Importance/Status columns."""
+        distroseries = self.factory.makeDistroSeries()
+        self.factory.makeBugTask(target=distroseries, status=BugTaskStatus.NEW)
+        view = self._getView(distroseries)
+        html = view.bugs_new_markup
+        for header in ("Bug", "Title", "Affects", "Importance", "Status"):
+            self.assertIn('<th scope="col">%s</th>' % header, html)
+
+    def test_bugs_markup_source_package_affects_and_link(self):
+        """
+        Source-package tasks link the package
+        and use a bugs rootsite URL.
+        """
+        distroseries = self.factory.makeDistroSeries()
+        sourcepackage = self.factory.makeSourcePackage(
+            distroseries=distroseries
+        )
+        bugtask = self.factory.makeBugTask(
+            target=sourcepackage, status=BugTaskStatus.NEW
+        )
+        pkg_name = bugtask.sourcepackagename.name
+        view = self._getView(distroseries)
+        html = view.bugs_new_markup
+        self.assertIn(">%s</a>" % pkg_name, html)
+        self.assertIn("://bugs.", html)
+        self.assertIn("/+source/%s/+bug/%d" % (pkg_name, bugtask.bug.id), html)
+        self.assertIn(IMPORTANCE_ICONS[bugtask.importance], html)
+
+    def test_bugs_markup_series_target_has_empty_affects(self):
+        """Series-only tasks render an empty Affects cell."""
+        distroseries = self.factory.makeDistroSeries()
+        bugtask = self.factory.makeBugTask(
+            target=distroseries, status=BugTaskStatus.NEW
+        )
+        view = self._getView(distroseries)
+        html = view.bugs_new_markup
+        self.assertNotIn("/+source/", html)
         self.assertIn(">%d<" % bugtask.bug.id, html)
 
     # -- tab ordering --
