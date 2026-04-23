@@ -14,7 +14,7 @@ from typing import Literal, Tuple
 from urllib.parse import quote
 
 from markupsafe import Markup, escape
-from zope.component import getUtility
+from zope.component import getMultiAdapter, getUtility
 
 from lp.app.browser.vanilla import Tabs
 from lp.bugs.browser.buglisting import get_buglisting_search_filter_url
@@ -29,6 +29,7 @@ from lp.layers import VanillaLayer, setAdditionalLayer
 from lp.registry.browser import MilestoneOverlayMixin
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.series import SeriesStatus
+from lp.services.features import getFeatureFlag
 from lp.services.propertycache import cachedproperty
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
@@ -36,6 +37,8 @@ from lp.soyuz.interfaces.publishing import (
     IPublishingSet,
     active_publishing_status,
 )
+
+CLASSIC_DISTROSERIES_INDEX_FEATURE_FLAG = "view.distroseries.classic.default"
 
 
 class ChipColor(str, Enum):
@@ -100,6 +103,20 @@ POCKET_CHART_COLORS = {
 
 class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     """View for the vanilla distroseries page."""
+
+    def index(self):
+        """Render +classic when the feature flag is on, else default to
+        +vanilla.
+
+        TODO ines-almeida 2026-04-23: Remove the delegation and the classic
+        view once the vanilla view is fully rolled out and stable.
+        """
+        view_name = (
+            "+classic"
+            if bool(getFeatureFlag(CLASSIC_DISTROSERIES_INDEX_FEATURE_FLAG))
+            else "+vanilla"
+        )
+        return getMultiAdapter((self.context, self.request), name=view_name)()
 
     def initialize(self):
         super().initialize()
