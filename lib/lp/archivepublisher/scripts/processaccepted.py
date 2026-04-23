@@ -152,7 +152,10 @@ class ProcessAccepted(PublisherScript):
             )
             try:
                 for distroseries in distribution.series:
-                    if distroseries.status in INACTIVE_STATUSES:
+                    if (
+                        distroseries.status in INACTIVE_STATUSES
+                        and not archive.permit_obsolete_series_uploads
+                    ):
                         continue
                     self.logger.debug(
                         "Processing queue for %s %s"

@@ -9,6 +9,7 @@ __all__ = [
     "INACTIVE_STATUSES",
     "DistroSeries",
     "DistroSeriesSet",
+    "INACTIVE_STATUSES",
 ]
 
 import collections
@@ -162,8 +163,9 @@ ACTIVE_UNRELEASED_STATUSES = [
     SeriesStatus.FROZEN,
 ]
 
-
-INACTIVE_STATUSES = [SeriesStatus.OBSOLETE]
+INACTIVE_STATUSES = [
+    SeriesStatus.OBSOLETE,
+]
 
 
 DEFAULT_INDEX_COMPRESSORS = [
