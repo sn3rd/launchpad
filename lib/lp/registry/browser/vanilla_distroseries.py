@@ -31,6 +31,7 @@ from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.features import getFeatureFlag
 from lp.services.propertycache import cachedproperty
+from lp.services.searchbuilder import not_equals
 from lp.services.webapp.publisher import LaunchpadView, canonical_url
 from lp.soyuz.interfaces.binarypackagebuild import IBinaryPackageBuildSet
 from lp.soyuz.interfaces.publishing import (
@@ -205,6 +206,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
         """Return the important bug tasks for this series."""
         return self._search_bug_tasks(
             importance=BugTaskImportance.CRITICAL,
+            status=not_equals(BugTaskStatus.FIXRELEASED),
             limit=limit,
             offset=offset,
         )

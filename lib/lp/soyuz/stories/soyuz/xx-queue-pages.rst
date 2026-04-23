@@ -52,12 +52,11 @@ Let's setup a browser with the defined upload-admin for future use.
 Accessing the queues
 ====================
 
-The link "View Uploads" is presented in Distrorelease page.
-
 Viewing the current queue, by default the NEW queue.
 
-    >>> anon_browser.open("http://launchpad.test/ubuntu/breezy-autotest/")
-    >>> anon_browser.getLink("All uploads").click()
+    >>> anon_browser.open(
+    ...     "http://launchpad.test/ubuntu/breezy-autotest/+queue"
+    ... )
 
     >>> anon_browser.getControl(name="queue_state", index=0).displayValue
     ['New']
