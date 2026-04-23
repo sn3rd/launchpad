@@ -107,7 +107,7 @@ class TestDistroSeriesView(TestCaseWithFactory):
     def test_needs_linking(self):
         ubuntu = getUtility(ILaunchpadCelebrities).ubuntu
         distroseries = self.factory.makeDistroSeries(distribution=ubuntu)
-        view = create_initialized_view(distroseries, "+index")
+        view = create_initialized_view(distroseries, "+classic")
         self.assertEqual(view.needs_linking, None)
 
     def _createDifferenceAndGetView(self, difference_type, status=None):
@@ -120,7 +120,7 @@ class TestDistroSeriesView(TestCaseWithFactory):
             difference_type=difference_type,
             status=status,
         )
-        return create_initialized_view(dsp.derived_series, "+index")
+        return create_initialized_view(dsp.derived_series, "+classic")
 
     def test_num_version_differences_needing_attention(self):
         # num_version_differences_needing_attention counts
@@ -156,7 +156,7 @@ class TestDistroSeriesView(TestCaseWithFactory):
             )
             for status in DistroSeriesDifferenceStatus.items
         ]
-        view = create_initialized_view(series, "+index")
+        view = create_initialized_view(series, "+classic")
         self.assertEqual(len(dsds), view.num_version_differences)
 
     def test_num_version_differences_ignores_limits_type(self):
@@ -192,13 +192,13 @@ class TestDistroSeriesView(TestCaseWithFactory):
 
     def test_alludeToParent_names_single_parent(self):
         dsp = self.factory.makeDistroSeriesParent()
-        view = create_initialized_view(dsp.derived_series, "+index")
+        view = create_initialized_view(dsp.derived_series, "+classic")
         self.assertEqual(dsp.parent_series.displayname, view.alludeToParent())
 
     def test_alludeToParent_refers_to_multiple_parents_collectively(self):
         dsp = self.factory.makeDistroSeriesParent()
         self.factory.makeDistroSeriesParent(derived_series=dsp.derived_series)
-        view = create_initialized_view(dsp.derived_series, "+index")
+        view = create_initialized_view(dsp.derived_series, "+classic")
         self.assertEqual("a parent series", view.alludeToParent())
 
     def test_link_to_version_diffs_needing_attention(self):
@@ -299,7 +299,7 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
 
         with person_logged_in(self.simple_user):
             view = create_initialized_view(
-                derived_series, "+index", principal=self.simple_user
+                derived_series, "+classic", principal=self.simple_user
             )
             html_content = view()
 
@@ -321,7 +321,7 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
 
         with person_logged_in(self.simple_user):
             view = create_initialized_view(
-                derived_series, "+index", principal=self.simple_user
+                derived_series, "+classic", principal=self.simple_user
             )
             html_text = view()
 
@@ -344,7 +344,7 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
 
         with person_logged_in(self.simple_user):
             view = create_initialized_view(
-                derived_series, "+index", principal=self.simple_user
+                derived_series, "+classic", principal=self.simple_user
             )
             html_content = view()
 
@@ -373,7 +373,7 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
 
         with person_logged_in(self.simple_user):
             view = create_initialized_view(
-                derived_series, "+index", principal=self.simple_user
+                derived_series, "+classic", principal=self.simple_user
             )
             html_content = view()
 
@@ -397,7 +397,7 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
         )
         with person_logged_in(self.simple_user):
             view = create_initialized_view(
-                derived_series, "+index", principal=self.simple_user
+                derived_series, "+classic", principal=self.simple_user
             )
             html_content = view()
         self.assertThat(html_content, portlet_display)
@@ -424,7 +424,9 @@ class DistroSeriesIndexFunctionalTestCase(TestCaseWithFactory):
         )
 
         with person_logged_in(person):
-            view = create_initialized_view(series, "+index", principal=person)
+            view = create_initialized_view(
+                series, "+classic", principal=person
+            )
             html_content = view()
 
         if present:
@@ -601,7 +603,7 @@ class TestMilestoneBatchNavigatorAttribute(TestCaseWithFactory):
         distroseries = self.factory.makeDistroSeries(distribution=ubuntu)
         for name in ("a", "b", "c", "d"):
             distroseries.newMilestone(name)
-        view = create_initialized_view(distroseries, name="+index")
+        view = create_initialized_view(distroseries, name="+classic")
         self._check_milestone_batch_navigator(view)
 
     def test_productseries_milestone_batch_navigator(self):

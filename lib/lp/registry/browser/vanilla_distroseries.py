@@ -103,7 +103,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
     def initialize(self):
         super().initialize()
         setAdditionalLayer(self.request, VanillaLayer)
-        base_url = canonical_url(self.context, view_name="+vanilla")
+        base_url = canonical_url(self.context)
         self.packages_chart_tabs = Tabs(
             param="packages-chart",
             aria_label="Package builds",
@@ -445,9 +445,7 @@ class VanillaDistroSeriesView(LaunchpadView, MilestoneOverlayMixin):
                     build["build_status"], HELP_ICON
                 )
                 status_label = build["build_status"].title
-                build_url = "{}/+build/{}".format(
-                    version_url, build["build_id"]
-                )
+                build_url = build["build_url"]
                 build_chips.append(
                     Markup(
                         '<a class="p-link--soft u-flex--row'

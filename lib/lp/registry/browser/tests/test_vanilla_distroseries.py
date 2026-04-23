@@ -46,7 +46,7 @@ class TestVanillaDistroSeriesPackagesList(TestCaseWithFactory):
 
     def _getView(self, distroseries, principal=None):
         return create_initialized_view(
-            distroseries, "+vanilla", principal=principal
+            distroseries, "+index", principal=principal
         )
 
     # -- bugs list methods --
@@ -495,7 +495,7 @@ class TestVanillaDistroSeriesBinaryPackagesSummary(TestCaseWithFactory):
         return build
 
     def _getCounts(self, distroseries):
-        view = create_initialized_view(distroseries, "+vanilla")
+        view = create_initialized_view(distroseries, "+index")
         return view.binary_packages_summary_all_time
 
     def test_empty_distroseries_returns_zero_for_every_pocket(self):
@@ -571,7 +571,7 @@ class TestPackagesSummaryAllTimeChart(TestCaseWithFactory):
         return spph, build
 
     def _getChart(self, distroseries, packages_type):
-        view = create_initialized_view(distroseries, "+vanilla")
+        view = create_initialized_view(distroseries, "+index")
         return view.packages_summary_all_time_chart(packages_type)
 
     def test_source_empty_returns_zero_segments(self):
@@ -595,7 +595,7 @@ class TestPackagesSummaryAllTimeChart(TestCaseWithFactory):
     def test_invalid_type_raises(self):
         """Invalid packages_type raises ValueError."""
         distroseries = self.factory.makeDistroSeries()
-        view = create_initialized_view(distroseries, "+vanilla")
+        view = create_initialized_view(distroseries, "+index")
         self.assertRaises(
             ValueError,
             view.packages_summary_all_time_chart,
@@ -774,7 +774,7 @@ class TestVanillaDistroSeriesBugsSummary(TestCaseWithFactory):
 
     def _getView(self, distroseries, principal=None):
         return create_initialized_view(
-            distroseries, "+vanilla", principal=principal
+            distroseries, "+index", principal=principal
         )
 
     def test_bugs_summary_no_bugs(self):
@@ -971,7 +971,7 @@ class TestVanillaDistroSeriesBugsList(TestCaseWithFactory):
 
     def _getView(self, distroseries, principal=None, form=None):
         return create_initialized_view(
-            distroseries, "+vanilla", principal=principal, form=form
+            distroseries, "+index", principal=principal, form=form
         )
 
     def test_bugs_subscriptions_markup_empty(self):

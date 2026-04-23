@@ -8,6 +8,9 @@
     <li class="p-list__item" tal:condition="overview_menu/admin/enabled">
       <a tal:attributes="href overview_menu/admin/url">Admin</a>
     </li>
+    <li class="p-list__item" tal:condition="overview_menu/add_port/enabled">
+      <a tal:attributes="href overview_menu/add_port/url">Add architecture</a>
+    </li>
     <li class="p-list__item" tal:condition="overview_menu/initseries/enabled|nothing">
       <a tal:attributes="href overview_menu/initseries/url">Init series</a>
     </li>

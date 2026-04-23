@@ -133,7 +133,7 @@
           attribute="redirectToDistroFileBug"
           />
       <browser:page
-          name="+index"
+          name="+classic"
           template="../templates/distroseries-index.pt"
           />
       <browser:page
@@ -154,9 +154,9 @@
         class="lp.registry.browser.vanilla_distroseries.VanillaDistroSeriesView"
         permission="zope.Public">
         <browser:page
-            name="+vanilla"
+            name="+index"
             template="../templates/vanilla-distroseries-index.pt"
-            />
+        />
         <browser:page
             name="+vanilla-distroseries-summary"
             template="../templates/vanilla-distroseries-summary.pt"
