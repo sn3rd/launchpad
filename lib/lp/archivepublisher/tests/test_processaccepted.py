@@ -8,6 +8,7 @@ from optparse import OptionValueError
 
 import transaction
 from testtools.matchers import EndsWith, LessThan, MatchesListwise
+from zope.security.proxy import removeSecurityProxy
 
 from lp.archivepublisher.publishing import GLOBAL_PUBLISHER_LOCK
 from lp.archivepublisher.scripts.processaccepted import ProcessAccepted
@@ -102,6 +103,8 @@ class TestProcessAccepted(TestCaseWithFactory):
         )
 
     def test_skips_obsolete_series(self):
+        # The script skips OBSOLETE series when the archive does not
+        # permit obsolete series uploads.
         distroseries = self.factory.makeDistroSeries(distribution=self.distro)
         self.createWaitingAcceptancePackage(distroseries=distroseries)
         distroseries.status = SeriesStatus.OBSOLETE
@@ -113,6 +116,25 @@ class TestProcessAccepted(TestCaseWithFactory):
             name=self.test_package_name
         )
         self.assertTrue(published_main.is_empty())
+
+    def test_processes_obsolete_series_when_permitted(self):
+        # When permit_obsolete_series_uploads is set, the script processes
+        # queue items for OBSOLETE series.
+        distroseries = self.factory.makeDistroSeries(distribution=self.distro)
+        ppa = self.factory.makeArchive(
+            distribution=self.distro, purpose=ArchivePurpose.PPA
+        )
+        removeSecurityProxy(ppa).permit_obsolete_series_uploads = True
+        self.createWaitingAcceptancePackage(
+            distroseries=distroseries, archive=ppa
+        )
+        distroseries.status = SeriesStatus.OBSOLETE
+        script = self.getScript(["--ppa"])
+        switch_dbuser(self.dbuser)
+        script.main()
+
+        published_ppa = ppa.getPublishedSources(name=self.test_package_name)
+        self.assertFalse(published_ppa.is_empty())
 
     def test_accept_copy_archives(self):
         """Test that publications in a copy archive are accepted properly."""
