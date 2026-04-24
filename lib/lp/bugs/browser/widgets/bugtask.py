@@ -12,6 +12,7 @@ __all__ = [
     "BugTaskTargetWidget",
     "BugWatchEditForm",
     "DBItemDisplayWidget",
+    "FileBugArchiveSourcePackageNameWidget",
     "FileBugSourcePackageNameWidget",
     "NewLineToSpacesWidget",
 ]
@@ -44,6 +45,7 @@ from lp.app.validators import LaunchpadValidationError
 from lp.app.widgets.helpers import get_widget_template
 from lp.app.widgets.launchpadtarget import LaunchpadTargetWidget
 from lp.app.widgets.popup import (
+    ArchiveSourcePackagePickerWidget,
     PersonPickerWidget,
     SourcePackageNameWidgetBase,
 )
@@ -55,6 +57,7 @@ from lp.bugs.interfaces.bugwatch import (
 )
 from lp.bugs.vocabularies import UsesBugsDistributionVocabulary
 from lp.registry.enums import DistributionDefaultTraversalPolicy
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.distribution import IDistribution, IDistributionSet
 from lp.registry.interfaces.ociproject import IOCIProject
 from lp.registry.interfaces.product import IProduct
@@ -63,6 +66,7 @@ from lp.services.fields import URIField
 from lp.services.webapp import canonical_url
 from lp.services.webapp.escaping import html_escape
 from lp.services.webapp.interfaces import ILaunchBag
+from lp.soyuz.interfaces.archive import IArchive
 
 
 @implementer(IInputWidget)
@@ -657,6 +661,43 @@ class FileBugSourcePackageNameWidget(SourcePackageNameWidgetBase):
             return bspn
         else:
             return source
+
+
+class FileBugArchiveSourcePackageNameWidget(ArchiveSourcePackagePickerWidget):
+    """Package widget for +filebug on archive bug targets."""
+
+    # Use the base form-picker template; no dynamic ppa_id needed since
+    # the archive is fixed from the view context.
+    __call__ = ViewPageTemplateFile(
+        "../../../app/widgets/templates/form-picker.pt"
+    )
+
+    def _get_archive(self):
+        context = self.context.context
+        if IArchive.providedBy(context):
+            return context
+        if IArchiveSourcePackage.providedBy(context):
+            return context.archive
+        return None
+
+    def __init__(self, field, vocabulary, request):
+        super().__init__(field, vocabulary, request)
+        archive = self._get_archive()
+        if archive is not None:
+            self.context.vocabulary.setArchive(archive)
+
+    def _toFieldValue(self, input):
+        if not input:
+            return self.context.missing_value
+        archive = self._get_archive()
+        if archive is not None:
+            self.context.vocabulary.setArchive(archive)
+        try:
+            return self.context.vocabulary.getTermByToken(input).value
+        except LookupError:
+            raise ConversionError(
+                "There is no package named '%s' in this archive." % input
+            )
 
 
 @implementer(IDisplayWidget)

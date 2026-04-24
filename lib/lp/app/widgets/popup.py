@@ -4,6 +4,7 @@
 """Single selection widget using a popup to select one item from many."""
 
 __all__ = [
+    "ArchiveSourcePackagePickerWidget",
     "BugTrackerPickerWidget",
     "DistributionSourcePackagePickerWidget",
     "PersonPickerWidget",
@@ -32,6 +33,7 @@ from lp.services.features import getFeatureFlag
 from lp.services.propertycache import cachedproperty
 from lp.services.webapp import canonical_url
 from lp.services.webapp.escaping import structured
+from lp.soyuz.interfaces.archive import IArchiveSet
 
 
 class VocabularyPickerWidget(SingleDataHelper, ItemsWidgetBase):
@@ -312,6 +314,38 @@ class DistributionSourcePackagePickerWidget(VocabularyPickerWidget):
 
     distribution_name = ""
     distroseries_id = ""
+
+
+class ArchiveSourcePackagePickerWidget(VocabularyPickerWidget):
+    """Custom popup widget for choosing packages published in a PPA.
+
+    The picker template reads the archive reference from the sibling PPA
+    field and passes it as the context path for the AJAX vocabulary search,
+    so the vocabulary is automatically scoped to the selected archive.
+    """
+
+    __call__ = ViewPageTemplateFile("templates/archivesourcepackage-picker.pt")
+
+    @property
+    def ppa_id(self):
+        return self._prefix + "ppa"
+
+    def _toFieldValue(self, input):
+        if not input:
+            return self.context.missing_value
+        # Scope the vocabulary to whatever archive is currently selected in
+        # the sibling PPA field, so getTermByToken can resolve the package.
+        ppa_ref = self.request.form.get(self.ppa_id)
+        if ppa_ref:
+            archive = getUtility(IArchiveSet).getByReference(ppa_ref)
+            if archive is not None:
+                self.context.vocabulary.setArchive(archive)
+        try:
+            return self.context.vocabulary.getTermByToken(input).value
+        except LookupError:
+            raise ConversionError(
+                "There is no package named '%s' in the selected PPA." % input
+            )
 
 
 class SourcePackageNameWidgetBase(DistributionSourcePackagePickerWidget):

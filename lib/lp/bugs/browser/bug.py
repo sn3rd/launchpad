@@ -105,6 +105,7 @@ from lp.services.webapp.authorization import (
 from lp.services.webapp.interfaces import ICanonicalUrlData, ILaunchBag
 from lp.services.webapp.publisher import RedirectionView
 from lp.services.webapp.snapshot import notify_modified
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG, IArchive
 
 
 class BugNavigation(Navigation):
@@ -195,6 +196,7 @@ class BugContextMenu(ContextMenu):
         "visibility",
         "addupstream",
         "adddistro",
+        "addppa",
         "subscription",
         "addsubscriber",
         "editsubscriptions",
@@ -251,6 +253,13 @@ class BugContextMenu(ContextMenu):
         """Return the 'Also affects distribution/package' Link."""
         text = "Also affects distribution/package"
         return Link("+distrotask", text, icon="add")
+
+    @enabled_with_permission("launchpad.Edit")
+    def addppa(self):
+        """Return the 'Also affects PPA/package' Link."""
+        text = "Also affects PPA/package"
+        enabled = bool(getFeatureFlag(ARCHIVE_BUGS_FEATURE_FLAG))
+        return Link("+ppatask", text, icon="add", enabled=enabled)
 
     def subscription(self):
         """Return the 'Subscribe/Unsubscribe' Link."""
@@ -1073,10 +1082,16 @@ class BugSecrecyEditView(LaunchpadFormView, BugSubscriptionPortletDetails):
         bug_target_parents = self.context.bug.affected_bug_target_parents
         service = getUtility(IService, "sharing")
         for bug_target_parent in bug_target_parents:
-            # TODO: ilkeremrekoc 2026-03-25: getAccessPolicyGrantCounts expects
-            # a pillar, when we add a bug_target_parent that isn't a pillar we
-            # need to add a condition here to avoid calling it with something
-            # it doesn't understand.
+
+            # If bug_target_parent is an archive and it is not private, then
+            # the bug will still be visible. Else, there is a chance for the
+            # bug to become invisible, so we need to continue.
+            if IArchive.providedBy(bug_target_parent):
+                if not bug_target_parent.private:
+                    return False
+                else:
+                    continue
+
             grant_counts = service.getAccessPolicyGrantCounts(
                 bug_target_parent
             )

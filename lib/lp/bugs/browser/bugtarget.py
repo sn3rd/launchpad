@@ -4,6 +4,7 @@
 """IBugTarget-related browser views."""
 
 __all__ = [
+    "ArchiveBugTargetFileBugGuidedView",
     "BugsPatchesView",
     "BugTargetBugListingView",
     "BugTargetBugTagsView",
@@ -77,7 +78,10 @@ from lp.bugs.browser.widgets.bug import (
     DictBugTemplatesWidget,
     LargeBugTagsWidget,
 )
-from lp.bugs.browser.widgets.bugtask import FileBugSourcePackageNameWidget
+from lp.bugs.browser.widgets.bugtask import (
+    FileBugArchiveSourcePackageNameWidget,
+    FileBugSourcePackageNameWidget,
+)
 from lp.bugs.interfaces.apportjob import IProcessApportBlobJobSource
 from lp.bugs.interfaces.bug import (
     CreateBugParams,
@@ -105,6 +109,7 @@ from lp.bugs.model.structuralsubscription import (
 )
 from lp.bugs.utilities.filebugdataparser import FileBugData
 from lp.registry.browser.product import ProductConfigureBase
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.distribution import IDistribution
 from lp.registry.interfaces.distributionsourcepackage import (
     IDistributionSourcePackage,
@@ -125,6 +130,7 @@ from lp.services.webapp import LaunchpadView, canonical_url, urlappend
 from lp.services.webapp.authorization import check_permission
 from lp.services.webapp.batching import BatchNavigator
 from lp.services.webapp.escaping import structured
+from lp.soyuz.interfaces.archive import IArchive
 
 # A simple vocabulary for the subscribe_to_existing_bug form field.
 SUBSCRIBE_TO_BUG_VOCABULARY = SimpleVocabulary.fromItems(
@@ -474,35 +480,73 @@ class FileBugViewBase(LaunchpadFormView):
         if form.get("packagename_option") == "choose":
             packagename = form.get("field.packagename")
             if packagename:
+                # Handle both distribution and archive contexts
                 if IDistribution.providedBy(self.context):
                     distribution = self.context
-                else:
-                    assert IDistributionSourcePackage.providedBy(self.context)
+                    archive = None
+                elif IDistributionSourcePackage.providedBy(self.context):
                     distribution = self.context.distribution
+                    archive = None
+                elif IArchive.providedBy(self.context):
+                    distribution = None
+                    archive = self.context
+                elif IArchiveSourcePackage.providedBy(self.context):
+                    distribution = None
+                    archive = self.context.archive
+                else:
+                    # Unexpected context type
+                    # Neither distribution nor archive-based. Package name
+                    # validation will be skipped. This should not happen in
+                    # normal operation since the packagename field is only
+                    # shown for distribution and archive contexts.
+                    distribution = None
+                    archive = None
 
-                try:
-                    if bool(getFeatureFlag("disclosure.dsp_picker.enabled")):
-                        dsp_vocab = self.widgets.get("packagename").vocabulary
-                        dsp_vocab.setDistribution(distribution)
-                        dsp_vocab.getTermByToken(packagename)
-                    else:
-                        # The untrusted BinaryAndSourcePackageName
-                        # vocabulary was used, so it needs secondary
-                        # verification.
-                        distribution.guessPublishedSourcePackageName(
-                            packagename
-                        )
-                except (LookupError, NotFoundError):
-                    if distribution.series:
-                        # If a distribution doesn't have any series,
-                        # it won't have any source packages published at
-                        # all, so we set the error only if there are
-                        # series.
+                # Validate packagename for distributions
+                if distribution:
+                    try:
+                        if bool(
+                            getFeatureFlag("disclosure.dsp_picker.enabled")
+                        ):
+                            dsp_vocab = self.widgets.get(
+                                "packagename"
+                            ).vocabulary
+                            dsp_vocab.setDistribution(distribution)
+                            dsp_vocab.getTermByToken(packagename)
+                        else:
+                            # The untrusted BinaryAndSourcePackageName
+                            # vocabulary was used, so it needs secondary
+                            # verification.
+                            distribution.guessPublishedSourcePackageName(
+                                packagename
+                            )
+                    except (LookupError, NotFoundError):
+                        if distribution.series:
+                            # If a distribution doesn't have any series,
+                            # it won't have any source packages published at
+                            # all, so we set the error only if there are
+                            # series.
+                            packagename_error = (
+                                '"%s" does not exist in %s. Please choose a '
+                                "different package. If you're unsure, please "
+                                'select "I don\'t know"'
+                                % (packagename, distribution.displayname)
+                            )
+                            self.setFieldError(
+                                "packagename", packagename_error
+                            )
+
+                # Validate packagename for archives
+                elif archive:
+                    archive_package = archive.getArchiveSourcePackage(
+                        packagename
+                    )
+                    if archive_package is None:
                         packagename_error = (
                             '"%s" does not exist in %s. Please choose a '
                             "different package. If you're unsure, please "
                             'select "I don\'t know"'
-                            % (packagename, distribution.displayname)
+                            % (packagename, archive.displayname)
                         )
                         self.setFieldError("packagename", packagename_error)
             else:
@@ -602,6 +646,8 @@ class FileBugViewBase(LaunchpadFormView):
             packagename = None
             if IDistributionSourcePackage.providedBy(context):
                 context = context.distribution
+            elif IArchiveSourcePackage.providedBy(context):
+                context = context.archive
 
         linkified_ack = structured(
             FormattersAPI(
@@ -616,6 +662,8 @@ class FileBugViewBase(LaunchpadFormView):
             information_type=information_type,
             tags=data.get("tags"),
         )
+
+        # Handle distribution packagename resolution
         if IDistribution.providedBy(context) and packagename:
             if bool(getFeatureFlag("disclosure.dsp_picker.enabled")):
                 context = packagename
@@ -642,6 +690,26 @@ class FileBugViewBase(LaunchpadFormView):
                     )
                 else:
                     context = context.getSourcePackage(sourcepackagename.name)
+
+        # Handle archive packagename resolution
+        elif IArchive.providedBy(context) and packagename:
+            packagename = str(packagename.name)
+            archive_package = context.getArchiveSourcePackage(packagename)
+            if archive_package:
+                context = archive_package
+            else:
+                # Package doesn't exist in archive
+                notifications.append(
+                    "The package %s is not published in %s; the "
+                    "bug was targeted only to the archive."
+                    % (packagename, context.displayname)
+                )
+                params.comment += (
+                    "\r\n\r\nNote: the original reporter indicated "
+                    "the bug was in package %r; however, that package "
+                    "was not published in %s."
+                    % (packagename, context.displayname)
+                )
 
         extra_data = self.extra_data
         if extra_data.extra_description:
@@ -923,6 +991,8 @@ class FileBugViewBase(LaunchpadFormView):
             or IDistroSeries.providedBy(context)
             or ISourcePackage.providedBy(context)
             or IOCIProject.providedBy(context)
+            or IArchive.providedBy(context)
+            or IArchiveSourcePackage.providedBy(context)
         ):
             pass
         else:
@@ -998,6 +1068,8 @@ class FileBugViewBase(LaunchpadFormView):
     def getMainContext(self):
         if IDistributionSourcePackage.providedBy(self.context):
             return self.context.distribution
+        elif IArchiveSourcePackage.providedBy(self.context):
+            return self.context.archive
         else:
             return self.context
 
@@ -1031,6 +1103,12 @@ class IDistroBugAddForm(IBugAddForm):
     )
 
 
+class IArchiveBugAddForm(IBugAddForm):
+    packagename = copy_field(
+        IBugAddForm["packagename"], vocabularyName="ArchiveSourcePackageName"
+    )
+
+
 class FilebugShowSimilarBugsView(FileBugViewBase):
     """A view for showing possible dupes for a bug.
 
@@ -1040,7 +1118,18 @@ class FilebugShowSimilarBugsView(FileBugViewBase):
 
     @property
     def schema(self):
-        if bool(getFeatureFlag("disclosure.dsp_picker.enabled")):
+        """Return the appropriate schema based on context."""
+        # Use Archive-specific schema for Archive contexts
+        # This needs to be here because +filebug+show-similar calls this class
+        # directly instead of going through ArchiveBugTargetFileBugGuidedView
+        # so we need to make sure the right schema is used for the duplicate
+        # search form.
+        if IArchive.providedBy(
+            self.context
+        ) or IArchiveSourcePackage.providedBy(self.context):
+            return IArchiveBugAddForm
+        # Use distribution schema when feature flag is enabled
+        elif bool(getFeatureFlag("disclosure.dsp_picker.enabled")):
             return IDistroBugAddForm
         else:
             return IBugAddForm
@@ -1081,6 +1170,13 @@ class FilebugShowSimilarBugsView(FileBugViewBase):
             context_params = {"product": self.context}
         elif IDistribution.providedBy(self.context):
             context_params = {"distribution": self.context}
+        elif IArchive.providedBy(self.context):
+            context_params = {"archive": self.context}
+        elif IArchiveSourcePackage.providedBy(self.context):
+            context_params = {
+                "archive": self.context.archive,
+                "sourcepackagename": self.context.sourcepackagename,
+            }
         else:
             assert IDistributionSourcePackage.providedBy(self.context), (
                 "Unknown search context: %r" % self.context
@@ -1172,6 +1268,76 @@ class FileBugGuidedView(FilebugShowSimilarBugsView):
 
     def showFileBugForm(self):
         return self._FILEBUG_FORM()
+
+
+class ArchiveBugTargetFileBugGuidedView(FileBugGuidedView):
+    """Filebug view for IArchive and IArchiveSourcePackage.
+
+    Extends the standard guided filebug view with a package-name picker
+    for IArchive contexts.
+    """
+
+    # Preserve actions from ancestor views (see FileBugGuidedView comment).
+    actions = FileBugGuidedView.actions
+
+    _SEARCH_FOR_DUPES = ViewPageTemplateFile(
+        "../templates/bugtarget-filebug-search.pt"
+    )
+
+    _FILEBUG_FORM = ViewPageTemplateFile(
+        "../templates/bugtarget-filebug-submit-bug.pt"
+    )
+
+    template = _SEARCH_FOR_DUPES
+
+    schema = IArchiveBugAddForm
+
+    custom_widget_packagename = FileBugArchiveSourcePackageNameWidget
+
+    @property
+    def field_names(self):
+        names = super().field_names
+        # Add packagename field for all archive contexts
+        if "packagename" not in names:
+            names.append("packagename")
+        return names
+
+    @property
+    def initial_values(self):
+        values = super().initial_values
+        # Pre-fill packagename for specific package contexts
+        if IArchiveSourcePackage.providedBy(self.context):
+            values["packagename"] = self.context.name
+        return values
+
+    def setUpWidgets(self):
+        """Customize the onKeyPress event of the package name chooser."""
+        super().setUpWidgets()
+
+        if "packagename" in self.field_names:
+            self.widgets["packagename"].onKeyPress = (
+                "selectWidget('choose', event)"
+            )
+
+    def getMainContext(self):
+        """Return the main context for archives.
+
+        For IArchiveSourcePackage, return the archive. This is analogous
+        to how DistributionSourcePackage returns the distribution.
+        """
+        if IArchiveSourcePackage.providedBy(self.context):
+            return self.context.archive
+        else:
+            # IArchive or fallback
+            return self.context
+
+    def contextUsesMalone(self):
+        """Archives always use Launchpad for bug tracking."""
+        return True
+
+    def contextAllowsNewBugs(self):
+        """Archives always allow new bugs to be filed."""
+        return True
 
 
 class ProjectGroupFileBugGuidedView(LaunchpadFormView):

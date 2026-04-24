@@ -4,7 +4,10 @@
 from zope.component import getUtility
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
+from lp.registry.interfaces.archivesourcepackage import IArchiveSourcePackage
 from lp.registry.interfaces.packaging import IPackagingUtil, PackagingType
+from lp.services.features.testing import FeatureFixture
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
 from lp.testing import TestCaseWithFactory, login_person
 from lp.testing.layers import DatabaseFunctionalLayer
 from lp.testing.views import create_initialized_view
@@ -203,3 +206,63 @@ class TestProductBugTaskCreationStep(TestCaseWithFactory):
             self.bug_task, "+affects-new-product", form=form
         )
         self.assertEqual([], view.errors)
+
+
+class TestPPABugTaskCreationStep(TestCaseWithFactory):
+    layer = DatabaseFunctionalLayer
+
+    def setUp(self):
+        super().setUp()
+        self.ppa = self.factory.makeArchive()
+        self.spn = self.factory.makeSourcePackageName()
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=self.ppa, sourcepackagename=self.spn
+        )
+        self.user = self.ppa.owner
+        login_person(self.user)
+        self.bug_task = self.factory.makeBugTask(owner=self.user)
+        self.bug = self.bug_task.bug
+
+    def _make_view(self, extra_form=None):
+        form = {
+            "field.ppa": self.ppa.reference,
+            "field.__visited_steps__": "specify_remote_bug_url",
+            "field.actions.continue": "Continue",
+        }
+        if extra_form:
+            form.update(extra_form)
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            return create_initialized_view(
+                self.bug_task, "+ppatask", form=form
+            )
+
+    def test_create_ppa_bugtask_archive_only(self):
+        # Submitting with just a PPA (no package) creates a task on the
+        # archive itself.
+        view = self._make_view()
+        self.assertEqual([], view.view.errors)
+        ppa_task = self.bug.getBugTask(self.ppa)
+        self.assertIsNotNone(ppa_task)
+
+    def test_create_ppa_bugtask_with_package(self):
+        # Submitting with a PPA and a source package name creates a task on
+        # the ArchiveSourcePackage.
+        view = self._make_view({"field.sourcepackagename": self.spn.name})
+        self.assertEqual([], view.view.errors)
+        asp = self.ppa.getArchiveSourcePackage(self.spn.name)
+        ppa_package_task = self.bug.getBugTask(asp)
+        self.assertIsNotNone(ppa_package_task)
+        self.assertTrue(
+            IArchiveSourcePackage.providedBy(ppa_package_task.target)
+        )
+
+    def test_create_ppa_bugtask_unknown_package_sets_error(self):
+        # Entering a package name that is not in the PPA sets a field error.
+        view = self._make_view({"field.sourcepackagename": "no-such-package"})
+        self.assertNotEqual([], view.view.errors)
+
+    def test_create_ppa_bugtask_duplicate_raises_error(self):
+        # Trying to add a second task for the same PPA sets a field error.
+        self.bug.addTask(self.user, self.ppa, validate_target=False)
+        view = self._make_view()
+        self.assertNotEqual([], view.view.errors)

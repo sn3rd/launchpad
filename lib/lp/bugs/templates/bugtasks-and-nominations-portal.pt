@@ -85,6 +85,10 @@
         condition="link/enabled"
         replace="structure link/render" />
     </span>
+    <tal:addppa
+        define="link context_menu/addppa"
+        condition="link/enabled"
+        replace="structure link/render" />
     <tal:nominate
         define="link context_menu/nominate"
         condition="link/enabled"

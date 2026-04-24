@@ -1129,11 +1129,16 @@ class IBugTaskSet(Interface):
         """
 
     def findSimilar(
-        user, summary, product=None, distribution=None, sourcepackagename=None
+        user,
+        summary,
+        product=None,
+        distribution=None,
+        sourcepackagename=None,
+        archive=None,
     ):
         """Find bugs similar to the given summary.
 
-        The search is limited to the given product or distribution
+        The search is limited to the given product, distribution, or archive
         (together with an optional source package).
 
         Only BugTasks that the user has access to will be returned.

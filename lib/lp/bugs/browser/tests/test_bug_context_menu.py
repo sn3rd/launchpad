@@ -10,7 +10,13 @@ from lp.bugs.enums import BugNotificationLevel
 from lp.services.features import get_relevant_feature_controller
 from lp.services.webapp.interfaces import IOpenLaunchBag
 from lp.services.webapp.servers import LaunchpadTestRequest
-from lp.testing import TestCaseWithFactory, feature_flags, person_logged_in
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
+from lp.testing import (
+    TestCaseWithFactory,
+    feature_flags,
+    person_logged_in,
+    set_feature_flag,
+)
 from lp.testing.layers import DatabaseFunctionalLayer
 from lp.testing.views import create_initialized_view
 
@@ -73,3 +79,20 @@ class TestBugContextMenu(TestCaseWithFactory):
                 )
                 html = view.render()
         self.assertTrue('class="sprite maybe action-icon mute-help"' in html)
+
+    def test_addppa_link_disabled_without_feature_flag(self):
+        # The 'Also affects PPA/package' link is disabled when the
+        # archive bugs feature flag is off.
+        with feature_flags():
+            link = self.context_menu.addppa()
+        self.assertFalse(link.enabled)
+
+    def test_addppa_link_enabled_with_feature_flag(self):
+        # The 'Also affects PPA/package' link is enabled when the
+        # archive bugs feature flag is on (and the user has edit permission).
+        with feature_flags():
+            set_feature_flag(ARCHIVE_BUGS_FEATURE_FLAG, "on")
+            with person_logged_in(self.bug.owner):
+                link = self.context_menu.addppa()
+        self.assertTrue(link.enabled)
+        self.assertEqual("+ppatask", link.target)

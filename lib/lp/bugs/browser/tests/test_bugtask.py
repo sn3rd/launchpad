@@ -4,6 +4,7 @@
 import json
 import re
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 import soupmatchers
@@ -16,6 +17,7 @@ from zope.formlib.interfaces import ConversionError
 from zope.security.proxy import removeSecurityProxy
 
 from lp.app.enums import InformationType
+from lp.app.errors import NotFoundError
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
 from lp.bugs.adapters.bugchange import BugTaskStatusChange
 from lp.bugs.browser.buglisting import (
@@ -25,6 +27,7 @@ from lp.bugs.browser.buglisting import (
 from lp.bugs.browser.bugtask import (
     BugActivityItem,
     BugTaskEditView,
+    BugTaskNavigation,
     BugTasksNominationsView,
     BugTasksTableView,
 )
@@ -51,11 +54,12 @@ from lp.services.config import config
 from lp.services.database.constants import UTC_NOW
 from lp.services.features.testing import FeatureFixture
 from lp.services.propertycache import get_property_cache
-from lp.services.webapp import canonical_url
+from lp.services.webapp import Navigation, canonical_url
 from lp.services.webapp.escaping import html_escape
 from lp.services.webapp.interfaces import ILaunchBag, ILaunchpadRoot
 from lp.services.webapp.servers import LaunchpadTestRequest
 from lp.services.webapp.snapshot import notify_modified
+from lp.soyuz.interfaces.archive import ARCHIVE_BUGS_FEATURE_FLAG
 from lp.soyuz.interfaces.component import IComponentSet
 from lp.testing import (
     ANONYMOUS,
@@ -3209,6 +3213,85 @@ class TestBugTaskListingItem(TestCaseWithFactory):
             bug.date_last_updated = datetime(2000, 1, 1, tzinfo=timezone.utc)
             bug.date_last_message = datetime(2001, 1, 1, tzinfo=timezone.utc)
             self.assertEqual("on 2001-01-01", item.model["last_updated"])
+
+
+class TestBugTaskNavigationPublishTraverse(TestCaseWithFactory):
+    """Tests for BugTaskNavigation.publishTraverse method."""
+
+    layer = DatabaseFunctionalLayer
+
+    def test_ppatask_without_feature_flag_raises_not_found(self):
+        # When the ARCHIVE_BUGS_FEATURE_FLAG is not enabled, accessing
+        # +ppatask raises NotFoundError.
+        bugtask = self.factory.makeBugTask()
+        request = LaunchpadTestRequest()
+
+        navigation = BugTaskNavigation(bugtask, request)
+        self.assertRaises(
+            NotFoundError, navigation.publishTraverse, request, "+ppatask"
+        )
+
+    def test_ppatask_with_feature_flag_allows_traversal(self):
+        # When the ARCHIVE_BUGS_FEATURE_FLAG is enabled, publishTraverse
+        # passes +ppatask through to super() rather than raising from the
+        # feature flag guard.
+        bugtask = self.factory.makeBugTask()
+        request = LaunchpadTestRequest()
+        navigation = BugTaskNavigation(bugtask, request)
+        reached_super = []
+
+        def fake_super_traverse(self_inner, req, nm):
+            reached_super.append(nm)
+            return None
+
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            with patch.object(
+                Navigation, "publishTraverse", fake_super_traverse
+            ):
+                navigation.publishTraverse(request, "+ppatask")
+
+        self.assertEqual(["+ppatask"], reached_super)
+
+    def test_editstatus_on_archive_without_feature_flag_raises_not_found(self):
+        # When the ARCHIVE_BUGS_FEATURE_FLAG is not enabled, accessing
+        # +editstatus on an Archive bugtask raises NotFoundError.
+        # Create an Archive bugtask with feature flag enabled
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            archive = self.factory.makeArchive()
+            bugtask = self.factory.makeBugTask(target=archive)
+
+        # Now test with feature flag off (default state)
+        request = LaunchpadTestRequest()
+        navigation = BugTaskNavigation(bugtask, request)
+        self.assertRaises(
+            NotFoundError,
+            navigation.publishTraverse,
+            request,
+            "+editstatus",
+        )
+
+    def test_editstatus_on_archive_with_feature_flag_allows_traversal(self):
+        # When the ARCHIVE_BUGS_FEATURE_FLAG is enabled, publishTraverse
+        # passes +editstatus on Archive bugtasks through to super() rather
+        # than raising from the feature flag guard.
+        # Create an Archive bugtask with feature flag enabled
+        with FeatureFixture({ARCHIVE_BUGS_FEATURE_FLAG: "on"}):
+            archive = self.factory.makeArchive()
+            bugtask = self.factory.makeBugTask(target=archive)
+            request = LaunchpadTestRequest()
+            navigation = BugTaskNavigation(bugtask, request)
+            reached_super = []
+
+            def fake_super_traverse(self_inner, req, nm):
+                reached_super.append(nm)
+                return None
+
+            with patch.object(
+                Navigation, "publishTraverse", fake_super_traverse
+            ):
+                navigation.publishTraverse(request, "+editstatus")
+
+            self.assertEqual(["+editstatus"], reached_super)
 
 
 load_tests = load_tests_apply_scenarios

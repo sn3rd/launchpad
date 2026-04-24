@@ -87,6 +87,17 @@
             class="lp.bugs.browser.bugtarget.FileBugGuidedView"
             permission="launchpad.AnyPerson"/>
         <browser:page
+            name="+filebug"
+            for="lp.soyuz.interfaces.archive.IArchive"
+            class="lp.bugs.browser.bugtarget.ArchiveBugTargetFileBugGuidedView"
+            permission="launchpad.AnyPerson"/>
+        <browser:page
+            name="+filebug"
+            for="lp.registry.interfaces.archivesourcepackage.IArchiveSourcePackage"
+            class="lp.bugs.browser.bugtarget.ArchiveBugTargetFileBugGuidedView"
+            permission="launchpad.AnyPerson"/>
+
+        <browser:page
             name="+filebug-show-similar"
             for="lp.bugs.interfaces.bugtarget.IBugTarget"
             class="lp.bugs.browser.bugtarget.FilebugShowSimilarBugsView"
@@ -593,6 +604,11 @@
             name="+distrotask"
             for="lp.bugs.interfaces.bugtask.IBugTask"
             class="lp.bugs.browser.bugalsoaffects.BugAlsoAffectsDistroMetaView"
+            permission="launchpad.Edit"/>
+        <browser:page
+            name="+ppatask"
+            for="lp.bugs.interfaces.bugtask.IBugTask"
+            class="lp.bugs.browser.bugalsoaffects.BugAlsoAffectsPPAMetaView"
             permission="launchpad.Edit"/>
         <browser:page
             name="+editstatus"
@@ -1219,6 +1235,10 @@
         name="+bugs"/>
     <browser:defaultView
         for="lp.registry.interfaces.archivesourcepackageseries.IArchiveSourcePackageSeries"
+        layer="lp.bugs.publisher.BugsLayer"
+        name="+bugs"/>
+    <browser:defaultView
+        for="lp.registry.interfaces.archiveseries.IArchiveSeries"
         layer="lp.bugs.publisher.BugsLayer"
         name="+bugs"/>
 </configure>
