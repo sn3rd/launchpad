@@ -69,6 +69,7 @@ from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pocket import PackagePublishingPocket, pocketsuffix
 from lp.registry.interfaces.series import SeriesStatus
+from lp.registry.model.distroseries import STABLE_STATUSES
 from lp.services.config import config
 from lp.services.database.constants import UTC_NOW
 from lp.services.database.interfaces import IStore
@@ -89,6 +90,7 @@ from lp.soyuz.enums import (
 )
 from lp.soyuz.interfaces.archive import IArchiveSet
 from lp.soyuz.interfaces.archivefile import IArchiveFileSet
+from lp.soyuz.model.archive import PRE_RELEASE_POCKETS
 from lp.soyuz.tests.test_publishing import TestNativePublishingBase
 from lp.testing import TestCaseWithFactory, login_person
 from lp.testing.fakemethod import FakeMethod
@@ -100,6 +102,8 @@ from lp.testing.matchers import FileContainsBytes
 RELEASE = PackagePublishingPocket.RELEASE
 PROPOSED = PackagePublishingPocket.PROPOSED
 BACKPORTS = PackagePublishingPocket.BACKPORTS
+SECURITY = PackagePublishingPocket.SECURITY
+UPDATES = PackagePublishingPocket.UPDATES
 
 
 class TestPublisherBase(TestNativePublishingBase):
@@ -118,6 +122,29 @@ class TestPublisherBase(TestNativePublishingBase):
         naked_archive = removeSecurityProxy(cprov.archive)
         naked_archive.distribution = self.ubuntutest
         self.ubuntu = getUtility(IDistributionSet)["ubuntu"]
+
+    def runSteps(
+        self,
+        publisher,
+        step_a=False,
+        step_a2=False,
+        step_c=False,
+        step_d=False,
+        is_careful=False,
+    ):
+        """Run publisher steps."""
+        if step_a:
+            publisher.A_publish(is_careful)
+        if step_a2:
+            publisher.A2_markPocketsWithDeletionsDirty()
+        if step_c:
+            publisher.C_doFTPArchive(is_careful)
+        if step_d:
+            publisher.D_writeReleaseFiles(is_careful)
+
+    def parseRelease(self, release_path):
+        with open(release_path) as release_file:
+            return Release(release_file)
 
 
 class TestPublisherSeries(TestNativePublishingBase):
@@ -813,10 +840,6 @@ class TestPublisher(TestPublisherBase):
                 hash_func(contents).hexdigest(), entries[0][hash_name]
             )
             self.assertEqual(str(len(contents)), entries[0]["size"])
-
-    def parseRelease(self, release_path):
-        with open(release_path) as release_file:
-            return Release(release_file)
 
     def parseI18nIndex(self, i18n_index_path):
         with open(i18n_index_path) as i18n_index_file:
@@ -3202,6 +3225,719 @@ class TestPublisher(TestPublisherBase):
             os.remove(path + suffix)
 
 
+class TestValidUntil(TestPublisherBase):
+
+    def setUp(self):
+        TestPublisher.setUp(self)
+
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+        # default to one stable and one non-stable series
+        self.breezy_autotest.status = SeriesStatus.CURRENT
+        self.hoary_test = self.ubuntutest["hoary-test"]
+        self.ubuntutest["hoary-test"].status = SeriesStatus.DEVELOPMENT
+        self.logger = BufferLogger()
+
+        # Careful publish everything to generate archive files for both the
+        # series
+        self.runSteps(
+            publisher,
+            step_a=True,
+            step_a2=True,
+            step_c=True,
+            step_d=True,
+            is_careful=True,
+        )
+
+    def assertValidUntil(self, publisher, series, pocket, is_present=False):
+        release_path = os.path.join(
+            publisher._config.distsroot,
+            "%s%s" % (series.name, pocketsuffix[pocket]),
+            "Release",
+        )
+
+        # Release file will not be present if the publishing is happening
+        # for the very first time.
+        if not os.path.exists(release_path) and not is_present:
+            return True
+
+        release = self.parseRelease(release_path)
+
+        if is_present:
+            self.assertIn(
+                "Valid-Until",
+                release,
+                f"Valid-Until should be present in "
+                f"{series.name}/{pocket.name}",
+            )
+        else:
+            self.assertNotIn(
+                "Valid-Until",
+                release,
+                f"Valid-Until should not be in {series.name}/{pocket.name}",
+            )
+
+    def testValidUntilDisabled(self):
+        """
+        Test that Valid-Until is not added when valid_until_config is not set.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        self.getPubSource(
+            filecontent=b"Hello world",
+            pocket=PROPOSED,
+            distroseries=self.breezy_autotest,
+        )
+        self.getPubSource(
+            filecontent=b"Hello world",
+            pocket=RELEASE,
+            distroseries=self.hoary_test,
+        )
+
+        # valid-until-config defaults to {}
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        self.assertValidUntil(publisher, self.breezy_autotest, PROPOSED, False)
+        self.assertValidUntil(publisher, self.hoary_test, RELEASE, False)
+
+    def testValidUntilOnlyInConfiguredPockets(self):
+        """
+        Test that Valid-Until tag is only added for configured pockets.
+
+        Only pockets explicitly configured in valid_until_config should
+        have Valid-Until tags.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # configure the necessary pockets
+        self.breezy_autotest.valid_until_config = {
+            UPDATES: {"refresh_threshold": 7, "validity_period": 14},
+            BACKPORTS: {"refresh_threshold": 5, "validity_period": 10},
+        }
+
+        self.hoary_test.valid_until_config = {
+            RELEASE: {"refresh_threshold": 7, "validity_period": 14},
+            BACKPORTS: {"refresh_threshold": 5, "validity_period": 10},
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, UPDATES, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, BACKPORTS, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, RELEASE, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, PROPOSED, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, SECURITY, is_present=False
+        )
+
+        self.assertValidUntil(
+            publisher, self.hoary_test, RELEASE, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.hoary_test, BACKPORTS, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.hoary_test, UPDATES, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.hoary_test, PROPOSED, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.hoary_test, SECURITY, is_present=False
+        )
+
+    def testValidUntilRefreshesWhenExpiring(self):
+        """Test that Valid-Until is refreshed when close to expiry.
+
+        This tests the scenario where a Release file has a Valid-Until
+        that's within the configured refresh_threshold of expiring. The
+        publisher should detect this and refresh the Release file.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        VALIDITY_PERIOD = 14
+        self.breezy_autotest.valid_until_config = {
+            UPDATES: {
+                "refresh_threshold": 7,
+                "validity_period": VALIDITY_PERIOD,
+            }
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+        # Verify Valid-Until is present
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, UPDATES, is_present=True
+        )
+
+        updates_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[UPDATES],
+            "Release",
+        )
+
+        release = self.parseRelease(updates_path)
+
+        # Manually modify Valid-Until to be expiring soon
+        # Set to expire in 2 days (within 7-day refresh threshold)
+        expiring_date = datetime.now(timezone.utc) + timedelta(days=2)
+        release["Valid-Until"] = expiring_date.strftime(
+            "%a, %d %b %Y %H:%M:%S UTC"
+        )
+
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        release = self.parseRelease(updates_path)
+
+        with open(updates_path, "wb") as f:
+            release.dump(f, "utf-8")
+
+        valid_until = datetime.strptime(
+            release["Valid-Until"], "%a, %d %b %Y %H:%M:%S UTC"
+        ).replace(tzinfo=timezone.utc)
+        days = (valid_until - datetime.now(timezone.utc)).days
+
+        self.assertGreaterEqual(days, VALIDITY_PERIOD - 1)
+        self.assertLessEqual(days, VALIDITY_PERIOD)
+
+    def testValidUntilUnchangedWhenNotExpiring(self):
+        """
+        Test that Valid-Until is NOT refreshed when still valid.
+
+        This tests the "happy path" where Valid-Until exists and is still
+        fresh (beyond configured refresh_threshold), ensuring the
+        Release file is not unnecessarily regenerated.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        VALIDITY_PERIOD = 14
+        self.breezy_autotest.valid_until_config = {
+            UPDATES: {
+                "refresh_threshold": 7,
+                "validity_period": VALIDITY_PERIOD,
+            }
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, UPDATES, is_present=True
+        )
+
+        updates_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[UPDATES],
+            "Release",
+        )
+
+        release = self.parseRelease(updates_path)
+        prev_valid_until = release["Valid-Until"]
+
+        real_datetime = datetime
+        mock_dt = mock.patch(
+            "lp.archivepublisher.publishing.datetime", wraps=real_datetime
+        )
+        mocked_datetime = mock_dt.start()
+        self.addCleanup(mock_dt.stop)
+        mocked_datetime.now.return_value = real_datetime.now(
+            timezone.utc
+        ) + timedelta(days=3)
+
+        # create a publication in some other pocket
+        self.getPubSource(
+            filecontent=b"Hello world",
+            pocket=PROPOSED,
+            distroseries=self.breezy_autotest,
+        )
+
+        # create a new publisher instance to clear up any old state
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # publish again
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        release = self.parseRelease(updates_path)
+        curr_valid_until = release["Valid-Until"]
+
+        self.assertEqual(prev_valid_until, curr_valid_until)
+
+    def testValidUntilRemovedWhenDisabled(self):
+        """
+        Test that Valid-Until is removed when pocket is removed from config.
+
+        This verifies that when a pocket is removed from valid_until_config,
+        the next publisher run correctly removes the Valid-Until tag from the
+        Release file.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        self.breezy_autotest.valid_until_config = {
+            BACKPORTS: {"refresh_threshold": 7, "validity_period": 14},
+            UPDATES: {"refresh_threshold": 7, "validity_period": 14},
+            PROPOSED: {"refresh_threshold": 7, "validity_period": 14},
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, BACKPORTS, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, UPDATES, is_present=True
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, PROPOSED, is_present=True
+        )
+
+        # Update the configuration
+        self.breezy_autotest.valid_until_config = {
+            PROPOSED: {"refresh_threshold": 7, "validity_period": 14}
+        }
+
+        # Create a new publisher and publish again
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        # Valid-Until should only be present in the PROPOSED pocket
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, BACKPORTS, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, UPDATES, is_present=False
+        )
+        self.assertValidUntil(
+            publisher, self.breezy_autotest, PROPOSED, is_present=True
+        )
+
+    def testValidUntilForDevelopmentSeriesPreReleasePockets(self):
+        """
+        Test Valid-Until in pre-release pockets of development
+        series.
+
+        Configures Valid-Until for all non-pre-release pockets in a
+        DEVELOPMENT series, verifies the tag is published, then disables the
+        configuration and verifies the tag is removed.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        non_pre_release_pockets = set(PackagePublishingPocket.items) - set(
+            PRE_RELEASE_POCKETS
+        )
+        self.hoary_test.valid_until_config = {
+            pocket: {"refresh_threshold": 7, "validity_period": 14}
+            for pocket in non_pre_release_pockets
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        for pocket in non_pre_release_pockets:
+            self.assertValidUntil(
+                publisher, self.hoary_test, pocket, is_present=True
+            )
+
+        # disable Valid-Until
+        self.hoary_test.valid_until_config = {}
+
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+        for pocket in PRE_RELEASE_POCKETS:
+            self.assertValidUntil(
+                publisher, self.hoary_test, pocket, is_present=False
+            )
+
+    def testValidUntilNotInPPAArchives(self):
+        """
+        Test that Valid-Until is not added to PPA archives even if
+        valid_until_config is set.
+        """
+        # Create a PPA
+        cprov = getUtility(IPersonSet).getByName("cprov")
+        archive_publisher = getPublisher(cprov.archive, [], self.logger)
+
+        # Try to configure Valid-Until for the PPA (using RELEASE for PPAs)
+        self.hoary_test.valid_until_config = {
+            RELEASE: {
+                "refresh_threshold": 7,
+                "validity_period": 14,
+            }
+        }
+
+        self.getPubSource(
+            filecontent=b"Hello world",
+            pocket=RELEASE,
+            archive=cprov.archive,
+            distroseries=self.hoary_test,
+        )
+
+        archive_publisher.A_publish(True)
+        archive_publisher.C_writeIndexes(False)
+        archive_publisher.D_writeReleaseFiles(False)
+
+        self.assertValidUntil(
+            archive_publisher, self.hoary_test, RELEASE, is_present=False
+        )
+
+        # remove PPA root
+        shutil.rmtree(config.personalpackagearchive.root)
+
+    # direct tests for "checkValidUntilNeedsRefresh"
+    def testCheckValidUntilNeedsRefreshWhenDisabled(self):
+        """
+        checkValidUntilNeedsRefresh returns False when valid_until_config is
+        empty.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # Set valid_until_config to empty dict
+        self.breezy_autotest.valid_until_config = {}
+
+        # Should return False when valid_until_config is empty
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, PROPOSED, "DOES-NOT-MATTER"
+        )
+        self.assertFalse(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return False when "
+            "valid_until_config is empty",
+        )
+
+    def testCheckValidUntilNeedsRefreshForWrongPocket(self):
+        """
+        checkValidUntilNeedsRefresh returns False for pockets not in
+        valid_until_config.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # Configure only UPDATES pocket
+        self.breezy_autotest.valid_until_config = {
+            UPDATES: {"refresh_threshold": 7, "validity_period": 14}
+        }
+
+        # BACKPORTS pocket is not configured
+        backports_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[BACKPORTS],
+            "Release",
+        )
+
+        # Should return False for BACKPORTS pocket (not in config)
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, BACKPORTS, backports_path
+        )
+        self.assertFalse(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return False for pockets "
+            "not in valid_until_config",
+        )
+
+    def testCheckValidUntilNeedsRefreshWhenFileNotFound(self):
+        """
+        checkValidUntilNeedsRefresh returns False when Release file doesn't
+        exist.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # Configure Valid-Until for PROPOSED pocket
+        self.breezy_autotest.valid_until_config = {
+            PROPOSED: {"validity_period": 14, "refresh_threshold": 7}
+        }
+
+        # Use a path that doesn't exist
+        nonexistent_path = os.path.join(
+            publisher._config.distsroot,
+            "nonexistent-series-proposed",
+            "Release",
+        )
+
+        # Should return False when file doesn't exist
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, PROPOSED, nonexistent_path
+        )
+        self.assertFalse(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return False when Release "
+            "file doesn't exist",
+        )
+
+    def testCheckValidUntilNeedsRefreshWhenMissing(self):
+        """
+        checkValidUntilNeedsRefresh returns True when Valid-Until is missing
+        from Release file.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # We already publish the archive files in setUp. Just configure
+        # Valid-Until
+        self.breezy_autotest.valid_until_config = {
+            BACKPORTS: {"refresh_threshold": 7, "validity_period": 14}
+        }
+
+        backports_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[BACKPORTS],
+            "Release",
+        )
+
+        # Should return True when Valid-Until is missing
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, BACKPORTS, backports_path
+        )
+        self.assertTrue(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return True when Valid-Until "
+            "is missing",
+        )
+
+    def testCheckValidUntilNeedsRefreshWhenExpiring(self):
+        """
+        checkValidUntilNeedsRefresh returns True when Valid-Until is close to
+        expiring.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # Configure Valid-Until with 7-day refresh threshold
+        self.breezy_autotest.valid_until_config = {
+            UPDATES: {
+                "refresh_threshold": 7,
+                "validity_period": 14,
+            }
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        updates_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[UPDATES],
+            "Release",
+        )
+
+        release = self.parseRelease(updates_path)
+
+        # Set to expire in 2 days (within 7-day refresh threshold)
+        expiring_date = datetime.now(timezone.utc) + timedelta(days=2)
+        release["Valid-Until"] = expiring_date.strftime(
+            "%a, %d %b %Y %H:%M:%S UTC"
+        )
+
+        with open(updates_path, "wb") as f:
+            release.dump(f, "utf-8")
+
+        # Should return True when Valid-Until is expiring soon
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, UPDATES, updates_path
+        )
+        self.assertTrue(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return True when Valid-Until "
+            "is close to expiring",
+        )
+
+    def testCheckValidUntilNeedsRefreshReturnsFalseWhenFresh(self):
+        """
+        checkValidUntilNeedsRefresh returns False when Valid-Until is still
+        fresh (far from expiring).
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        # Configure Valid-Until
+        self.breezy_autotest.valid_until_config = {
+            PROPOSED: {"refresh_threshold": 7, "validity_period": 14}
+        }
+
+        self.runSteps(
+            publisher, step_a=True, step_a2=True, step_c=True, step_d=True
+        )
+
+        proposed_path = os.path.join(
+            publisher._config.distsroot,
+            "breezy-autotest%s" % pocketsuffix[PROPOSED],
+            "Release",
+        )
+
+        # The just-published file should have a fresh Valid-Until
+        # (14 days from now, well beyond the 7-day refresh threshold)
+        needs_refresh = publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, PROPOSED, proposed_path
+        )
+        self.assertFalse(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return False when Valid-Until "
+            "is still fresh",
+        )
+
+    def testCheckValidUntilNeedsRefreshAlwaysReturnsFalseForPPA(self):
+        """
+        Test that checkValidUntilNeedsRefresh returns False for PPA archives.
+
+        PPAs should never use Valid-Until, so the check should always return
+        False regardless of valid_until_config.
+        """
+        # Create a PPA
+        cprov = getUtility(IPersonSet).getByName("cprov")
+        archive_publisher = getPublisher(cprov.archive, [], self.logger)
+
+        # if archive is not main, it should just return False
+        needs_refresh = archive_publisher.checkValidUntilNeedsRefresh(
+            self.breezy_autotest, RELEASE, "DOES-NOT-MATTER"
+        )
+        self.assertFalse(
+            needs_refresh,
+            "checkValidUntilNeedsRefresh should return False for PPA archives",
+        )
+
+    def testCheckValidUntilNeedsRefreshReturnsFalseWhenStableReleasePocket(
+        self,
+    ):
+        """
+        Test that checkValidUntilNeedsRefresh returns False for RELEASE
+        pocket in CURRENT series.
+
+        Even if valid_until_config includes RELEASE pocket, it should not be
+        used for stable (CURRENT/SUPPORTED/OSBOLETE) series.
+        """
+        publisher = Publisher(
+            self.logger,
+            self.config,
+            self.disk_pool,
+            self.ubuntutest.main_archive,
+        )
+
+        for status in STABLE_STATUSES:
+
+            self.breezy_autotest.status = status
+            self.breezy_autotest.valid_until_config = {
+                RELEASE: {
+                    "refresh_threshold": 3,
+                    "validity_period": 7,
+                }
+            }
+
+            # checkValidUntilNeedsRefresh should right away return False if
+            # Release pocket is configured for CURRENT series.
+            needs_refresh = publisher.checkValidUntilNeedsRefresh(
+                self.breezy_autotest, RELEASE, "DOES-NOT-MATTER"
+            )
+            self.assertFalse(
+                needs_refresh,
+                "checkValidUntilNeedsRefresh should return False for RELEASE "
+                f'pocket in series with status "{status.name}"',
+            )
+
+
 class TestArchiveIndices(TestPublisherBase):
     """Tests for the native publisher's index generation.
 
@@ -3382,7 +4118,9 @@ class TestUpdateByHash(TestPublisherBase):
         mock_datetime = mock.patch("lp.archivepublisher.publishing.datetime")
         mocked_datetime = mock_datetime.start()
         self.addCleanup(mock_datetime.stop)
-        mocked_datetime.utcnow = lambda: self.times[-1].replace(tzinfo=None)
+        mocked_datetime.now = lambda tz=None: (
+            self.times[-1] if tz else self.times[-1].replace(tzinfo=None)
+        )
         self.useFixture(
             MonkeyPatch(
                 "lp.soyuz.model.archivefile._now", lambda: self.times[-1]
@@ -3400,24 +4138,6 @@ class TestUpdateByHash(TestPublisherBase):
             self.times.append(self.times[-1] + delta)
         else:
             self.times.append(absolute)
-
-    def runSteps(
-        self,
-        publisher,
-        step_a=False,
-        step_a2=False,
-        step_c=False,
-        step_d=False,
-    ):
-        """Run publisher steps."""
-        if step_a:
-            publisher.A_publish(False)
-        if step_a2:
-            publisher.A2_markPocketsWithDeletionsDirty()
-        if step_c:
-            publisher.C_doFTPArchive(False)
-        if step_d:
-            publisher.D_writeReleaseFiles(False)
 
     @classmethod
     def _makeScheduledDeletionDateMatcher(cls, superseded_at):

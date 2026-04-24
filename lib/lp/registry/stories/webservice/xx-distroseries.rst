@@ -104,6 +104,7 @@ For distroseries we publish a subset of its attributes.
     summary: 'Hoary is the ...
     supported: False
     title: 'The Hoary Hedgehog Release'
+    valid_until_config: {}
     version: '5.04'
     web_link: 'http://launchpad.../ubuntu/hoary'
 

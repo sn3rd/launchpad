@@ -13,6 +13,7 @@ from datetime import date, timedelta
 import transaction
 from testtools.matchers import Equals
 from zope.component import getUtility
+from zope.security.interfaces import Unauthorized
 from zope.security.proxy import removeSecurityProxy
 
 from lp.app.interfaces.launchpad import ILaunchpadCelebrities
@@ -476,6 +477,86 @@ class TestDistroSeries(TestCaseWithFactory):
         self.assertFalse(
             naked_distroseries.publishing_options["publish_i18n_index"]
         )
+
+    def test_valid_until_config(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertFalse(distroseries.valid_until_config)
+        with admin_logged_in():
+            distroseries.valid_until_config = {
+                PackagePublishingPocket.BACKPORTS: {
+                    "refresh_threshold": 5,
+                    "validity_period": 10,
+                }
+            }
+        naked_distroseries = removeSecurityProxy(distroseries)
+        self.assertEqual(
+            {"BACKPORTS": {"refresh_threshold": 5, "validity_period": 10}},
+            naked_distroseries.publishing_options["valid_until_config"],
+        )
+
+    def test_valid_until_config_empty(self):
+        distroseries = self.factory.makeDistroSeries()
+        self.assertFalse(distroseries.valid_until_config)
+        with admin_logged_in():
+            distroseries.valid_until_config = {}
+        naked_distroseries = removeSecurityProxy(distroseries)
+        self.assertEqual(
+            {},
+            naked_distroseries.publishing_options["valid_until_config"],
+        )
+
+    def test_valid_until_raises_assert(self):
+        """
+        Test that setting valid_until_config to non-dict values raises
+        AssertionError
+        """
+        distroseries = self.factory.makeDistroSeries()
+        values = [None, [], (), 12]
+        for value in values:
+            with admin_logged_in():
+                self.assertRaises(
+                    AssertionError,
+                    setattr,
+                    distroseries,
+                    "valid_until_config",
+                    value,
+                )
+        self.assertFalse(distroseries.valid_until_config)
+
+    def test_anonymous_users_cant_modify_valid_until_config(self):
+        """Test that anonymous users cannot edit valid_until_config."""
+        distroseries = self.factory.makeDistroSeries()
+
+        self.assertRaises(
+            Unauthorized, setattr, distroseries, "valid_until_config", {}
+        )
+
+    def test_regular_users_cant_modify_valid_until_config(self):
+        """
+        Test that regular authenticated users cannot edit
+        valid_until_config.
+        """
+        distroseries = self.factory.makeDistroSeries()
+        regular_user = self.factory.makePerson()
+        with person_logged_in(regular_user):
+            self.assertRaises(
+                Unauthorized, setattr, distroseries, "valid_until_config", {}
+            )
+
+    def test_distribution_owner_can_modify_valid_until_config(self):
+        """Test that distribution owners can edit valid_until_config."""
+        distroseries = self.factory.makeDistroSeries()
+        distribution_owner = distroseries.distribution.owner
+
+        # Distribution owner can modify valid_until_config
+        with person_logged_in(distribution_owner):
+            distroseries.valid_until_config = {
+                PackagePublishingPocket.BACKPORTS: {
+                    "refresh_threshold": 5,
+                    "validity_period": 10,
+                }
+            }
+        self.assertTrue(distroseries.valid_until_config)
 
     def test_getExternalPackageSeries(self):
         # Test that we get the ExternalPackageSeries that belongs to the

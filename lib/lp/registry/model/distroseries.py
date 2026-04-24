@@ -9,6 +9,8 @@ __all__ = [
     "DistroSeries",
     "DistroSeriesSet",
     "INACTIVE_STATUSES",
+    "STABLE_STATUSES",
+    "UNSTABLE_STATUSES",
 ]
 
 import collections
@@ -155,6 +157,7 @@ ACTIVE_RELEASED_STATUSES = [
     SeriesStatus.SUPPORTED,
 ]
 
+STABLE_STATUSES = ACTIVE_RELEASED_STATUSES + [SeriesStatus.OBSOLETE]
 
 ACTIVE_UNRELEASED_STATUSES = [
     SeriesStatus.EXPERIMENTAL,
@@ -162,9 +165,10 @@ ACTIVE_UNRELEASED_STATUSES = [
     SeriesStatus.FROZEN,
 ]
 
-INACTIVE_STATUSES = [
-    SeriesStatus.OBSOLETE,
-]
+UNSTABLE_STATUSES = ACTIVE_UNRELEASED_STATUSES + [SeriesStatus.FUTURE]
+
+
+INACTIVE_STATUSES = [SeriesStatus.OBSOLETE]
 
 
 DEFAULT_INDEX_COMPRESSORS = [
@@ -297,6 +301,7 @@ class DistroSeries(
             "advertise_by_hash": False,
             "strict_supported_component_dependencies": True,
             "publish_i18n_index": True,
+            "valid_until_config": {},
         }
 
     @property
@@ -1026,6 +1031,22 @@ class DistroSeries(
     def publish_i18n_index(self, value):
         assert isinstance(value, bool)
         self.publishing_options["publish_i18n_index"] = value
+
+    @property
+    def valid_until_config(self):
+        stored = self.publishing_options.get("valid_until_config", {})
+
+        return {
+            PackagePublishingPocket.items[key]: value
+            for key, value in stored.items()
+        }
+
+    @valid_until_config.setter
+    def valid_until_config(self, value):
+        assert isinstance(value, dict)
+
+        normalized = {pocket.name: config for pocket, config in value.items()}
+        self.publishing_options["valid_until_config"] = normalized
 
     def _customizeSearchParams(self, search_params):
         """Customize `search_params` for this distribution series."""

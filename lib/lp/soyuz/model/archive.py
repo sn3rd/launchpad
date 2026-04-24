@@ -216,6 +216,12 @@ ARCHIVE_REFERENCE_TEMPLATES = {
     ArchivePurpose.COPY: "%(distribution)s/%(archive)s",
 }
 
+PRE_RELEASE_POCKETS = [
+    PackagePublishingPocket.RELEASE,
+    PackagePublishingPocket.PROPOSED,
+    PackagePublishingPocket.BACKPORTS,
+]
+
 
 @error_status(http.client.BAD_REQUEST)
 class CannotSetMetadataOverrides(Exception):
@@ -1854,13 +1860,8 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
             return False
 
         # Deny uploads for post-release-only pockets in unstable states.
-        pre_release_pockets = (
-            PackagePublishingPocket.RELEASE,
-            PackagePublishingPocket.PROPOSED,
-            PackagePublishingPocket.BACKPORTS,
-        )
         if (
-            pocket not in pre_release_pockets
+            pocket not in PRE_RELEASE_POCKETS
             and distroseries.status not in stable_states
         ):
             return False
