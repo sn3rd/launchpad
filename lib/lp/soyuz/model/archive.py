@@ -986,9 +986,7 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
 
         return ArchiveSourcePackage(self, sourcepackagename)
 
-    def getArchiveSourcePackageSeries(
-        self, distroseries, name, check_publication=True
-    ):
+    def getArchiveSourcePackageSeries(self, distroseries, name):
         """See `IArchive`."""
         # Imported locally to avoid circular imports:
         # ArchiveSourcePackageSeries references IArchive, so importing it at
@@ -1009,32 +1007,12 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
             # Distroseries must belong to the same distribution as the archive
             return None
 
-        # Resolve sourcepackagename
-        if ISourcePackageName.providedBy(name):
-            sourcepackagename = name
-        else:
-            sourcepackagename = getUtility(ISourcePackageNameSet).queryByName(
-                name
-            )
-            if sourcepackagename is None:
-                return None
-
-        if check_publication:
-            # Verify the archive has this package in this distroseries
-            SPPH = SourcePackagePublishingHistory
-            has_publication = (
-                IStore(SPPH)
-                .find(
-                    SPPH,
-                    SPPH.archive == self,
-                    SPPH.distroseries == distroseries,
-                    SPPH.sourcepackagename == sourcepackagename,
-                )
-                .any()
-            )
-
-            if not has_publication:
-                return None
+        # The package must be known to this archive. getArchiveSourcePackage
+        # handles name resolution and the publication check.
+        asp = self.getArchiveSourcePackage(name)
+        if asp is None:
+            return None
+        sourcepackagename = asp.sourcepackagename
 
         return ArchiveSourcePackageSeries(
             self, distroseries, sourcepackagename
@@ -3506,7 +3484,7 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
         for series in self.series_with_sources:
             if series.name == series_name:
                 return series
-        return NoSuchDistroSeriesInArchive(series_name)
+        raise NoSuchDistroSeriesInArchive(series_name)
 
 
 def validate_ppa(owner, distribution, proposed_name, private=False):

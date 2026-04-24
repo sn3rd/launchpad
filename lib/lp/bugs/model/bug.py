@@ -2136,6 +2136,14 @@ class Bug(StormBase, InformationTypeMixin):
             # series of a product or distro for which we don't have a
             # plain bug target parent task.
             for task in self.bugtasks:
+
+                if (
+                    task.archive
+                    and task.archive.distribution
+                    == bug_target_parent_getter(target)
+                ):
+                    return True
+
                 if bug_target_parent_getter(task) == bug_target_parent_getter(
                     target
                 ):

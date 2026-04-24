@@ -273,25 +273,27 @@ class TestArchiveSourcePackageSeries(TestCaseWithFactory):
             self.sourcepackagename,
         )
 
-    def test_check_publication_true_returns_none_without_publication(self):
-        """getArchiveSourcePackageSeries returns None when no publication
-        exists for the given package in the given series."""
-        archive = self.factory.makeArchive(distribution=self.distribution)
-        spn = self.factory.makeSourcePackageName("unpublished")
-        result = archive.getArchiveSourcePackageSeries(
-            self.distroseries, spn, check_publication=True
+    def test_returns_object_for_series_without_publication(self):
+        """getArchiveSourcePackageSeries returns an object even when the
+        package has no publication in the requested series, as long as it is
+        published somewhere in the archive (no per-series check)."""
+        # self.sourcepackagename is published in self.archive/self.distroseries
+        # via setUp, but unpublished_series has no publication for it.
+        unpublished_series = self.factory.makeDistroSeries(
+            distribution=self.distribution
         )
-        self.assertIsNone(result)
-
-    def test_check_publication_false_returns_object_without_publication(self):
-        """getArchiveSourcePackageSeries with check_publication=False returns
-        the object even when no publication exists in the archive."""
-        archive = self.factory.makeArchive(distribution=self.distribution)
-        spn = self.factory.makeSourcePackageName("unpublished")
-        result = archive.getArchiveSourcePackageSeries(
-            self.distroseries, spn, check_publication=False
+        result = self.archive.getArchiveSourcePackageSeries(
+            unpublished_series, self.sourcepackagename
         )
         self.assertIsNotNone(result)
-        self.assertEqual(spn, result.sourcepackagename)
-        self.assertEqual(archive, result.archive)
-        self.assertEqual(self.distroseries, result.distroseries)
+        self.assertEqual(self.sourcepackagename, result.sourcepackagename)
+        self.assertEqual(self.archive, result.archive)
+        self.assertEqual(unpublished_series, result.distroseries)
+
+    def test_returns_none_without_archive_publication(self):
+        """getArchiveSourcePackageSeries returns None when the package has
+        never been published anywhere in the archive (archive-wide check)."""
+        archive = self.factory.makeArchive(distribution=self.distribution)
+        spn = self.factory.makeSourcePackageName("unpublished")
+        result = archive.getArchiveSourcePackageSeries(self.distroseries, spn)
+        self.assertIsNone(result)

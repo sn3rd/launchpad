@@ -25,6 +25,7 @@ from lp.services.features import getFeatureFlag
 from lp.services.webapp import LaunchpadView, canonical_url
 from lp.services.webapp.authorization import check_permission
 from lp.services.webapp.interfaces import ILaunchBag
+from lp.soyuz.interfaces.archive import IArchive
 
 
 class BugNominationView(LaunchpadFormView):
@@ -85,11 +86,23 @@ class BugNominationView(LaunchpadFormView):
         # project-wide driver for upstreams because I'm guessing it's
         # hardly used, and would make displaying release managers a
         # little harder.
-        return self.getReleaseContext().driver
+
+        context = self.getReleaseContext()
+
+        if IArchive.providedBy(context):
+            return context.owner
+
+        return context.driver
 
     def getReleaseContext(self):
-        """Get the distribution or product for release management."""
+        """Get the distribution, product, or archive for release management."""
+
+        # Check if we're in an archive context
+        if self.current_bugtask.archive:
+            return self.current_bugtask.archive
+
         launchbag = getUtility(ILaunchBag)
+
         return launchbag.product or launchbag.distribution
 
     @action(_("Submit"), name="submit")

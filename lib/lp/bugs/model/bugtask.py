@@ -212,7 +212,7 @@ def bug_target_from_key(
     elif archive:
         if sourcepackagename and distroseries:
             return archive.getArchiveSourcePackageSeries(
-                distroseries, sourcepackagename, check_publication=False
+                distroseries, sourcepackagename
             )
         elif distroseries:
             return archive.getArchiveSeries(distroseries)
@@ -2142,13 +2142,39 @@ class BugTaskSet:
         targets = [target]
         key = bug_target_to_key(target)
         existing_targets = {bugtask.target for bugtask in bug.bugtasks}
+
+        # Determine the distribution to use for finding approved nominations.
+        # Distribution tasks use the distribution directly; archive tasks
+        # (without a distroseries) use the archive's distribution.
         if key["distribution"] is not None:
-            for nomination in bug.getNominations(key["distribution"]):
+            nomination_distribution = key["distribution"]
+        elif key["archive"] is not None and key["distroseries"] is None:
+            nomination_distribution = key["archive"].distribution
+        else:
+            nomination_distribution = None
+
+        if nomination_distribution is not None:
+            for nomination in bug.getNominations(nomination_distribution):
                 if not nomination.isApproved():
                     continue
-                nominated_target = nomination.distroseries.getSourcePackage(
-                    key["sourcepackagename"]
-                )
+                distroseries = nomination.distroseries
+                if key["archive"] is not None:
+                    if key["sourcepackagename"] is not None:
+                        nominated_target = (
+                            distroseries.getArchiveSourcePackageSeries(
+                                key["archive"], key["sourcepackagename"]
+                            )
+                        )
+                    else:
+                        nominated_target = distroseries.getArchiveSeries(
+                            key["archive"]
+                        )
+                elif key["sourcepackagename"] is not None:
+                    nominated_target = distroseries.getSourcePackage(
+                        key["sourcepackagename"]
+                    )
+                else:
+                    nominated_target = distroseries
                 if nominated_target not in existing_targets:
                     targets.append(nominated_target)
                     # Note: addTask calls createTask with
