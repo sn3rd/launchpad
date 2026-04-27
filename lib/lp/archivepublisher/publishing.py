@@ -451,8 +451,8 @@ class Publisher:
     def checkValidUntilNeedsRefresh(self, distroseries, pocket, release_path):
         """Check if this release file's Valid-Until has expired."""
 
-        # we publish "Valid-until" flags only for the main archives
-        if not self.archive.is_main:
+        # we publish "Valid-until" flags only for the primary archives
+        if not self.archive.purpose == ArchivePurpose.PRIMARY:
             return False
 
         # RELEASE pocket should not have Valid-Until for stable series.
@@ -1906,7 +1906,10 @@ class Publisher:
 
         now = datetime.now(timezone.utc)
         release_file["Date"] = now.strftime("%a, %d %b %Y %k:%M:%S UTC")
-        if self.archive.is_main and pocket in distroseries.valid_until_config:
+        if (
+            self.archive.purpose == ArchivePurpose.PRIMARY
+            and pocket in distroseries.valid_until_config
+        ):
             pocket_config = distroseries.valid_until_config[pocket]
             release_file["Valid-Until"] = (
                 now + timedelta(days=pocket_config["validity_period"])
