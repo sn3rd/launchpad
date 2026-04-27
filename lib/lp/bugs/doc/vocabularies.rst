@@ -154,6 +154,7 @@ the trunk will be nominatable:
     >>> firefox_bug_one = bug_one.bugtasks[0]
     >>> print(firefox_bug_one.target.name)
     firefox
+    >>> launchbag.add(firefox_bug_one)
     >>> series_vocabulary = vocabulary_registry.get(
     ...     firefox_bug_one, "BugNominatableSeries"
     ... )
@@ -179,6 +180,7 @@ So if we give bug four to the vocabulary, all series will be returned:
     >>> firefox_bug_four = bug_four.bugtasks[0]
     >>> print(firefox_bug_four.target.name)
     firefox
+    >>> launchbag.add(firefox_bug_four)
     >>> series_vocabulary = vocabulary_registry.get(
     ...     firefox_bug_four, "BugNominatableSeries"
     ... )
@@ -213,6 +215,7 @@ So Hoary isn't included in the vocabulary:
     >>> ubuntu_bug_one = bug_one.bugtasks[1]
     >>> print(ubuntu_bug_one.distribution.name)
     ubuntu
+    >>> launchbag.add(ubuntu_bug_one)
     >>> series_vocabulary = vocabulary_registry.get(
     ...     ubuntu_bug_one, "BugNominatableSeries"
     ... )
@@ -243,6 +246,7 @@ The same is true for bug two, where the bug is targeted to Hoary.
     >>> ubuntu_bug_two = bug_two.bugtasks[1]
     >>> print(ubuntu_bug_two.distribution.name)
     ubuntu
+    >>> launchbag.add(ubuntu_bug_two)
     >>> series_vocabulary = vocabulary_registry.get(
     ...     ubuntu_bug_two, "BugNominatableSeries"
     ... )
