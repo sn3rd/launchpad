@@ -3662,6 +3662,37 @@ class TestValidUntil(TestPublisherBase):
         # remove PPA root
         shutil.rmtree(config.personalpackagearchive.root)
 
+    def testValidUntilNotInPartnerArchives(self):
+        """
+        Test that Valid-Until is not added to partner archives.
+        """
+        partner_archive = getUtility(IArchiveSet).getByDistroPurpose(
+            self.ubuntutest, ArchivePurpose.PARTNER
+        )
+        archive_publisher = getPublisher(partner_archive, [], self.logger)
+
+        self.hoary_test.valid_until_config = {
+            UPDATES: {
+                "refresh_threshold": 7,
+                "validity_period": 14,
+            }
+        }
+
+        self.getPubSource(
+            filecontent=b"Hello world",
+            pocket=UPDATES,
+            archive=partner_archive,
+            distroseries=self.hoary_test,
+        )
+
+        archive_publisher.A_publish(True)
+        archive_publisher.C_writeIndexes(False)
+        archive_publisher.D_writeReleaseFiles(False)
+
+        self.assertValidUntil(
+            archive_publisher, self.hoary_test, UPDATES, is_present=False
+        )
+
     # direct tests for "checkValidUntilNeedsRefresh"
     def testCheckValidUntilNeedsRefreshWhenDisabled(self):
         """
