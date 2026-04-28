@@ -58,7 +58,7 @@ def reconcile_access_for_artifacts(
         for pillar in pillars
     ]
     # Deduplicate pillars (e.g., if bug has tasks on both a distribution
-    # and a PPA for that distribution).
+    # and a PPA for that distribution). Uses dict.fromkeys to preserve order.
     pillars = list(dict.fromkeys(pillars))
 
     if information_type in PUBLIC_INFORMATION_TYPES:
