@@ -1093,10 +1093,7 @@ class BugSecrecyEditView(LaunchpadFormView, BugSubscriptionPortletDetails):
             # the bug will still be visible. Else, there is a chance for the
             # bug to become invisible, so we need to continue.
             if IArchive.providedBy(bug_target_parent):
-                if not bug_target_parent.private:
-                    return False
-                else:
-                    continue
+                bug_target_parent = bug_target_parent.distribution
 
             grant_counts = service.getAccessPolicyGrantCounts(
                 bug_target_parent
