@@ -212,6 +212,24 @@ class TestCraftPublishingJob(TestCaseWithFactory):
             content = tar_data.getvalue()
             filename = "nodirs-0.1.0.crate"
             mimetype = "application/x-tar"
+        elif type == "symlink_escape":
+            tar_data = io.BytesIO()
+            with tarfile.open(fileobj=tar_data, mode="w") as tar:
+                crate_name = "unsafe-0.1.0"
+                crate_dir_info = tarfile.TarInfo(crate_name)
+                crate_dir_info.type = tarfile.DIRTYPE
+                crate_dir_info.mode = 0o755
+                tar.addfile(crate_dir_info)
+
+                # A symlink that would resolve outside the extraction root.
+                link_info = tarfile.TarInfo(f"{crate_name}/escape")
+                link_info.type = tarfile.SYMTYPE
+                link_info.linkname = "../../../../tmp/evil-target"
+                tar.addfile(link_info)
+            tar_data.seek(0)
+            content = tar_data.getvalue()
+            filename = "symlink-escape-0.1.0.crate"
+            mimetype = "application/x-tar"
         elif type == "dummy":
             content = b"test content"
             filename = "test.txt"
@@ -399,6 +417,21 @@ class TestCraftPublishingJob(TestCaseWithFactory):
         self._setup_config(with_env_vars=True, with_http_proxy=True)
 
         self._create_invalid_crate_file(type="invalid_tar")
+
+        job = self.run_job(self.build)
+
+        self.assertEqual(JobStatus.FAILED, job.job.status)
+        self.assertIn(
+            "Failed to extract crate",
+            job.error_message,
+        )
+
+    def test_run_crate_extraction_symlink_escape_failure(self):
+        """Test failure when crate contains symlink traversal content."""
+        self._setup_distribution("soss")
+        self._setup_config(with_env_vars=True, with_http_proxy=True)
+
+        self._create_invalid_crate_file(type="symlink_escape")
 
         job = self.run_job(self.build)
 

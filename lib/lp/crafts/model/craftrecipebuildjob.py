@@ -13,6 +13,7 @@ import glob
 import json
 import os
 import subprocess
+import tarfile
 import tempfile
 from configparser import NoSectionError
 from urllib.parse import urlparse
@@ -28,6 +29,7 @@ from storm.locals import Int, Reference
 from zope.interface import implementer, provider
 
 from lp.app.errors import NotFoundError
+from lp.archiveuploader.utils import SafeTarExtractError, safe_extract_tar
 from lp.crafts.interfaces.craftrecipebuildjob import (
     ICraftPublishingJob,
     ICraftPublishingJobSource,
@@ -283,17 +285,11 @@ class CraftPublishingJob(CraftRecipeBuildJobDerived):
                     crate_extract_dir = os.path.join(tmpdir, "crate_contents")
                     os.makedirs(crate_extract_dir, exist_ok=True)
 
-                    # Extract the .crate file using system tar command
-                    result = subprocess.run(
-                        ["tar", "-xf", crate_path, "-C", crate_extract_dir],
-                        capture_output=True,
-                        text=True,
-                    )
-
-                    if result.returncode != 0:
-                        raise Exception(
-                            f"Failed to extract crate: {result.stderr}"
-                        )
+                    try:
+                        with tarfile.open(crate_path, "r:*") as tar:
+                            safe_extract_tar(tar, crate_extract_dir)
+                    except (tarfile.TarError, SafeTarExtractError) as e:
+                        raise Exception(f"Failed to extract crate: {e}") from e
 
                     # Find the extracted directory(should be the only one)
                     extracted_dirs = [
