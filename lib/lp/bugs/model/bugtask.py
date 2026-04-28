@@ -988,7 +988,6 @@ class BugTask(StormBase):
                     and bugtask.sourcepackagename == self.sourcepackagename
                     and bugtask.packagetype == self.packagetype
                     and bugtask.channel == self.channel
-                    and bugtask.archive == self.archive
                 )
             ]
             # Return early, so that we don't have to get currentseries,
@@ -996,6 +995,35 @@ class BugTask(StormBase):
             if len(possible_primaries) == 0:
                 return None
             current_series = self.distribution.currentseries
+            for bugtask in possible_primaries:
+                if bugtask.distroseries == current_series:
+                    conjoined_primary = bugtask
+                    break
+        elif self.archive and not self.distroseries:
+            # Archive tasks look for archive series tasks in the current
+            # series of the archive's distribution.
+            if bugtasks_by_package is None:
+                bugtasks_by_package = self.bug.getBugTasksByPackageName(
+                    bugtasks
+                )
+            bugtasks = bugtasks_by_package[self.sourcepackagename]
+            archive = self.archive
+            possible_primaries = [
+                bugtask
+                for bugtask in bugtasks
+                if (
+                    bugtask.archive == archive
+                    and bugtask.distroseries is not None
+                    and bugtask.sourcepackagename == self.sourcepackagename
+                    and bugtask.packagetype == self.packagetype
+                    and bugtask.channel == self.channel
+                )
+            ]
+            # Return early, so that we don't have to get currentseries,
+            # which is expensive.
+            if len(possible_primaries) == 0:
+                return None
+            current_series = archive.distribution.currentseries
             for bugtask in possible_primaries:
                 if bugtask.distroseries == current_series:
                     conjoined_primary = bugtask
@@ -1031,20 +1059,40 @@ class BugTask(StormBase):
         """See `IBugTask`."""
         conjoined_replica = None
         if self.distroseries:
-            distribution = self.distroseries.distribution
-            if self.distroseries != distribution.currentseries:
-                # Only current series tasks are conjoined.
-                return None
-            for bugtask in self._get_shortlisted_bugtasks():
-                if (
-                    bugtask.distribution == distribution
-                    and bugtask.sourcepackagename == self.sourcepackagename
-                    and bugtask.packagetype == self.packagetype
-                    and bugtask.channel == self.channel
-                    and bugtask.archive == self.archive
-                ):
-                    conjoined_replica = bugtask
-                    break
+            if self.archive:
+                # Archive series tasks conjoin with archive (non-series) tasks
+                # of the same archive, but only for the current series.
+                archive = self.archive
+                current_series = archive.distribution.currentseries
+                if self.distroseries != current_series:
+                    # Only current series tasks are conjoined.
+                    return None
+                for bugtask in self._get_shortlisted_bugtasks():
+                    if (
+                        bugtask.archive == archive
+                        and bugtask.distroseries is None
+                        and bugtask.sourcepackagename == self.sourcepackagename
+                        and bugtask.packagetype == self.packagetype
+                        and bugtask.channel == self.channel
+                    ):
+                        conjoined_replica = bugtask
+                        break
+            else:
+                # Regular distribution series tasks conjoin with distribution
+                # tasks (both have archive=None).
+                distribution = self.distroseries.distribution
+                if self.distroseries != distribution.currentseries:
+                    # Only current series tasks are conjoined.
+                    return None
+                for bugtask in self._get_shortlisted_bugtasks():
+                    if (
+                        bugtask.distribution == distribution
+                        and bugtask.sourcepackagename == self.sourcepackagename
+                        and bugtask.packagetype == self.packagetype
+                        and bugtask.channel == self.channel
+                    ):
+                        conjoined_replica = bugtask
+                        break
         elif self.productseries:
             product = self.productseries.product
             if self.productseries != product.development_focus:
