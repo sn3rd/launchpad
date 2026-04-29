@@ -1089,14 +1089,11 @@ class BugSecrecyEditView(LaunchpadFormView, BugSubscriptionPortletDetails):
         service = getUtility(IService, "sharing")
         for bug_target_parent in bug_target_parents:
 
-            # If bug_target_parent is an archive and it is not private, then
-            # the bug will still be visible. Else, there is a chance for the
-            # bug to become invisible, so we need to continue.
+            # If bug_target_parent is an archive use its distribution instead
+            # because archive bugs need to use the AccessPolicy of their
+            # distribution to determine visibility.
             if IArchive.providedBy(bug_target_parent):
-                if not bug_target_parent.private:
-                    return False
-                else:
-                    continue
+                bug_target_parent = bug_target_parent.distribution
 
             grant_counts = service.getAccessPolicyGrantCounts(
                 bug_target_parent

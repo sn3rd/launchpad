@@ -333,11 +333,17 @@ class BugTaskSearchParams:
     def setArchive(self, archive):
         """Set the archive context to filter the search."""
         self.archive = archive
+        # Archive tasks without a series should not match archive series
+        # tasks. Explicitly filter for distroseries IS NULL.
+        self.distroseries = NULL
 
     def setArchiveSourcePackage(self, archivesourcepackage):
         """Set the archive source package context to filter the search."""
+
         self.archive = archivesourcepackage.archive
         self.sourcepackagename = archivesourcepackage.sourcepackagename
+        # Archive source package tasks should not match series tasks.
+        self.distroseries = NULL
 
     def setArchiveSourcePackageSeries(self, archivesourcepackageseries):
         """Set the archive source package series context to filter."""

@@ -49,12 +49,7 @@ from zope.interface import alsoProvides, implementer
 from zope.security.interfaces import Unauthorized
 from zope.security.proxy import removeSecurityProxy
 
-from lp.app.enums import (
-    NON_EMBARGOED_INFORMATION_TYPES,
-    PROPRIETARY_INFORMATION_TYPES,
-    InformationType,
-    ServiceUsage,
-)
+from lp.app.enums import InformationType, ServiceUsage
 from lp.app.errors import (
     IncompatibleArchiveStatus,
     IncompatibleArguments,
@@ -3432,10 +3427,7 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
         """See `IBugTarget`."""
         # Archives use the same information types as their distribution
 
-        if self.private:
-            # Private archives don't have bug information types.
-            return PROPRIETARY_INFORMATION_TYPES
-        return NON_EMBARGOED_INFORMATION_TYPES
+        return self.distribution.getAllowedBugInformationTypes()
 
     def getDefaultBugInformationType(self):
         """See `IBugTarget`."""

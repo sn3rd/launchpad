@@ -43,11 +43,24 @@ from lp.services.database.decoratedresultset import DecoratedResultSet
 from lp.services.database.enumcol import DBEnum
 from lp.services.database.interfaces import IStore
 from lp.services.database.stormbase import StormBase
+from lp.soyuz.interfaces.archive import IArchive
 
 
 def reconcile_access_for_artifacts(
     artifacts, information_type, pillars, wanted_links=None
 ):
+
+    # Archive's aren't and don't have pillars, but they need the same
+    # access policies as their distribution, so we need to convert them to
+    # their distribution before we do anything else.
+    pillars = [
+        pillar if not IArchive.providedBy(pillar) else pillar.distribution
+        for pillar in pillars
+    ]
+    # Deduplicate pillars (e.g., if bug has tasks on both a distribution
+    # and a PPA for that distribution). Uses dict.fromkeys to preserve order.
+    pillars = list(dict.fromkeys(pillars))
+
     if information_type in PUBLIC_INFORMATION_TYPES:
         # If it's public we can delete all the access information.
         # IAccessArtifactSource handles the cascade.
