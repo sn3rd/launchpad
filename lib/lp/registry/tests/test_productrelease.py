@@ -3,6 +3,8 @@
 
 """Test product releases and product release set."""
 
+from datetime import datetime, timezone
+
 from zope.component import getUtility
 
 from lp.app.enums import InformationType
@@ -13,13 +15,13 @@ from lp.registry.interfaces.productrelease import (
 )
 from lp.services.database.interfaces import IStore
 from lp.testing import TestCaseWithFactory, person_logged_in
-from lp.testing.layers import DatabaseFunctionalLayer, LaunchpadFunctionalLayer
+from lp.testing.layers import LaunchpadFunctionalLayer
 
 
 class ProductReleaseSetTestcase(TestCaseWithFactory):
     """Tests for ProductReleaseSet."""
 
-    layer = DatabaseFunctionalLayer
+    layer = LaunchpadFunctionalLayer
 
     def setUp(self):
         super().setUp()
@@ -52,6 +54,40 @@ class ProductReleaseSetTestcase(TestCaseWithFactory):
             series, "0.0.1"
         )
         self.assertStatementCount(0, getattr, release, "milestone")
+
+    def test_getLatestReleaseWithDownloadFiles_no_releases(self):
+        # Returns None when the product has no releases
+        product = self.factory.makeProduct()
+        result = self.product_release_set.getLatestReleaseWithDownloadFiles(
+            product
+        )
+        self.assertIsNone(result)
+
+    def test_getLatestReleaseWithDownloadFiles_no_files(self):
+        # Returns None when releases exist but none have download files
+        product = self.factory.makeProduct()
+        self.factory.makeProductRelease(product=product)
+        result = self.product_release_set.getLatestReleaseWithDownloadFiles(
+            product
+        )
+        self.assertIsNone(result)
+
+    def test_getLatestReleaseWithDownloadFiles_returns_latest(self):
+        # Returns the most recent release that has at least one file
+        product = self.factory.makeProduct()
+        file1 = self.factory.makeProductReleaseFile(product=product)
+        file2 = self.factory.makeProductReleaseFile(product=product)
+        release1 = file1.productrelease
+        release2 = file2.productrelease
+        # Make release1 newer so it should be returned.
+        with person_logged_in(product.owner):
+            release1.datereleased = datetime(2025, 6, 1, tzinfo=timezone.utc)
+            release2.datereleased = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        IStore(release1).flush()
+        result = self.product_release_set.getLatestReleaseWithDownloadFiles(
+            product
+        )
+        self.assertEqual(release1, result)
 
 
 class ProductReleaseFileTestcase(TestCaseWithFactory):

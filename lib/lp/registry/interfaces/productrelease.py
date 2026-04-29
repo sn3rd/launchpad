@@ -496,3 +496,10 @@ class IProductReleaseSet(Interface):
 
     def getFilesForReleases(releases):
         """Get all files for the releases."""
+
+    def getLatestReleaseWithDownloadFiles(product):
+        """Return the most recent release with download files.
+
+        Only releases from non-OBSOLETE series of the product are considered.
+        Returns a `ProductRelease` or None.
+        """

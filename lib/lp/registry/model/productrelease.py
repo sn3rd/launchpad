@@ -13,7 +13,7 @@ from datetime import timezone
 from io import BufferedIOBase, BytesIO
 from operator import itemgetter
 
-from storm.expr import And, Desc, Join, LeftJoin
+from storm.expr import And, Desc, Exists, Join, LeftJoin, Select
 from storm.info import ClassAlias
 from storm.properties import DateTime, Int, Unicode
 from storm.references import Reference, ReferenceSet
@@ -395,6 +395,36 @@ class ProductReleaseSet:
             )
             .order_by(Desc(ProductReleaseFile.date_uploaded)),
             result_decorator=itemgetter(0),
+        )
+
+    def getLatestReleaseWithDownloadFiles(self, product):
+        """See `IProductReleaseSet`."""
+        # Local imports to avoid circular imports.
+        from lp.registry.interfaces.series import SeriesStatus
+        from lp.registry.model.milestone import Milestone
+        from lp.registry.model.productseries import ProductSeries
+
+        return (
+            IStore(ProductRelease)
+            .find(
+                ProductRelease,
+                ProductRelease.milestone_id == Milestone.id,
+                Milestone.productseries_id == ProductSeries.id,
+                ProductSeries.product_id == product.id,
+                ProductSeries.status != SeriesStatus.OBSOLETE,
+                Exists(
+                    Select(
+                        1,
+                        tables=[ProductReleaseFile],
+                        where=(
+                            ProductReleaseFile.productrelease_id
+                            == ProductRelease.id
+                        ),
+                    )
+                ),
+            )
+            .order_by(Desc(ProductRelease.datereleased))
+            .first()
         )
 
 

@@ -1255,6 +1255,19 @@ class ProductView(
         else:
             return None
 
+    @cachedproperty
+    def latest_release_with_download_files(self):
+        """Return the latest release with download files.
+
+        Overrides the mixin implementation to avoid materialising all
+        releases for the product into Python objects, which is
+        prohibitively slow for products (such as linux) that have
+        thousands of releases.
+        """
+        return getUtility(
+            IProductReleaseSet
+        ).getLatestReleaseWithDownloadFiles(self.context)
+
 
 class ProductPackagesView(LaunchpadView):
     """View for displaying product packaging"""
