@@ -1,6 +1,7 @@
 #  Copyright 2022 Canonical Ltd.  This software is licensed under the
 #  GNU Affero General Public License version 3 (see the file LICENSE).
 
+import copy
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ from lp.bugs.scripts.uct import (
     UCTImportError,
     UCTRecord,
 )
+from lp.bugs.scripts.uct.subprojects import PPAReference, SubProjectPPAs
 from lp.registry.interfaces.distribution import IDistributionSet
 from lp.registry.interfaces.distroseries import IDistroSeriesSet
 from lp.registry.interfaces.series import SeriesStatus
@@ -869,6 +871,25 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         # Note: The ubuntu-esm distribution does not have any source packages
         # published.
 
+        self.ppa_owner = self.factory.makePerson(name="ubuntu-esm")
+        self.ppa = self.factory.makeArchive(
+            distribution=self.ubuntu,
+            owner=self.ppa_owner,
+            name="esm-infra-security",
+        )
+        self.ppa_sourcepackagename = self.factory.makeSourcePackageName()
+        self.factory.makeSourcePackagePublishingHistory(
+            sourcepackagename=self.ppa_sourcepackagename,
+            archive=self.ppa,
+            distroseries=self.ubuntu_supported_series,
+        )
+        _ppa_asp = self.ppa.getArchiveSourcePackage(self.ppa_sourcepackagename)
+        _ppa_asps = self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=self.ppa_sourcepackagename,
+            archive=self.ppa,
+            distroseries=self.ubuntu_supported_series,
+        )
+
         assignee = self.factory.makePerson()
         self.lp_cve = self.factory.makeCVE("2022-23222")
         self.cve = CVE(
@@ -1011,6 +1032,23 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                 ),
             ],
             global_tags={"cisa-kev"},
+            ppa_packages=[
+                CVE.PPAPackage(
+                    target=_ppa_asp,
+                    package_name=self.ppa_sourcepackagename,
+                    importance=BugTaskImportance.LOW,
+                    tags=set(),
+                ),
+            ],
+            ppa_series_packages=[
+                CVE.PPASeriesPackage(
+                    target=_ppa_asps,
+                    package_name=self.ppa_sourcepackagename,
+                    importance=BugTaskImportance.HIGH,
+                    status=BugTaskStatus.FIXRELEASED,
+                    status_explanation="fixed in ppa",
+                ),
+            ],
         )
 
         self.uct_record = UCTRecord(
@@ -1160,6 +1198,11 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                 tags.add(
                     f"{distro_package.package_name.name}{TAG_SEPARATOR}{tag}"
                 )
+        for ppa_package in cve.ppa_packages:
+            for tag in ppa_package.tags:
+                tags.add(
+                    f"{ppa_package.package_name.name}{TAG_SEPARATOR}{tag}"
+                )
         self.assertEqual(sorted(bug.tags), sorted(list(tags)))
 
     def checkBugTasks(self, bug: Bug, cve: CVE):
@@ -1168,7 +1211,9 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         self.assertEqual(
             len(cve.distro_packages)
             + len(cve.series_packages)
-            + len(cve.upstream_packages),
+            + len(cve.upstream_packages)
+            + len(cve.ppa_packages)
+            + len(cve.ppa_series_packages),
             len(bug_tasks),
         )
         bug_tasks_by_target = {t.target: t for t in bug_tasks}
@@ -1230,6 +1275,28 @@ class TestUCTImporterExporter(TestCaseWithFactory):
 
         for t in bug_tasks:
             self.assertEqual(cve.assignee, t.assignee)
+
+        for ppa_package in cve.ppa_packages:
+            self.assertIn(ppa_package.target, bug_tasks_by_target)
+            t = bug_tasks_by_target[ppa_package.target]
+            pp_importance = ppa_package.importance or cve.importance
+            package_importances[ppa_package.package_name.name] = pp_importance
+            self.assertEqual(pp_importance, t.importance)
+
+        for ppa_series_package in cve.ppa_series_packages:
+            self.assertIn(ppa_series_package.target, bug_tasks_by_target)
+            t = bug_tasks_by_target[ppa_series_package.target]
+            package_importance = package_importances[
+                ppa_series_package.package_name.name
+            ]
+            psp_importance = (
+                ppa_series_package.importance or package_importance
+            )
+            self.assertEqual(psp_importance, t.importance)
+            self.assertEqual(ppa_series_package.status, t.status)
+            self.assertEqual(
+                ppa_series_package.status_explanation, t.status_explanation
+            )
 
     def checkBugPresences(self, bug: Bug, cve: CVE):
         presences_by_pkg = {
@@ -1826,7 +1893,9 @@ class TestUCTImporterExporter(TestCaseWithFactory):
 
         self.assertIsNot(importer_1.cache_entities, importer_2.cache_entities)
 
-        def mock_make_from_uct_record(record, cache_entities=None):
+        def mock_make_from_uct_record(
+            record, cache_entities=None, subprojects=None
+        ):
             self.assertIsNotNone(cache_entities)
             cache_entities["distribution"]["ubuntu"] = object()
             return Mock(sequence="CVE-mismatch")
@@ -1859,7 +1928,9 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         # Track cache modifications across imports
         cached_entries = []
 
-        def mock_make_from_uct_record(record, cache_entities):
+        def mock_make_from_uct_record(
+            record, cache_entities=None, subprojects=None
+        ):
             cached_entries.append(cache_entities)
             return Mock(sequence=record.sequence)
 
@@ -1973,3 +2044,114 @@ class TestUCTImporterExporter(TestCaseWithFactory):
 
         self.assertListEqual(self.uct_record.packages, uct_record.packages)
         self.assertDictEqual(self.uct_record.__dict__, uct_record.__dict__)
+
+    def test_create_bug_with_ppa_packages(self):
+        """create_bug creates bug tasks for PPA package targets."""
+        bug, _ = self.importer.create_bug(self.cve, self.lp_cve)
+
+        bug_tasks_by_target = {t.target: t for t in bug.bugtasks}
+
+        ppa_pkg = self.cve.ppa_packages[0]
+        ppa_series_pkg = self.cve.ppa_series_packages[0]
+
+        self.assertIn(ppa_pkg.target, bug_tasks_by_target)
+        self.assertIn(ppa_series_pkg.target, bug_tasks_by_target)
+
+        ppa_pkg_task = bug_tasks_by_target[ppa_pkg.target]
+        self.assertEqual(BugTaskImportance.LOW, ppa_pkg_task.importance)
+
+        ppa_series_task = bug_tasks_by_target[ppa_series_pkg.target]
+        self.assertEqual(BugTaskImportance.HIGH, ppa_series_task.importance)
+        self.assertEqual(BugTaskStatus.FIXRELEASED, ppa_series_task.status)
+        self.assertEqual("fixed in ppa", ppa_series_task.status_explanation)
+
+    def test_import_cve_with_only_ppa_packages_not_aborted(self):
+        """import_cve doesn't abort when CVE has only ppa_series_packages."""
+        cve = copy.copy(self.cve)
+        cve.distro_packages = []
+        cve.series_packages = []
+        cve.upstream_packages = []
+
+        bug, vulnerability, created = self.importer.import_cve(cve)
+
+        self.assertIsNotNone(bug)
+        self.assertIsNotNone(vulnerability)
+        self.assertTrue(created)
+
+    def test_make_from_uct_record_with_subprojects(self):
+        """make_from_uct_record populates ppa_packages/ppa_series_packages."""
+        subprojects = {
+            "esm-infra/focal": SubProjectPPAs(
+                ubuntu_series="focal",
+                ppas=(
+                    PPAReference(
+                        owner=self.ppa_owner.name,
+                        archive=self.ppa.name,
+                        pocket="security",
+                    ),
+                ),
+            ),
+        }
+
+        pkg_name = self.ubuntu_package.sourcepackagename.name
+        uct_record = UCTRecord(
+            parent_dir="active",
+            assigned_to=None,
+            bugs=[],
+            cvss={},
+            candidate="CVE-2022-23222",
+            crd=None,
+            public_date_at_USN=None,
+            public_date=datetime(2022, 1, 14, 8, 15, tzinfo=timezone.utc),
+            description="description",
+            discovered_by="",
+            mitigation="",
+            notes="",
+            priority=UCTRecord.Priority.HIGH,
+            priority_explanation="",
+            references=[],
+            ubuntu_description="",
+            packages=[
+                UCTRecord.Package(
+                    name=pkg_name,
+                    statuses=[
+                        UCTRecord.SeriesPackageStatus(
+                            series="esm-infra/focal",
+                            status=UCTRecord.PackageStatus.RELEASED,
+                            reason="fixed",
+                            priority=UCTRecord.Priority.HIGH,
+                        ),
+                    ],
+                    priority=UCTRecord.Priority.HIGH,
+                    tags=set(),
+                    patches=[],
+                ),
+            ],
+            global_tags=set(),
+        )
+
+        cve = CVE.make_from_uct_record(
+            uct_record,
+            subprojects=subprojects,
+        )
+
+        self.assertEqual(1, len(cve.ppa_packages))
+        self.assertEqual(1, len(cve.ppa_series_packages))
+        self.assertEqual(0, len(cve.distro_packages))
+        self.assertEqual(0, len(cve.series_packages))
+
+        ppa_pkg = cve.ppa_packages[0]
+        self.assertEqual(self.ppa, ppa_pkg.target.archive)
+        self.assertEqual(
+            self.ubuntu_package.sourcepackagename,
+            ppa_pkg.package_name,
+        )
+        self.assertEqual(BugTaskImportance.HIGH, ppa_pkg.importance)
+
+        ppa_series_pkg = cve.ppa_series_packages[0]
+        self.assertEqual(self.ppa, ppa_series_pkg.target.archive)
+        self.assertEqual(
+            self.ubuntu_supported_series, ppa_series_pkg.target.distroseries
+        )
+        self.assertEqual(BugTaskStatus.FIXRELEASED, ppa_series_pkg.status)
+        self.assertEqual("fixed", ppa_series_pkg.status_explanation)
