@@ -151,6 +151,18 @@ class TestURLParser(TestCase):
         )
 
 
+class TestBadResponseCode(TestCase):
+    def test_str_includes_url(self):
+        error = BadResponseCode(404, "http://example.com/foo")
+        self.assertEqual(
+            "Bad response code for http://example.com/foo: 404", str(error)
+        )
+
+    def test_str_without_url(self):
+        error = BadResponseCode(404)
+        self.assertEqual("Bad response code: 404", str(error))
+
+
 class TestProberHTTPSProtocolAndFactory(TestCase):
     layer = TwistedLayer
     run_tests_with = AsynchronousDeferredRunTestForBrokenTwisted.make_factory(
@@ -219,7 +231,12 @@ class TestProberHTTPSProtocolAndFactory(TestCase):
 
     def test_notfound(self):
         d = self._createProberAndProbe(self.urls["404"])
-        return assert_fails_with(d, BadResponseCode)
+        d = assert_fails_with(d, BadResponseCode)
+
+        def check_url(error):
+            self.assertEqual(self.urls["404"], error.url)
+
+        return d.addCallback(check_url)
 
     def test_multiple_failures(self):
         """Avoid defer.AlreadyCalledError when failWithTimeoutError is still
@@ -494,7 +511,12 @@ class TestProberProtocolAndFactory(TestCase):
 
     def test_notfound(self):
         d = self._createProberAndProbe(self.urls["404"])
-        return assert_fails_with(d, BadResponseCode)
+        d = assert_fails_with(d, BadResponseCode)
+
+        def check_url(error):
+            self.assertEqual(self.urls["404"], error.url)
+
+        return d.addCallback(check_url)
 
     def test_500(self):
         d = self._createProberAndProbe(self.urls["500"])

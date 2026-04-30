@@ -166,9 +166,13 @@ class ProberProtocol(HTTPClient):
             if status == http.client.OK:
                 self.factory.succeeded(status)
             else:
-                self.factory.failed(Failure(BadResponseCode(status)))
+                self.factory.failed(
+                    Failure(BadResponseCode(status, self.factory.url))
+                )
         except ValueError:
-            self.factory.failed(Failure(BadResponseCode(status)))
+            self.factory.failed(
+                Failure(BadResponseCode(status, self.factory.url))
+            )
         self.transport.loseConnection()
 
     def handleResponse(self, response):
@@ -196,7 +200,7 @@ class HTTPSProbeFailureHandler:
         if status == http.client.OK:
             return response
         else:
-            raise BadResponseCode(status, response)
+            raise BadResponseCode(status, self.factory.url, response)
 
     def handleErrors(self, error):
         """Handle exceptions in https requests."""
@@ -537,12 +541,15 @@ class ProberTimeout(ProberError):
 
 
 class BadResponseCode(ProberError):
-    def __init__(self, status, response=None, *args):
+    def __init__(self, status, url=None, response=None, *args):
         ProberError.__init__(self, *args)
         self.status = status
+        self.url = url
         self.response = response
 
     def __str__(self):
+        if self.url:
+            return "Bad response code for %s: %s" % (self.url, self.status)
         return "Bad response code: %s" % self.status
 
 
