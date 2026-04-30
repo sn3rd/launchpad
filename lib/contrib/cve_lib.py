@@ -846,7 +846,7 @@ def load_cve(cvefile, strict=False, srcentries=None):
         code = EXIT_FAIL
     for item in priority_reason:
         field = 'Priority' if not item else 'Priority_' + item
-        data[field][1] = ' '.join(priority_reason[item])
+        data[field][1] = priority_reason[item]
 
     # entries need an upstream entry if any entries are from the internal
     # list of subprojects
