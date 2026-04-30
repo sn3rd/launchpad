@@ -16,6 +16,17 @@ class DistributionMirrorTestHTTPServer(Resource):
 
     :valid-mirror/*: Respond with a '200 OK' status.
 
+    :html-mirror/*: Respond with a '200 OK' and Content-Type: text/html.
+
+    :iso-mirror/*: Respond with a '200 OK' and
+        Content-Type: application/x-iso9660-image.
+
+    :octet-stream-mirror/*: Respond with a '200 OK' and
+        Content-Type: application/octet-stream.
+
+    :no-content-type-mirror/*: Respond with a '200 OK' and no Content-Type
+        header.
+
     :timeout: Do not respond, causing the client to keep waiting.
 
     :error: Respond with a '500 Internal Server Error' status.
@@ -40,6 +51,22 @@ class DistributionMirrorTestHTTPServer(Resource):
         port = request.getHost().port
         if name == b"valid-mirror":
             leaf = self.__class__()
+            leaf.isLeaf = True
+            return leaf
+        elif name == b"html-mirror":
+            leaf = ExplicitContentTypeResource(b"text/html; charset=utf-8")
+            leaf.isLeaf = True
+            return leaf
+        elif name == b"iso-mirror":
+            leaf = ExplicitContentTypeResource(b"application/x-iso9660-image")
+            leaf.isLeaf = True
+            return leaf
+        elif name == b"octet-stream-mirror":
+            leaf = ExplicitContentTypeResource(b"application/octet-stream")
+            leaf.isLeaf = True
+            return leaf
+        elif name == b"no-content-type-mirror":
+            leaf = NoContentTypeResource()
             leaf.isLeaf = True
             return leaf
         elif name == b"timeout":
@@ -73,6 +100,28 @@ class DistributionMirrorTestSecureHTTPServer(DistributionMirrorTestHTTPServer):
     """HTTPS version of DistributionMirrorTestHTTPServer"""
 
     protocol = "https"
+
+
+class ExplicitContentTypeResource(Resource):
+    """A resource that responds 200 OK with an explicit Content-Type."""
+
+    def __init__(self, content_type):
+        self.content_type = content_type
+        Resource.__init__(self)
+
+    def render_GET(self, request):
+        request.setHeader(b"Content-Type", self.content_type)
+        return b""
+
+
+class NoContentTypeResource(Resource):
+    """A resource that responds 200 OK without any Content-Type header."""
+
+    def render_GET(self, request):
+        # Prevent Twisted from injecting its default text/html content type
+        # when the response is written.
+        request.defaultContentType = None
+        return b""
 
 
 class RedirectingResource(Resource):
