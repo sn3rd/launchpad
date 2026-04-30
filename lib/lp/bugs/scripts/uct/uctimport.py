@@ -52,6 +52,7 @@ from lp.bugs.model.cve import Cve as CveModel
 from lp.bugs.model.vulnerability import Vulnerability
 from lp.bugs.scripts.svthandler import SVTImporter
 from lp.bugs.scripts.uct.models import CVE, UCTRecord
+from lp.bugs.scripts.uct.subprojects import load_subprojects
 from lp.registry.interfaces.role import IPersonRoles
 from lp.registry.model.distribution import Distribution
 from lp.registry.model.person import Person
@@ -64,6 +65,12 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+_CONTRIB_SUBPROJECTS_JSON = (
+    Path(__file__).parent.parent.parent.parent.parent
+    / "contrib"
+    / "subprojects.json"
+)
 
 
 class UCTImportError(Exception):
@@ -89,6 +96,7 @@ class UCTImporter(SVTImporter):
         self.ubuntu = ubuntu
         self.information_type = information_type
         self.cache_entities = cache_entities or CVE.new_cache()
+        self.subprojects = load_subprojects(_CONTRIB_SUBPROJECTS_JSON)
 
     def import_cve_from_file(
         self, cve_path: Path
@@ -101,7 +109,9 @@ class UCTImporter(SVTImporter):
         logger.info("Importing %s", cve_path)
         uct_record = UCTRecord.load(cve_path)
         cve = CVE.make_from_uct_record(
-            uct_record, cache_entities=self.cache_entities
+            uct_record,
+            cache_entities=self.cache_entities,
+            subprojects=self.subprojects,
         )
         return self.import_cve(cve)
 
@@ -109,7 +119,9 @@ class UCTImporter(SVTImporter):
         self, record: UCTRecord, cve_sequence: str
     ) -> Optional[Tuple[BugModel, Vulnerability]]:
         cve = CVE.make_from_uct_record(
-            record, cache_entities=self.cache_entities
+            record,
+            cache_entities=self.cache_entities,
+            subprojects=self.subprojects,
         )
 
         if cve.sequence != cve_sequence:
@@ -138,7 +150,7 @@ class UCTImporter(SVTImporter):
                 cve.sequence,
             )
             return None, None, None
-        if not cve.series_packages:
+        if not cve.series_packages and not cve.ppa_series_packages:
             logger.warning(
                 "%s: could not find any affected packages, aborting."
                 "%s was not imported.",
@@ -199,7 +211,14 @@ class UCTImporter(SVTImporter):
         :param lp_cve: Launchpad `Cve` model
         """
 
-        distro_package = cve.distro_packages[0]
+        if cve.distro_packages:
+            initial_package = cve.distro_packages[0]
+            remaining_distro_packages = cve.distro_packages[1:]
+            remaining_ppa_packages = cve.ppa_packages
+        else:
+            initial_package = cve.ppa_packages[0]
+            remaining_distro_packages = []
+            remaining_ppa_packages = cve.ppa_packages[1:]
 
         # Create the bug
         bug: BugModel = removeSecurityProxy(
@@ -209,8 +228,8 @@ class UCTImporter(SVTImporter):
                     title=cve.sequence,
                     information_type=self.information_type,
                     owner=self.bug_importer,
-                    target=distro_package.target,
-                    importance=distro_package.importance,
+                    target=initial_package.target,
+                    importance=initial_package.importance,
                     cve=lp_cve,
                     check_permissions=False,
                 )
@@ -220,13 +239,17 @@ class UCTImporter(SVTImporter):
         self._update_external_bug_urls(bug, cve.bug_urls)
         self._update_patches(bug, cve.patch_urls)
         self._update_break_fix(bug, cve.break_fix_data)
-        self._update_tags(bug, cve.global_tags, cve.distro_packages)
+        self._update_tags(
+            bug, cve.global_tags, cve.distro_packages, cve.ppa_packages
+        )
 
         self._create_bug_tasks(
             bug,
-            cve.distro_packages[1:],
+            remaining_distro_packages,
             cve.series_packages,
             cve.upstream_packages,
+            ppa_packages=remaining_ppa_packages,
+            ppa_series_packages=cve.ppa_series_packages,
         )
         self._update_statuses_and_importances(
             bug,
@@ -234,6 +257,8 @@ class UCTImporter(SVTImporter):
             cve.distro_packages,
             cve.series_packages,
             cve.upstream_packages,
+            ppa_packages=cve.ppa_packages,
+            ppa_series_packages=cve.ppa_series_packages,
         )
         self._assign_bug_tasks(bug, cve.assignee)
 
@@ -269,6 +294,8 @@ class UCTImporter(SVTImporter):
             cve.distro_packages,
             cve.series_packages,
             cve.upstream_packages,
+            ppa_packages=cve.ppa_packages,
+            ppa_series_packages=cve.ppa_series_packages,
         )
         self._update_statuses_and_importances(
             bug,
@@ -276,12 +303,16 @@ class UCTImporter(SVTImporter):
             cve.distro_packages,
             cve.series_packages,
             cve.upstream_packages,
+            ppa_packages=cve.ppa_packages,
+            ppa_series_packages=cve.ppa_series_packages,
         )
         self._assign_bug_tasks(bug, cve.assignee)
         self._update_external_bug_urls(bug, cve.bug_urls)
         self._update_patches(bug, cve.patch_urls)
         self._update_break_fix(bug, cve.break_fix_data)
-        self._update_tags(bug, cve.global_tags, cve.distro_packages)
+        self._update_tags(
+            bug, cve.global_tags, cve.distro_packages, cve.ppa_packages
+        )
 
         vulnerability = self._find_existing_vulnerability(lp_cve, self.ubuntu)
         if vulnerability is None:
@@ -292,13 +323,23 @@ class UCTImporter(SVTImporter):
         return bug, vulnerability
 
     def _update_tags(
-        self, bug: BugModel, global_tags: Set, distro_packages: List
+        self,
+        bug: BugModel,
+        global_tags: Set,
+        distro_packages: List,
+        ppa_packages: Optional[List] = None,
     ):
         tags = global_tags.copy()
         for distro_package in distro_packages:
             for tag in distro_package.tags:
                 tags.add(
                     f"{distro_package.package_name.name}"
+                    f"{self.TAG_SEPARATOR}{tag}"
+                )
+        for ppa_package in ppa_packages or []:
+            for tag in ppa_package.tags:
+                tags.add(
+                    f"{ppa_package.package_name.name}"
                     f"{self.TAG_SEPARATOR}{tag}"
                 )
 
@@ -340,6 +381,8 @@ class UCTImporter(SVTImporter):
         distro_packages: List[CVE.DistroPackage],
         series_packages: List[CVE.SeriesPackage],
         upstream_packages: List[CVE.UpstreamPackage],
+        ppa_packages: Optional[List[CVE.PPAPackage]] = None,
+        ppa_series_packages: Optional[List[CVE.PPASeriesPackage]] = None,
     ) -> None:
         """
         Add bug tasks to the given `Bug` model based on the information
@@ -358,7 +401,11 @@ class UCTImporter(SVTImporter):
         bug_task_by_target = {t.target: t for t in bug_tasks}
         bug_task_set = getUtility(IBugTaskSet)
         for package in chain(
-            distro_packages, series_packages, upstream_packages
+            distro_packages,
+            series_packages,
+            upstream_packages,
+            ppa_packages or [],
+            ppa_series_packages or [],
         ):
             if package.target not in bug_task_by_target:
                 bug_task_set.createTask(bug, self.bug_importer, package.target)
@@ -462,6 +509,8 @@ class UCTImporter(SVTImporter):
         distro_packages: List[CVE.DistroPackage],
         series_packages: List[CVE.SeriesPackage],
         upstream_packages: List[CVE.UpstreamPackage],
+        ppa_packages: Optional[List[CVE.PPAPackage]] = None,
+        ppa_series_packages: Optional[List[CVE.PPASeriesPackage]] = None,
     ) -> None:
         """
         Update statuses and importances of bug tasks according to the
@@ -489,6 +538,12 @@ class UCTImporter(SVTImporter):
             package_importances[dp.package_name.name] = dp_importance
             task.transitionToImportance(dp_importance)
 
+        for pp in ppa_packages or []:
+            task = bug_task_by_target[pp.target]
+            pp_importance = pp.importance or cve_importance
+            package_importances[pp.package_name.name] = pp_importance
+            task.transitionToImportance(pp_importance)
+
         for sp in chain(series_packages, upstream_packages):
             task = bug_task_by_target[sp.target]
             package_name = sp.package_name.name
@@ -497,6 +552,15 @@ class UCTImporter(SVTImporter):
             task.transitionToImportance(sp_importance)
             task.transitionToStatus(sp.status)
             task.status_explanation = sp.status_explanation
+
+        for psp in ppa_series_packages or []:
+            task = bug_task_by_target[psp.target]
+            package_name = psp.package_name.name
+            package_importance = package_importances[package_name]
+            psp_importance = psp.importance or package_importance
+            task.transitionToImportance(psp_importance)
+            task.transitionToStatus(psp.status)
+            task.status_explanation = psp.status_explanation
 
     def _update_external_bug_urls(
         self, bug: BugModel, bug_urls: List[str]
