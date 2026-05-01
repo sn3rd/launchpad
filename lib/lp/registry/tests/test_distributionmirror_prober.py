@@ -50,10 +50,8 @@ from lp.registry.scripts.distributionmirror_prober import (
     MIN_REQUEST_TIMEOUT_RATIO,
     MIN_REQUESTS_TO_CONSIDER_RATIO,
     ArchiveMirrorProberCallbacks,
-    BadContentType,
     BadResponseCode,
     ConnectionSkipped,
-    ContentTypeCheckingProberFactory,
     InfiniteLoopDetected,
     InvalidHTTPSCertificate,
     InvalidHTTPSCertificateSkipped,
@@ -1012,7 +1010,6 @@ class TestMirrorCDImageProberCallbacks(TestCaseWithFactory):
         self.assertEqual(
             set(callbacks.expected_failures),
             {
-                BadContentType,
                 BadResponseCode,
                 ProberTimeout,
                 ConnectionSkipped,
@@ -1024,7 +1021,6 @@ class TestMirrorCDImageProberCallbacks(TestCaseWithFactory):
             },
         )
         exceptions = [
-            BadContentType("http://localhost/ubuntu.iso", "text/html"),
             BadResponseCode(http.client.NOT_FOUND),
             ProberTimeout("http://localhost/", 5),
             ConnectionSkipped(),
@@ -1502,175 +1498,3 @@ class TestDistroMirrorProberFunctional(TestCaseWithFactory):
                 )
             ),
         )
-
-
-class TestContentTypeCheckingProberHTTP(TestCase):
-    """Tests for ContentTypeCheckingProberFactory over plain HTTP.
-
-    These tests reproduce the bug where a mirror serving .iso files with
-    Content-Type: text/html is incorrectly marked as working.  The new
-    factory must reject any content type that is not in the allowlist of
-    known-good binary types.
-    """
-
-    layer = TwistedLayer
-    run_tests_with = AsynchronousDeferredRunTestForBrokenTwisted.make_factory(
-        timeout=30
-    )
-
-    def setUp(self):
-        super().setUp()
-        root = DistributionMirrorTestHTTPServer()
-        site = server.Site(root)
-        site.displayTracebacks = False
-        self.listening_port = reactor.listenTCP(0, site)
-        self.addCleanup(self.listening_port.stopListening)
-        self.port = self.listening_port.getHost().port
-        self.pushConfig("launchpad", http_proxy=None)
-        self.useFixture(
-            MockPatchObject(distributionmirror_prober, "host_requests", {})
-        )
-        self.useFixture(
-            MockPatchObject(distributionmirror_prober, "host_timeouts", {})
-        )
-
-    def _url(self, path):
-        return "http://localhost:%s/%s" % (self.port, path)
-
-    def test_text_html_content_type_raises_bad_content_type(self):
-        """A 200 OK with Content-Type: text/html must be rejected.
-
-        This is the core bug: a misconfigured mirror proxying .iso requests
-        through a web page causes browsers to display binary data as text
-        rather than triggering a file download.
-        """
-        prober = ContentTypeCheckingProberFactory(
-            self._url("html-mirror/ubuntu-24.04.iso")
-        )
-        return assert_fails_with(prober.probe(), BadContentType)
-
-    def test_iso9660_content_type_is_accepted(self):
-        """A 200 OK with Content-Type: application/x-iso9660-image succeeds."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("iso-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result)
-
-        return d.addCallback(got_result)
-
-    def test_octet_stream_content_type_is_accepted(self):
-        """A 200 OK with Content-Type: application/octet-stream succeeds."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("octet-stream-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result)
-
-        return d.addCallback(got_result)
-
-    def test_missing_content_type_is_accepted(self):
-        """A 200 OK with no Content-Type header is not treated as a failure."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("no-content-type-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result)
-
-        return d.addCallback(got_result)
-
-
-class TestContentTypeCheckingProberHTTPS(TestCase):
-    """HTTPS equivalent of TestContentTypeCheckingProberHTTP."""
-
-    layer = TwistedLayer
-    run_tests_with = AsynchronousDeferredRunTestForBrokenTwisted.make_factory(
-        timeout=30
-    )
-
-    def setUp(self):
-        super().setUp()
-        root = DistributionMirrorTestSecureHTTPServer()
-        site = server.Site(root)
-        site.displayTracebacks = False
-        keys_path = os.path.join(config.root, "configs", "development")
-        keys = ssl.DefaultOpenSSLContextFactory(
-            os.path.join(keys_path, "launchpad.key"),
-            os.path.join(keys_path, "launchpad.crt"),
-        )
-        self.listening_port = reactor.listenSSL(0, site, keys)
-        self.addCleanup(self.listening_port.stopListening)
-        self.port = self.listening_port.getHost().port
-        self.pushConfig("launchpad", http_proxy=None)
-        self.useFixture(
-            MockPatchObject(
-                ContentTypeCheckingProberFactory,
-                "https_agent_policy",
-                LocalhostWhitelistedHTTPSPolicy,
-            )
-        )
-        self.useFixture(
-            MockPatchObject(distributionmirror_prober, "host_requests", {})
-        )
-        self.useFixture(
-            MockPatchObject(distributionmirror_prober, "host_timeouts", {})
-        )
-        self.useFixture(
-            MockPatchObject(
-                distributionmirror_prober, "invalid_certificate_hosts", set()
-            )
-        )
-
-    def _url(self, path):
-        return "https://localhost:%s/%s" % (self.port, path)
-
-    def test_text_html_content_type_raises_bad_content_type(self):
-        """
-        A 200 OK with Content-Type: text/html must be rejected over HTTPS.
-        """
-        prober = ContentTypeCheckingProberFactory(
-            self._url("html-mirror/ubuntu-24.04.iso")
-        )
-        return assert_fails_with(prober.probe(), BadContentType)
-
-    def test_iso9660_content_type_is_accepted(self):
-        """A 200 OK with Content-Type: application/x-iso9660-image succeeds."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("iso-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result.code)
-
-        return d.addCallback(got_result)
-
-    def test_octet_stream_content_type_is_accepted(self):
-        """A 200 OK with Content-Type: application/octet-stream succeeds."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("octet-stream-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result.code)
-
-        return d.addCallback(got_result)
-
-    def test_missing_content_type_is_accepted(self):
-        """A 200 OK with no Content-Type header is not treated as a failure."""
-        prober = ContentTypeCheckingProberFactory(
-            self._url("no-content-type-mirror/ubuntu-24.04.iso")
-        )
-        d = prober.probe()
-
-        def got_result(result):
-            self.assertEqual(http.client.OK, result.code)
-
-        return d.addCallback(got_result)

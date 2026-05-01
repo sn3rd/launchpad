@@ -67,19 +67,6 @@ invalid_certificate_hosts = set()
 
 MAX_REDIRECTS = 3
 
-# Allowlist of Content-Type values that are acceptable for .iso files.
-# Sampled from production mirrors: the vast majority serve
-# application/octet-stream while a minority use the more specific
-# application/x-iso9660-image.  Any other type (including text/html or
-# text/plain) indicates a misconfigured mirror that would cause browsers to
-# display binary data inline rather than triggering a file download.
-CDIMAGE_ISO_CONTENT_TYPES = frozenset(
-    [
-        "application/octet-stream",
-        "application/x-iso9660-image",
-    ]
-)
-
 
 class LoggingMixin:
     """Common logging class for archive and releases mirror messages."""
@@ -531,95 +518,6 @@ class RedirectAwareProberFactory(ProberFactory):
             self.connect()
 
 
-class ContentTypeCheckingProberProtocol(RedirectAwareProberProtocol):
-    """A prober protocol that also validates the Content-Type response header.
-
-    For .iso files the Content-Type must be in CDIMAGE_ISO_CONTENT_TYPES.
-    Any other type (e.g. text/html) means the mirror is misconfigured and
-    the probe is failed with BadContentType.
-
-    Unlike the parent class, this protocol does NOT close the connection
-    immediately on a 200 response — it waits until handleEndHeaders() has
-    captured the Content-Type before deciding success or failure.
-    """
-
-    _awaiting_headers = False
-
-    def handleStatus(self, version, status, message):
-        try:
-            status_int = int(status)
-        except ValueError:
-            self.factory.failed(Failure(BadResponseCode(status)))
-            self.transport.loseConnection()
-            return
-
-        if status_int in self.handled_redirect_statuses:
-            self.redirected_to_location = True
-        elif status_int == http.client.OK:
-            # Delay the success/failure decision until handleEndHeaders()
-            # so we can inspect the Content-Type header.
-            self._awaiting_headers = True
-        else:
-            self.factory.failed(Failure(BadResponseCode(status_int)))
-            self.transport.loseConnection()
-
-    def handleEndHeaders(self):
-        if self.redirected_to_location:
-            location = self.headers.get(b"location")
-            url = location[0]
-            self.factory.redirect(url)
-        elif self._awaiting_headers:
-            content_type = self._get_content_type()
-            if content_type and content_type not in CDIMAGE_ISO_CONTENT_TYPES:
-                self.factory.failed(
-                    Failure(BadContentType(self.factory.url, content_type))
-                )
-            else:
-                self.factory.succeeded(http.client.OK)
-        else:
-            raise AssertionError(
-                "handleEndHeaders called in unexpected state "
-                "(redirected_to_location=%r, _awaiting_headers=%r)"
-                % (self.redirected_to_location, self._awaiting_headers)
-            )
-        self.transport.loseConnection()
-
-    def _get_content_type(self):
-        """Return the normalised Content-Type value, or '' if absent."""
-        values = self.headers.get(b"content-type", [b""])
-        ct = values[0]
-        if isinstance(ct, bytes):
-            ct = ct.decode("UTF-8", errors="replace")
-        return ct.split(";")[0].strip().lower()
-
-
-class ContentTypeCheckingProberFactory(RedirectAwareProberFactory):
-    """A prober factory that validates Content-Type for .iso files.
-
-    Uses ContentTypeCheckingProberProtocol for HTTP connections and adds
-    an equivalent Content-Type check to the HTTPS callback chain.
-    """
-
-    protocol = ContentTypeCheckingProberProtocol
-
-    def connect(self):
-        super().connect()
-        if self.is_https:
-            self._deferred.addCallback(self._check_https_content_type)
-
-    def _check_https_content_type(self, response):
-        if not IResponse.providedBy(response):
-            return response
-        ct_values = response.headers.getRawHeaders(b"content-type", [b""])
-        content_type = ct_values[0] if ct_values else b""
-        if isinstance(content_type, bytes):
-            content_type = content_type.decode("UTF-8", errors="replace")
-        content_type = content_type.split(";")[0].strip().lower()
-        if content_type and content_type not in CDIMAGE_ISO_CONTENT_TYPES:
-            raise BadContentType(self.url, content_type)
-        return response
-
-
 class ProberError(Exception):
     """A generic prober error.
 
@@ -653,23 +551,6 @@ class BadResponseCode(ProberError):
         if self.url:
             return "Bad response code for %s: %s" % (self.url, self.status)
         return "Bad response code: %s" % self.status
-
-
-class BadContentType(ProberError):
-    """The response Content-Type is not acceptable for a .iso file.
-
-    A mirror that returns a ``text/*`` or other non-binary content type for
-    an ISO image is misconfigured: browsers will display the raw bytes inline
-    instead of triggering a file download.
-    """
-
-    def __init__(self, url, content_type, *args):
-        ProberError.__init__(self, *args)
-        self.url = url
-        self.content_type = content_type
-
-    def __str__(self):
-        return "Bad content type '%s' for %s" % (self.content_type, self.url)
 
 
 class InvalidHTTPSCertificate(ProberError):
@@ -979,7 +860,6 @@ class ArchiveMirrorProberCallbacks(LoggingMixin):
 
 class MirrorCDImageProberCallbacks(LoggingMixin):
     expected_failures = (
-        BadContentType,
         BadResponseCode,
         ConnectionSkipped,
         ProberTimeout,
@@ -1009,23 +889,14 @@ class MirrorCDImageProberCallbacks(LoggingMixin):
                 self.mirror.deleteMirrorCDImageSeries(
                     self.distroseries, self.flavour
                 )
-                logger = logging.getLogger("distributionmirror-prober")
-                if response.check(BadContentType) is not None:
-                    logger.warning(
-                        "Mirror %s returned bad Content-Type for %s: %s\n"
-                        % (
-                            self.mirror.name,
-                            response.value.url,
-                            response.value.content_type,
-                        )
-                    )
-                elif response.check(*self.expected_failures) is None:
+                if response.check(*self.expected_failures) is None:
                     msg = (
                         "%s on mirror %s. Check its logfile for more "
                         "details.\n"
                         % (response.getErrorMessage(), self.mirror.name)
                     )
                     # This is not an error we expect from an HTTP server.
+                    logger = logging.getLogger("distributionmirror-prober")
                     logger.error(msg)
                 return None
 
@@ -1207,14 +1078,9 @@ def probe_cdimage_mirror(
             url = urljoin(base_url, path)
             # Use a RedirectAwareProberFactory because CD mirrors are allowed
             # to redirect, and we need to cope with that.
-            # For .iso files, also validate the Content-Type header so that
-            # mirrors serving ISO data with text/html are marked as broken.
             sched = CallScheduler(mirror, series)
             call_scheds.append(sched)
-            if path.endswith(".iso"):
-                prober = ContentTypeCheckingProberFactory(url)
-            else:
-                prober = RedirectAwareProberFactory(url)
+            prober = RedirectAwareProberFactory(url)
             deferred = request_manager.run(prober.request_host, prober.probe)
             deferred.addErrback(
                 sched.schedCallback(callbacks.urlCallback, url)
