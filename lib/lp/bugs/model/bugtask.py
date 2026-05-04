@@ -212,7 +212,7 @@ def bug_target_from_key(
     elif archive:
         if sourcepackagename and distroseries:
             return archive.getArchiveSourcePackageSeries(
-                distroseries, sourcepackagename
+                distroseries, sourcepackagename, check_publication=False
             )
         elif distroseries:
             return archive.getArchiveSeries(distroseries)

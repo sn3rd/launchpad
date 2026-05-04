@@ -981,7 +981,9 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
 
         return ArchiveSourcePackage(self, sourcepackagename)
 
-    def getArchiveSourcePackageSeries(self, distroseries, name):
+    def getArchiveSourcePackageSeries(
+        self, distroseries, name, check_publication=True
+    ):
         """See `IArchive`."""
         # Imported locally to avoid circular imports:
         # ArchiveSourcePackageSeries references IArchive, so importing it at
@@ -1004,7 +1006,9 @@ class Archive(BugTargetBase, StormBase, WebhookTargetMixin):
 
         # The package must be known to this archive. getArchiveSourcePackage
         # handles name resolution and the publication check.
-        asp = self.getArchiveSourcePackage(name)
+        asp = self.getArchiveSourcePackage(
+            name, check_publication=check_publication
+        )
         if asp is None:
             return None
         sourcepackagename = asp.sourcepackagename

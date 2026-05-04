@@ -711,11 +711,16 @@ class IArchiveSubscriberView(Interface):
             archive has no publications for this package.
         """
 
-    def getArchiveSourcePackageSeries(distroseries, name):
+    def getArchiveSourcePackageSeries(
+        distroseries, name, check_publication=True
+    ):
         """Return an ArchiveSourcePackageSeries for this archive.
 
         :param distroseries: A `IDistroSeries` object or name string.
         :param name: A source package name string or `ISourcePackageName`.
+        :param check_publication: If True (default), return None if the
+            archive has no publications for this package. If False, return
+            the object regardless (used when reconstructing from stored data).
         :return: An `IArchiveSourcePackageSeries`, or None if the source
             package name doesn't exist or if this archive has no publications
             for this package.
