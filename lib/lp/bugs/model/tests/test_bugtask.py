@@ -63,6 +63,10 @@ from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.product import IProductSet
 from lp.registry.interfaces.projectgroup import IProjectGroupSet
 from lp.registry.interfaces.sourcepackage import ISourcePackage
+from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+from lp.registry.model.archivesourcepackageseries import (
+    ArchiveSourcePackageSeries,
+)
 from lp.registry.model.sourcepackage import SourcePackage
 from lp.registry.tests.test_accesspolicy import get_policies_for_artifact
 from lp.services.database.sqlbase import (
@@ -3577,6 +3581,74 @@ class TestBugTargetKeys(TestCaseWithFactory):
                 archive=archive,
             ),
         )
+
+    def test_archivesourcepackage_unpublished(self):
+        """bug_target_from_key reconstructs ArchiveSourcePackage targets
+        even when the package is deleted or unpublished from the archive.
+        """
+
+        # Create a PPA and a source package name (but no publication)
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        spn = self.factory.makeSourcePackageName(name="test-package")
+
+        # Create an ArchiveSourcePackage target (without any publication)
+        asp = ArchiveSourcePackage(ppa, spn)
+
+        # Create the flat key representation
+        flat = dict(
+            product=None,
+            productseries=None,
+            distribution=None,
+            distroseries=None,
+            sourcepackagename=spn,
+            ociproject=None,
+            packagetype=None,
+            channel=None,
+            archive=ppa,
+        )
+
+        # Without check_publication=False, this would return None because the
+        # package is not published in the archive.
+        target = bug_target_from_key(**flat)
+
+        # Verify we got a valid target
+        self.assertIsNotNone(target)
+        self.assertEqual(target, asp)
+
+    def test_archivesourcepackageseries_unpublished(self):
+        """bug_target_from_key reconstructs ArchiveSourcePackageSeries targets
+        even when the package is deleted or unpublished from the archive.
+        """
+        # Create a PPA, distroseries, and source package name (no publication)
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        distroseries = self.factory.makeDistroSeries(
+            distribution=ppa.distribution
+        )
+        spn = self.factory.makeSourcePackageName(name="test-package")
+
+        # Create an ArchiveSourcePackageSeries target (without publication)
+        asps = ArchiveSourcePackageSeries(ppa, distroseries, spn)
+
+        # Create the flat key representation
+        flat = dict(
+            product=None,
+            productseries=None,
+            distribution=None,
+            distroseries=distroseries,
+            sourcepackagename=spn,
+            ociproject=None,
+            packagetype=None,
+            channel=None,
+            archive=ppa,
+        )
+
+        # Without check_publication=False, this would return None because the
+        # package is not published in the archive.
+        target = bug_target_from_key(**flat)
+
+        # Verify we got a valid target
+        self.assertIsNotNone(target)
+        self.assertEqual(target, asps)
 
     def test_no_key_for_non_targets(self):
         self.assertRaises(
