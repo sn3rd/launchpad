@@ -129,5 +129,5 @@ PROBER="{{ code_dir }}/cronscripts/distributionmirror-prober.py -q --log-file=DE
 */15 * * * * run-one {{ code_dir }}/bin/datedir2amqp --exchange oopses --host {{ rabbitmq_host }} --username {{ rabbitmq_username }} --password {{ rabbitmq_password }} --vhost {{ rabbitmq_vhost }} --repo {{ oopses_dir }} --key ""
 
 # CVE update
-10 * * * * {{ code_dir }}/cronscripts/update-cve.py -q -d --log-file=DEBUG:{{ logs_dir }}/update-cve.log
+30 * * * * {{ code_dir }}/cronscripts/update-cve.py -q -d --log-file=DEBUG:{{ logs_dir }}/update-cve.log
 
