@@ -665,6 +665,10 @@
         path_expression="string:+upload/${id}"
         attribute_to_parent="distroseries"
         />
+    <lp:feeds
+        module="lp.soyuz.feed.packageupload"
+        classes="NewPackageUploadsFeed"
+    />
     <lp:url
         for="lp.soyuz.interfaces.queue.IPackageUploadLog"
         path_expression="string:+log/${id}"

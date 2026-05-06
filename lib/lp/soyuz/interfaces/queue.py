@@ -20,6 +20,7 @@ __all__ = [
     "QueueInconsistentStateError",
     "QueueSourceAcceptError",
     "QueueStateWriteProtectedError",
+    "PACKAGE_UPLOAD_STATUS_MAPPING_TO_STR",
 ]
 
 import http.client
@@ -47,6 +48,14 @@ from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.services.webservice.apihelpers import patch_reference_property
 from lp.soyuz.enums import PackageUploadStatus
 from lp.soyuz.interfaces.packagecopyjob import IPackageCopyJob
+
+PACKAGE_UPLOAD_STATUS_MAPPING_TO_STR = {
+    PackageUploadStatus.NEW: "new",
+    PackageUploadStatus.UNAPPROVED: "unapproved",
+    PackageUploadStatus.REJECTED: "rejected",
+    PackageUploadStatus.ACCEPTED: "accepted",
+    PackageUploadStatus.DONE: "accepted",
+}
 
 
 class QueueStateWriteProtectedError(Exception):

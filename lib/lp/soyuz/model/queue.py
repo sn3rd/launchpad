@@ -65,6 +65,7 @@ from lp.soyuz.interfaces.packagecopyjob import IPackageCopyJobSource
 from lp.soyuz.interfaces.packagediff import IPackageDiffSet
 from lp.soyuz.interfaces.publishing import IPublishingSet, name_priority_map
 from lp.soyuz.interfaces.queue import (
+    PACKAGE_UPLOAD_STATUS_MAPPING_TO_STR,
     CustomUploadError,
     ICustomUploadHandler,
     IPackageUpload,
@@ -837,7 +838,7 @@ class PackageUpload(StormBase):
         """See `IPackageUpload`."""
         if self.contains_source:
             return self.sources[0].sourcepackagerelease
-        elif self.contains_build:
+        elif self.contains_build and self.builds:
             return self.builds[0].build.source_package_release
         else:
             return None
@@ -988,13 +989,7 @@ class PackageUpload(StormBase):
         """See `IPackageUpload`."""
         if status is None:
             status = self.status
-        status_action = {
-            PackageUploadStatus.NEW: "new",
-            PackageUploadStatus.UNAPPROVED: "unapproved",
-            PackageUploadStatus.REJECTED: "rejected",
-            PackageUploadStatus.ACCEPTED: "accepted",
-            PackageUploadStatus.DONE: "accepted",
-        }
+
         changes = self._getChangesDict(changes_file_object)
         if changes_file_object is not None:
             # Strip any PGP signature so that the .changes file attached to
@@ -1006,7 +1001,7 @@ class PackageUpload(StormBase):
             changesfile_content = "No changes file content available."
         blamee = self.findPersonToNotify()
         mailer = PackageUploadMailer.forAction(
-            status_action[status],
+            PACKAGE_UPLOAD_STATUS_MAPPING_TO_STR[status],
             blamee,
             self.sourcepackagerelease,
             self.builds,

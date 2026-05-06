@@ -6,6 +6,7 @@ __all__ = [
     "DistroSeriesQueueView",
 ]
 
+from lp.services.feeds.browser import NewPackageUploadsFeedLink
 from lp.soyuz.browser.build import BuildRecordsView
 from lp.soyuz.browser.queue import QueueItemsView
 
@@ -19,6 +20,11 @@ class DistroSeriesBuildsView(BuildRecordsView):
 
         See `BuildRecordsView` for further details."""
         return True
+
+    @property
+    def latest_uploads_feed_url(self):
+        """The URL to the feed for the latest uploads."""
+        return NewPackageUploadsFeedLink(self.context).href
 
 
 class DistroSeriesQueueView(QueueItemsView):

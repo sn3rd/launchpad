@@ -11,6 +11,7 @@ from lp.registry.interfaces.person import IPersonSet
 from lp.registry.interfaces.pocket import PackagePublishingPocket
 from lp.registry.interfaces.series import SeriesStatus
 from lp.services.database.sqlbase import flush_database_caches
+from lp.services.feeds.browser import NewPackageUploadsFeedLink
 from lp.services.webapp import canonical_url
 from lp.services.webapp.interfaces import StormRangeFactoryError
 from lp.services.webapp.servers import LaunchpadTestRequest
@@ -384,6 +385,14 @@ class TestBuildViews(TestCaseWithFactory):
         self.assertEqual(option_arches.sort(), arch_list.sort())
         self.assertTrue(len(selected), 1)
         self.assertEqual(selected, [arch_list[0]])
+
+    def test_distroseries_builds_view_latest_uploads_feed_url(self):
+        distroseries = self.factory.makeDistroSeries()
+        view = create_initialized_view(distroseries, name="+builds")
+        self.assertEqual(
+            NewPackageUploadsFeedLink(distroseries).href,
+            view.latest_uploads_feed_url,
+        )
 
     def test_dispatch_estimate(self):
         # A dispatch time estimate is available for pending binary builds
