@@ -3,6 +3,7 @@
 
 __all__ = [
     "PackageUploadMailer",
+    "calculate_subject",
 ]
 
 import os.path

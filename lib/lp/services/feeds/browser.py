@@ -12,6 +12,7 @@ __all__ = [
     "FeedsMixin",
     "FeedsNavigation",
     "FeedsRootUrlData",
+    "NewPackageUploadsFeedLink",
     "PersonBranchesFeedLink",
     "PersonRevisionsFeedLink",
     "ProductBranchesFeedLink",
@@ -39,6 +40,7 @@ from lp.registry.interfaces.announcement import (
     IAnnouncementSet,
     IHasAnnouncements,
 )
+from lp.registry.interfaces.distroseries import IDistroSeries
 from lp.registry.interfaces.person import IPerson, IPersonSet
 from lp.registry.interfaces.pillar import IPillarNameSet
 from lp.registry.interfaces.product import IProduct
@@ -246,6 +248,21 @@ class AnnouncementsFeedLink(FeedLinkBase):
             )
 
 
+class NewPackageUploadsFeedLink(FeedLinkBase):
+    usedfor = IDistroSeries
+
+    @property
+    def title(self):
+        return "New Package Uploads for %s" % self.context.displayname
+
+    @property
+    def href(self):
+        return urlappend(
+            canonical_url(self.context, rootsite="feeds"),
+            "new-package-uploads.atom",
+        )
+
+
 class RootAnnouncementsFeedLink(AnnouncementsFeedLink):
     usedfor = ILaunchpadRoot
 
@@ -384,6 +401,7 @@ class FeedsMixin:
         ProjectBranchesFeedLink,
         ProjectRevisionsFeedLink,
         RootAnnouncementsFeedLink,
+        NewPackageUploadsFeedLink,
     )
 
     @property

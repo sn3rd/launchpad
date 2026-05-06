@@ -336,10 +336,10 @@ class TestNotification(TestCaseWithFactory):
         self.assertEqual(info["date"], spr.dateuploaded)
         self.assertEqual(info["changelog"], spr.changelog_entry)
         self.assertEqual(
-            ("foø", spr.creator.preferredemail.email), info["changedby"]
+            ("foø", spr.creator.safe_email_or_blank), info["changedby"]
         )
         self.assertEqual(
-            ("bær", spr.maintainer.preferredemail.email), info["maintainer"]
+            ("bær", spr.maintainer.safe_email_or_blank), info["maintainer"]
         )
         self.assertFalse(info["notify_changed_by"])
 
@@ -350,11 +350,11 @@ class TestNotification(TestCaseWithFactory):
         self.assertEqual(info["date"], spr.dateuploaded)
         self.assertEqual(info["changelog"], spr.changelog_entry)
         self.assertEqual(
-            (spr.creator.displayname, spr.creator.preferredemail.email),
+            (spr.creator.displayname, spr.creator.safe_email_or_blank),
             info["changedby"],
         )
         self.assertEqual(
-            (spr.maintainer.displayname, spr.maintainer.preferredemail.email),
+            (spr.maintainer.displayname, spr.maintainer.safe_email_or_blank),
             info["maintainer"],
         )
         self.assertFalse(info["notify_changed_by"])
