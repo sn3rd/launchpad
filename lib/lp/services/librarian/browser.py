@@ -120,9 +120,10 @@ class ProxiedLibraryFileAlias:
     even when called from the webservice domain.
     """
 
-    def __init__(self, context, parent):
+    def __init__(self, context, parent, rootsite=None):
         self.context = context
         self.parent = parent
+        self.rootsite = rootsite
 
     @property
     def request(self):
@@ -144,7 +145,9 @@ class ProxiedLibraryFileAlias:
         if self.context.deleted:
             return None
 
-        parent_url = canonical_url(self.parent, request=self.request)
+        parent_url = canonical_url(
+            self.parent, request=self.request, rootsite=self.rootsite
+        )
         traversal_url = urlappend(parent_url, "+files")
         url = urlappend(
             traversal_url,
