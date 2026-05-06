@@ -4079,6 +4079,59 @@ class TestValidateTarget(TestCaseWithFactory, ValidateTargetMixin):
             asp,
         )
 
+    def test_ppa_source_package_without_publication_disallowed(self):
+        # An unpublished source package in a PPA cannot be a bug target
+        # when check_source_package is True.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        spn = self.factory.makeSourcePackageName()
+        asp = ArchiveSourcePackage(ppa, spn)
+        bug = self.factory.makeBug()
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "The source package %s has not been published in the "
+            "archive %s." % (spn.name, ppa.displayname),
+            validate_target,
+            bug,
+            asp,
+        )
+
+    def test_ppa_source_package_with_publication_allowed(self):
+        # A published source package in a PPA is allowed as a bug target.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        # makeArchiveSourcePackage creates a publication automatically
+        asp = self.factory.makeArchiveSourcePackage(archive=ppa)
+        bug = self.factory.makeBug()
+        # This should not raise an exception
+        validate_target(bug, asp)
+
+    def test_ppa_source_package_series_without_publication_disallowed(self):
+        # An unpublished source package series in a PPA cannot be a bug target
+        # when check_source_package is True.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        distroseries = ppa.distribution.currentseries
+        spn = self.factory.makeSourcePackageName()
+        asps = ArchiveSourcePackageSeries(ppa, distroseries, spn)
+        bug = self.factory.makeBug()
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "The source package %s has not been published in the "
+            "archive %s." % (spn.name, ppa.displayname),
+            validate_target,
+            bug,
+            asps,
+        )
+
+    def test_ppa_source_package_series_with_publication_allowed(self):
+        # A published source package series in a PPA is allowed as a bug target
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        # makeArchiveSourcePackageSeries creates a publication automatically
+        asps = self.factory.makeArchiveSourcePackageSeries(
+            archive=ppa, distroseries=ppa.distribution.currentseries
+        )
+        bug = self.factory.makeBug()
+        # This should not raise an exception
+        validate_target(bug, asps)
+
 
 class TestValidateNewTarget(TestCaseWithFactory, ValidateTargetMixin):
     layer = DatabaseFunctionalLayer
@@ -4172,6 +4225,81 @@ class TestValidateNewTarget(TestCaseWithFactory, ValidateTargetMixin):
             validate_new_target,
             task.bug,
             d,
+        )
+
+    def test_archive_task_allowed(self):
+        # A generic archive task can be added when no archive tasks exist.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        bug = self.factory.makeBug()
+        # This should not raise an exception
+        validate_new_target(bug, ppa)
+
+    def test_archive_task_with_existing_archive_task_forbidden(self):
+        # A second generic archive task is forbidden when one already exists.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        task = self.factory.makeBugTask(target=ppa)
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "This bug is already on %s. Please specify an affected "
+            "package in which the bug has not yet been reported."
+            % ppa.displayname,
+            validate_new_target,
+            task.bug,
+            ppa,
+        )
+
+    def test_archive_source_package_task_allowed(self):
+        # An archive source package task can be added when no generic
+        # archive task exists.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        asp = self.factory.makeArchiveSourcePackage(archive=ppa)
+        bug = self.factory.makeBug()
+        # This should not raise an exception
+        validate_new_target(bug, asp)
+
+    def test_multiple_archive_source_package_tasks_allowed(self):
+        # Multiple archive source package tasks with different packages
+        # can coexist on the same archive.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        asp1 = self.factory.makeArchiveSourcePackage(archive=ppa)
+        task = self.factory.makeBugTask(target=asp1)
+        asp2 = self.factory.makeArchiveSourcePackage(archive=ppa)
+        # This should not raise an exception
+        validate_new_target(task.bug, asp2)
+
+    def test_archive_source_package_task_with_archive_task_forbidden(self):
+        # An archive source package task cannot be added when a generic
+        # archive task already exists.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        # Create a generic archive task
+        task = self.factory.makeBugTask(target=ppa)
+        # makeArchiveSourcePackage creates a publication automatically
+        asp = self.factory.makeArchiveSourcePackage(archive=ppa)
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "This bug is already open on %s with no package specified. "
+            "You should fill in a package name for the existing bug."
+            % ppa.displayname,
+            validate_new_target,
+            task.bug,
+            asp,
+        )
+
+    def test_archive_task_with_archive_source_package_task_forbidden(self):
+        # A generic archive task cannot be added when an archive source
+        # package task already exists.
+        ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
+        # makeArchiveSourcePackage creates a publication automatically
+        asp = self.factory.makeArchiveSourcePackage(archive=ppa)
+        task = self.factory.makeBugTask(target=asp)
+        self.assertRaisesWithContent(
+            IllegalTarget,
+            "This bug is already on %s. Please specify an affected "
+            "package in which the bug has not yet been reported."
+            % ppa.displayname,
+            validate_new_target,
+            task.bug,
+            ppa,
         )
 
 

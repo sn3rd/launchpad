@@ -449,6 +449,22 @@ def validate_target(
                 "Primary and partner archives are covered by distribution "
                 "bug tasks."
             )
+        # Check that the source package has been published in the archive.
+        if check_source_package and target.sourcepackagename is not None:
+            # For archive source packages, verify the package exists in the
+            # archive
+            archive_package = target.archive.getArchiveSourcePackage(
+                target.sourcepackagename, check_publication=True
+            )
+            if archive_package is None:
+                raise IllegalTarget(
+                    "The source package %s has not been published in the "
+                    "archive %s."
+                    % (
+                        target.sourcepackagename.name,
+                        target.archive.displayname,
+                    )
+                )
     elif IDistributionSourcePackage.providedBy(
         target
     ) or ISourcePackage.providedBy(target):
@@ -542,6 +558,33 @@ def validate_new_target(bug, target, check_source_package=True):
                 "This bug is already open on %s with no package "
                 "specified. You should fill in a package name for "
                 "the existing bug." % target.distribution.displayname
+            )
+    elif IArchive.providedBy(target):
+        # Prevent having a task targeting the archive if there is already a
+        # task targeting a source package within that archive or the target
+        # itself
+        archive_tasks_for_bug = [
+            bugtask
+            for bugtask in shortlist(bug.bugtasks, longest_expected=50)
+            if bugtask.archive == target
+        ]
+
+        if len(archive_tasks_for_bug) > 0:
+            raise IllegalTarget(
+                "This bug is already on %s. Please specify an "
+                "affected package in which the bug has not yet "
+                "been reported." % target.displayname
+            )
+    elif IArchiveSourcePackage.providedBy(target):
+        # Ensure that there isn't already a generic task open on the
+        # archive for this bug, because if there were, that task
+        # should be reassigned to the sourcepackage, rather than a new
+        # task opened.
+        if bug.getBugTask(target.archive) is not None:
+            raise IllegalTarget(
+                "This bug is already open on %s with no package "
+                "specified. You should fill in a package name for "
+                "the existing bug." % target.archive.displayname
             )
 
     validate_target(
