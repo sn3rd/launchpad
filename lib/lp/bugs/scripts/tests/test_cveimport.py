@@ -10,6 +10,7 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 import responses
 from testtools.matchers import Contains
@@ -262,6 +263,57 @@ class TestCVEUpdater(TestCase):
         if current_hour not in (0, 23):
             expected = f"_delta_CVEs_at_{current_hour:02d}00Z.zip"
             self.assertThat(url, Contains(expected))
+
+    def test_construct_github_url_candidates_delta(self):
+        """Delta yields primary and +1h fallback URL."""
+        updater = CVEUpdater(
+            "cve-updater", test_args=[], logger=DevNullLogger()
+        )
+        fixed_now = datetime(2026, 1, 29, 2, 0, tzinfo=timezone.utc)
+        with patch("lp.bugs.scripts.cveimport.datetime") as mock_dt:
+            mock_dt.now.return_value = fixed_now
+            candidates = updater.construct_github_url_candidates(delta=True)
+
+        self.assertEqual(2, len(candidates))
+        # Primary: release tag and filename both match 0200Z
+        self.assertThat(candidates[0], Contains("cve_2026-01-29_0200Z"))
+        self.assertThat(
+            candidates[0],
+            Contains("2026-01-29_delta_CVEs_at_0200Z.zip"),
+        )
+        # Fallback: same release tag, filename shifted to 0300Z
+        self.assertThat(candidates[1], Contains("cve_2026-01-29_0200Z"))
+        self.assertThat(
+            candidates[1],
+            Contains("2026-01-29_delta_CVEs_at_0300Z.zip"),
+        )
+
+    def test_construct_github_url_candidates_delta_2300Z(self):
+        """Delta at 2300Z yields primary and a next-day 0000Z fallback URL.
+
+        The +1h filename wraps past midnight, so the fallback uses tomorrow's
+        date with 0000Z within the same 2300Z release tag.
+        """
+        updater = CVEUpdater(
+            "cve-updater", test_args=[], logger=DevNullLogger()
+        )
+        fixed_now = datetime(2026, 1, 29, 23, 0, tzinfo=timezone.utc)
+        with patch("lp.bugs.scripts.cveimport.datetime") as mock_dt:
+            mock_dt.now.return_value = fixed_now
+            candidates = updater.construct_github_url_candidates(delta=True)
+
+        self.assertEqual(2, len(candidates))
+        self.assertThat(candidates[0], Contains("cve_2026-01-29_2300Z"))
+        self.assertThat(
+            candidates[0],
+            Contains("2026-01-29_delta_CVEs_at_2300Z.zip"),
+        )
+        # Fallback: same release tag, filename uses next day + 0000Z
+        self.assertThat(candidates[1], Contains("cve_2026-01-29_2300Z"))
+        self.assertThat(
+            candidates[1],
+            Contains("2026-01-30_delta_CVEs_at_0000Z.zip"),
+        )
 
     def test_processCVEJSON(self):
         """Test handling of CVE JSON data."""
