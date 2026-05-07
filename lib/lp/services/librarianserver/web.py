@@ -21,7 +21,7 @@ from twisted.web.server import NOT_DONE_YET
 from zope.interface import implementer
 
 from lp.services.config import config
-from lp.services.database import read_transaction, write_transaction
+from lp.services.database import read_transaction
 from lp.services.librarian.client import url_path_quote
 from lp.services.librarian.utils import guess_librarian_encoding
 
@@ -195,18 +195,9 @@ class LibraryFileAliasResource(resource.Resource):
         deferred.addErrback(self._eb_getFileAlias)
         return util.DeferredResource(deferred)
 
-    @write_transaction
     def _getFileAlias(self, aliasID, token, path):
         try:
-            alias = self.storage.getFileAlias(aliasID, token, path)
-            return (
-                alias.content_id,
-                alias.filename,
-                alias.mimetype,
-                alias.date_created,
-                alias.content.filesize,
-                alias.restricted,
-            )
+            return self.storage.getFileAlias(aliasID, token, path)
         except LookupError:
             raise NotFound
 
