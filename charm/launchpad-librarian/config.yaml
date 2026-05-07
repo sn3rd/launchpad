@@ -111,6 +111,10 @@ options:
       certificate chain; but in real deployments, we need to send a
       certificate chain.
     default: false
+  backfill_sha512_workers:
+    type: int
+    description: Number of parallel download workers for librarian-backfill-sha512.
+    default: 2
   swift_feed_workers:
     type: int
     description: Number of librarian-feed-swift workers to run in parallel.
