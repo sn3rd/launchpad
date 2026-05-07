@@ -97,7 +97,10 @@ def main():
         FROM pg_stat_activity
         WHERE
             pid <> pg_backend_pid()
-            AND state = 'idle in transaction'
+            AND state IN (
+                'idle in transaction',
+                'idle in transaction (aborted)'
+            )
             AND state_change < CURRENT_TIMESTAMP - '%d seconds'::interval
             %s
         ORDER BY age
