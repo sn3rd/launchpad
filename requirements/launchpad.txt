@@ -39,7 +39,7 @@ craft-platforms==0.8.0
 cryptography==2.7
 cssselect==0.9.1
 cssutils==2.11.1
-Cython==0.29.17
+Cython==3.2.4
 d2to1==0.2.12
 debtcollector==1.22.0
 decorator==5.1.1
@@ -91,7 +91,7 @@ lazr.restful==2.0.2
 lazr.restfulclient==0.14.5
 lazr.sshserver==0.1.15+lp1
 lazr.uri==1.0.6
-lxml==5.3.0
+lxml==6.1.0
 loggerhead==2.0.1
 lpjsmin==0.7
 m2r==0.1.13
