@@ -205,6 +205,7 @@ from lp.services.webapp.publisher import (
 )
 from lp.services.webapp.snapshot import notify_modified
 from lp.services.xref.interfaces import IXRefSet
+from lp.soyuz.interfaces.archive import IArchive
 
 
 @error_status(http.client.BAD_REQUEST)
@@ -2597,8 +2598,20 @@ class Bug(StormBase, InformationTypeMixin):
         roles = IPersonRoles(user)
         if roles.in_admin or roles.in_registry_experts:
             return True
+
+        # Archives aren't pillars, but they need the same access policies
+        # as their distribution, so convert them before checking access.
+        pillars = [
+            pillar if not IArchive.providedBy(pillar) else pillar.distribution
+            for pillar in self.affected_bug_target_parents
+        ]
+
+        # Deduplicate pillars (e.g., if bug has tasks on both a distribution
+        # and PPA for that distribution). Uses dict.fromkeys to preserve order.
+        pillars = list(dict.fromkeys(pillars))
+
         return getUtility(IService, "sharing").checkPillarAccess(
-            self.affected_bug_target_parents,
+            pillars,
             InformationType.USERDATA,
             user,
         )
