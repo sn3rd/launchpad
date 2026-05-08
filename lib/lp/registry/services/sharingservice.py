@@ -69,7 +69,6 @@ from lp.registry.model.accesspolicy import (
     AccessPolicyArtifact,
     AccessPolicyGrant,
     AccessPolicyGrantFlat,
-    IArchive,
 )
 from lp.registry.model.commercialsubscription import CommercialSubscription
 from lp.registry.model.distribution import Distribution
@@ -102,17 +101,6 @@ class SharingService:
 
     def checkPillarAccess(self, pillars, information_type, person):
         """See `ISharingService`."""
-
-        # Archive's aren't and don't have pillars, but they need the same
-        # access policies as their distribution, so we need to convert them to
-        # their distribution before we do anything else.
-        pillars = [
-            pillar if not IArchive.providedBy(pillar) else pillar.distribution
-            for pillar in pillars
-        ]
-        # Deduplicate pillars (e.g., if bug has tasks on both a distribution
-        # and PPA for that distribution). Uses dict.fromkeys to preserve order.
-        pillars = list(dict.fromkeys(pillars))
 
         policies = getUtility(IAccessPolicySource).find(
             [(pillar, information_type) for pillar in pillars]
