@@ -11,6 +11,7 @@ from zope.component import getAdapter, getUtility
 from zope.traversing.interfaces import IPathAdapter, TraversalError
 
 from lp.app.browser.tales import (
+    ArchiveFormatterAPI,
     DateTimeFormatterAPI,
     ObjectImageDisplayAPI,
     PackageDiffFormatterAPI,
@@ -587,3 +588,44 @@ class TestPackageDiffFormatterAPI(TestCaseWithFactory):
         link = formatter.link(None)
         self.assertIn("(failed)", link)
         self.assertIn(diff.title, link)
+
+
+class TestArchiveFormatterAPI(TestCaseWithFactory):
+    """Tests for ArchiveFormatterAPI."""
+
+    layer = LaunchpadFunctionalLayer
+
+    def test_link_with_rootsite_parameter(self):
+        # ArchiveFormatterAPI.link() accepts a rootsite parameter.
+        archive = self.factory.makeArchive()
+        formatter = ArchiveFormatterAPI(archive)
+        rootsite = "bugs"
+
+        # This should return a link
+        link = formatter.link(None, rootsite=rootsite)
+        self.assertIsNotNone(link)
+        self.assertIn(archive.displayname, link)
+
+        # The rootsite should appear in the generated URL
+        self.assertIn(rootsite, link)
+
+    def test_link_via_tales_with_rootsite(self):
+        # The TALES expression fmt:link:rootsite should work.
+        archive = self.factory.makeArchive()
+        rootsite = "bugs"
+
+        # Ensure that fmt keyword and the rootsite parameter are supported
+        link = test_tales(f"archive/fmt:link:{rootsite}", archive=archive)
+        self.assertIsNotNone(link)
+        self.assertIn(archive.displayname, link)
+
+        # The rootsite should appear in the generated URL
+        self.assertIn(rootsite, link)
+
+    def test_link_without_rootsite(self):
+        # ArchiveFormatterAPI.link() works without rootsite (default None).
+        archive = self.factory.makeArchive()
+        formatter = ArchiveFormatterAPI(archive)
+        link = formatter.link(None)
+        self.assertIsNotNone(link)
+        self.assertIn(archive.displayname, link)
