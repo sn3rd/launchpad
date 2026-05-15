@@ -359,6 +359,7 @@ class PrivateGitRepositoryRecipe(Exception):
         Exception.__init__(self, message)
 
 
+@error_status(http.client.BAD_REQUEST)
 class ReviewNotPending(Exception):
     """The requested review is not in a pending state."""
 

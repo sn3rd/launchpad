@@ -15,8 +15,17 @@ from lp.code.interfaces.codereviewvote import ICodeReviewVoteReference
 from lp.code.tests.helpers import make_merge_proposal_without_reviewers
 from lp.services.database.constants import UTC_NOW
 from lp.services.webapp.authorization import check_permission
-from lp.testing import ANONYMOUS, TestCaseWithFactory, login, login_person
+from lp.services.webapp.interfaces import OAuthPermission
+from lp.testing import (
+    ANONYMOUS,
+    TestCaseWithFactory,
+    api_url,
+    login,
+    login_person,
+    person_logged_in,
+)
 from lp.testing.layers import DatabaseFunctionalLayer
+from lp.testing.pages import webservice_for_person
 
 
 class TestCodeReviewVote(WithScenarios, TestCaseWithFactory):
@@ -392,3 +401,52 @@ class TestCodeReviewVoteReferenceReassignReview(
         bmp.nominateReviewer(reviewer=reviewer_team, registrant=bmp.registrant)
         review.reassignReview(reviewer_team)
         self.assertEqual(reviewer_team, review.reviewer)
+
+
+class TestCodeReviewVoteReferenceDeleteWebservice(TestCaseWithFactory):
+    """Webservice-level tests for CodeReviewVoteReference.delete."""
+
+    layer = DatabaseFunctionalLayer
+
+    def test_delete_not_pending_returns_bad_request(self):
+        # Deleting a cast (non-pending) vote via the webservice returns
+        # 400 Bad Request, not 500 Internal Server Error.
+        bmp = make_merge_proposal_without_reviewers(self.factory)
+        reviewer = self.factory.makePerson()
+        with person_logged_in(reviewer):
+            bmp.createComment(
+                reviewer,
+                "Message subject",
+                "Message content",
+                vote=CodeReviewVote.APPROVE,
+            )
+        with person_logged_in(bmp.registrant):
+            [review] = list(bmp.votes)
+            review_url = api_url(review)
+        webservice = webservice_for_person(
+            reviewer,
+            permission=OAuthPermission.WRITE_PUBLIC,
+            default_api_version="devel",
+        )
+        response = webservice.delete(review_url)
+        self.assertEqual(400, response.status)
+        self.assertIn(b"The review is not pending.", response.body)
+
+    def test_delete_pending_succeeds(self):
+        bmp = make_merge_proposal_without_reviewers(self.factory)
+        reviewer = self.factory.makePerson()
+        with person_logged_in(bmp.registrant):
+            registrant = bmp.registrant
+            review = bmp.nominateReviewer(
+                reviewer=reviewer, registrant=bmp.registrant
+            )
+            review_url = api_url(review)
+        webservice = webservice_for_person(
+            reviewer,
+            permission=OAuthPermission.WRITE_PUBLIC,
+            default_api_version="devel",
+        )
+        response = webservice.delete(review_url)
+        self.assertEqual(200, response.status)
+        with person_logged_in(registrant):
+            self.assertEqual([], list(bmp.votes))
