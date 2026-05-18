@@ -98,7 +98,7 @@ Check some properties of DARBP meta class
 
 Entire publishing history:
 
-    >>> pmount_hoary_i386.publishing_history.count()
+    >>> len(pmount_hoary_i386.publishing_history)
     2
 
 Most recent published history row:
@@ -130,7 +130,7 @@ Perform `post publication` override:
     >>> override.status.name
     'PENDING'
     >>> pub_hist = pmount_hoary_i386.publishing_history
-    >>> pub_hist.count()
+    >>> len(pub_hist)
     3
 
 Override information about 'pmount' is pending publication:
@@ -144,7 +144,7 @@ Supersede current publication:
 
     >>> pub = pmount_hoary_i386_released.current_publishing_record
     >>> pub.supersede()
-    >>> pmount_hoary_i386.publishing_history.count()
+    >>> len(pmount_hoary_i386.publishing_history)
     3
 
     >>> print(pub.status.name, pub.datesuperseded is not None)

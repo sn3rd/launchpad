@@ -7,8 +7,6 @@ __all__ = [
     "DistroArchSeriesBinaryPackage",
 ]
 
-from storm.expr import Cast
-from storm.locals import Desc
 from zope.interface import implementer
 
 from lp.app.errors import NotFoundError
@@ -23,6 +21,8 @@ from lp.soyuz.model.distroarchseriesbinarypackagerelease import (
     DistroArchSeriesBinaryPackageRelease,
 )
 from lp.soyuz.model.publishing import BinaryPackagePublishingHistory
+from storm.expr import Cast
+from storm.locals import Desc
 
 
 @implementer(IDistroArchSeriesBinaryPackage)
@@ -180,7 +180,7 @@ class DistroArchSeriesBinaryPackage:
     @property
     def publishing_history(self):
         """See IDistroArchSeriesBinaryPackage."""
-        return (
+        return list(
             IStore(BinaryPackagePublishingHistory)
             .find(BinaryPackagePublishingHistory, *self._getPublicationJoins())
             .config(distinct=True)
