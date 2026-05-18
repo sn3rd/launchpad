@@ -7,22 +7,26 @@ __all__ = [
     "DistroArchSeriesBinaryPackage",
 ]
 
+from storm.expr import Cast
+from storm.locals import Desc
 from zope.interface import implementer
 
 from lp.app.errors import NotFoundError
+from lp.services.database.bulk import load_related
 from lp.services.database.interfaces import IStore
 from lp.services.propertycache import cachedproperty
 from lp.soyuz.enums import PackagePublishingStatus
 from lp.soyuz.interfaces.distroarchseriesbinarypackage import (
     IDistroArchSeriesBinaryPackage,
 )
+from lp.soyuz.model.archive import Archive
+from lp.soyuz.model.binarypackagebuild import BinaryPackageBuild
 from lp.soyuz.model.binarypackagerelease import BinaryPackageRelease
 from lp.soyuz.model.distroarchseriesbinarypackagerelease import (
     DistroArchSeriesBinaryPackageRelease,
 )
 from lp.soyuz.model.publishing import BinaryPackagePublishingHistory
-from storm.expr import Cast
-from storm.locals import Desc
+from lp.soyuz.model.sourcepackagerelease import SourcePackageRelease
 
 
 @implementer(IDistroArchSeriesBinaryPackage)
@@ -180,12 +184,30 @@ class DistroArchSeriesBinaryPackage:
     @property
     def publishing_history(self):
         """See IDistroArchSeriesBinaryPackage."""
-        return list(
+        pubs = list(
             IStore(BinaryPackagePublishingHistory)
             .find(BinaryPackagePublishingHistory, *self._getPublicationJoins())
             .config(distinct=True)
             .order_by(Desc(BinaryPackagePublishingHistory.datecreated))
         )
+        # Preload related objects to avoid N+1 queries when rendering
+        # BinaryPublishingRecordView for each record.
+        bprs = load_related(
+            BinaryPackageRelease, pubs, ["binarypackagerelease_id"]
+        )
+        bpbs = load_related(BinaryPackageBuild, bprs, ["build_id"])
+        superseded_bpbs = load_related(
+            BinaryPackageBuild, pubs, ["supersededby_id"]
+        )
+        all_bpbs = bpbs + superseded_bpbs
+        if all_bpbs:
+            load_related(
+                SourcePackageRelease,
+                all_bpbs,
+                ["source_package_release_id"],
+            )
+            load_related(Archive, all_bpbs, ["archive_id"])
+        return pubs
 
     @property
     def current_published(self):
