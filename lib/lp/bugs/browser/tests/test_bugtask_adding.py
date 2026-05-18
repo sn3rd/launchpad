@@ -261,8 +261,44 @@ class TestPPABugTaskCreationStep(TestCaseWithFactory):
         view = self._make_view({"field.sourcepackagename": "no-such-package"})
         self.assertNotEqual([], view.view.errors)
 
+    def test_create_ppa_bugtask_unpublished_package_sets_error(self):
+        # Trying to add a bug task for a package that exists but is not
+        # published in the PPA shows a form error message.
+        unpublished_spn = self.factory.makeSourcePackageName()
+        unpublished_name = unpublished_spn.name
+        view = self._make_view({"field.sourcepackagename": unpublished_name})
+        # Should have an error, not crash
+        self.assertNotEqual([], view.view.errors)
+        # Verify the error message mentions the package not being published
+        error_text = str(view.view.errors)
+        self.assertIn(unpublished_name, error_text)
+
     def test_create_ppa_bugtask_duplicate_raises_error(self):
-        # Trying to add a second task for the same PPA sets a field error.
+        # Trying to add a second generic PPA task for the same archive
+        # sets a field error.
         self.bug.addTask(self.user, self.ppa, validate_target=False)
         view = self._make_view()
         self.assertNotEqual([], view.view.errors)
+        error_text = str(view.view.errors)
+        self.assertIn("already on", error_text.lower())
+
+    def test_create_generic_ppa_task_when_package_task_exists(self):
+        # Trying to add a generic PPA task when a PPA package task already
+        # exists sets a field error. A package should be specified instead.
+        asp = self.ppa.getArchiveSourcePackage(self.spn.name)
+        self.bug.addTask(self.user, asp, validate_target=False)
+        view = self._make_view()
+        self.assertNotEqual([], view.view.errors)
+        error_text = str(view.view.errors)
+        self.assertIn("already on", error_text.lower())
+        self.assertIn("specify", error_text.lower())
+
+    def test_create_package_task_when_generic_ppa_task_exists(self):
+        # Trying to add a PPA package task when a generic PPA task already
+        # exists sets a field error. Bugtask should be edited instead.
+        self.bug.addTask(self.user, self.ppa, validate_target=False)
+        view = self._make_view({"field.sourcepackagename": self.spn.name})
+        self.assertNotEqual([], view.view.errors)
+        error_text = str(view.view.errors)
+        self.assertIn("already open", error_text.lower())
+        self.assertIn("no package", error_text.lower())
