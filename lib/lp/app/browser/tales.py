@@ -10,6 +10,7 @@ from bisect import bisect
 from datetime import datetime, timedelta, timezone
 from email.utils import formatdate, mktime_tz
 from textwrap import dedent
+from typing import Optional
 from urllib.parse import quote
 
 from dateutil import tz
@@ -2171,7 +2172,9 @@ class ArchiveFormatterAPI(CustomizableFormatter):
         """See CustomizableFormatter._link_summary_values."""
         return {"display_name": self._context.displayname}
 
-    def link(self, view_name):
+    def link(
+        self, view_name: Optional[str], rootsite: Optional[str] = None
+    ) -> str:
         """Return html including a link for the context archive.
 
         Render a link using CSS sprites for users with permission to view
@@ -2188,9 +2191,9 @@ class ArchiveFormatterAPI(CustomizableFormatter):
             if self._context.is_main:
                 url = queryAdapter(
                     self._context.distribution, IPathAdapter, "fmt"
-                ).url(view_name)
+                ).url(view_name, rootsite)
             else:
-                url = self.url(view_name)
+                url = self.url(view_name, rootsite)
             return '<a href="%s" class="%s">%s</a>' % (url, css, summary)
         else:
             if not self._context.private:
