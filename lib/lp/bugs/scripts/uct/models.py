@@ -734,43 +734,62 @@ class CVE:
                     if distro_series is None:
                         continue
 
-                    for ppa_ref in subproject_ppas.ppas:
+                    ppa_ref = subproject_ppas.ppa
 
-                        archive = cls._get_ppa_archive(
-                            ppa_ref,
-                            ubuntu,
-                            cache_entities,
+                    archive = cls._get_ppa_archive(
+                        ppa_ref,
+                        ubuntu,
+                        cache_entities,
+                    )
+
+                    if not archive:
+                        continue
+
+                    # Check if the source package is actually published in this
+                    # archive. We can only create bug tasks if the package
+                    # exists
+                    archive_source_package = archive.getArchiveSourcePackage(
+                        source_package_name, check_publication=True
+                    )
+
+                    if archive_source_package is None:
+                        # Skip creating PPA tasks for packages not in the
+                        # archive
+                        logger.info(
+                            "Package %s not published in archive %s/%s, "
+                            "skipping PPA tasks",
+                            source_package_name.name,
+                            ppa_ref.owner,
+                            ppa_ref.archive,
                         )
+                        continue
 
-                        if not archive:
-                            continue
+                    # Create archive-level task
+                    ppa_package = cls.PPAPackage(
+                        target=archive_source_package,
+                        package_name=source_package_name,
+                        importance=package_importance,
+                        tags=uct_package.tags,
+                    )
+                    if ppa_package not in ppa_packages:
+                        ppa_packages.append(ppa_package)
 
-                        ppa_package = cls.PPAPackage(
-                            target=ArchiveSourcePackage(
+                    # Create series-level task
+                    ppa_series_packages.append(
+                        cls.PPASeriesPackage(
+                            target=ArchiveSourcePackageSeries(
                                 archive=archive,
+                                distroseries=distro_series,
                                 sourcepackagename=source_package_name,
                             ),
                             package_name=source_package_name,
-                            importance=package_importance,
-                            tags=uct_package.tags,
+                            importance=series_package_importance,
+                            status=cls.BUG_TASK_STATUS_MAP[
+                                uct_package_status.status
+                            ],
+                            status_explanation=uct_package_status.reason,
                         )
-                        if ppa_package not in ppa_packages:
-                            ppa_packages.append(ppa_package)
-                        ppa_series_packages.append(
-                            cls.PPASeriesPackage(
-                                target=ArchiveSourcePackageSeries(
-                                    archive=archive,
-                                    distroseries=distro_series,
-                                    sourcepackagename=source_package_name,
-                                ),
-                                package_name=source_package_name,
-                                importance=series_package_importance,
-                                status=cls.BUG_TASK_STATUS_MAP[
-                                    uct_package_status.status
-                                ],
-                                status_explanation=uct_package_status.reason,
-                            )
-                        )
+                    )
 
                     # If this status is in a PPA, we don't want to also create
                     # a distro/series package for it, so we continue to the

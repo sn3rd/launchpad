@@ -2103,17 +2103,15 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         subprojects = {
             "esm-infra/focal": SubProjectPPAs(
                 ubuntu_series="focal",
-                ppas=(
-                    PPAReference(
-                        owner=self.ppa_owner.name,
-                        archive=self.ppa.name,
-                        pocket="security",
-                    ),
+                ppa=PPAReference(
+                    owner=self.ppa_owner.name,
+                    archive=self.ppa.name,
+                    pocket="security",
                 ),
             ),
         }
 
-        pkg_name = self.ubuntu_package.sourcepackagename.name
+        pkg_name = self.esm_package.sourcepackagename.name
         uct_record = UCTRecord(
             parent_dir="active",
             assigned_to=None,
@@ -2163,7 +2161,7 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         ppa_pkg = cve.ppa_packages[0]
         self.assertEqual(self.ppa, ppa_pkg.target.archive)
         self.assertEqual(
-            self.ubuntu_package.sourcepackagename,
+            self.esm_package.sourcepackagename,
             ppa_pkg.package_name,
         )
         self.assertEqual(BugTaskImportance.HIGH, ppa_pkg.importance)
