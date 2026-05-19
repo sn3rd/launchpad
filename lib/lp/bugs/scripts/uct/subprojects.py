@@ -3,7 +3,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Tuple
 
 
 class PPAReference(NamedTuple):
@@ -145,3 +145,26 @@ def load_subprojects_from_str(
 def load_subprojects(path: Path) -> Dict[str, SubProjectPPAs]:
     """Load subprojects.json from *path* and return the PPA lookup dict."""
     return load_subprojects_from_str(path.read_text())
+
+
+def create_archive_to_subproject_map(
+    subprojects: Dict[str, SubProjectPPAs]
+) -> Dict[Tuple[str, str], str]:
+    """Create a reverse mapping from (archive_name, series_name) to subproject
+    key.
+
+    This is used when exporting from Launchpad to UCT format to map PPA archive
+    references back to their original subproject keys.
+
+    Args:
+        subprojects: Dict mapping subproject keys to SubProjectPPAs
+
+    Returns:
+        Dict mapping (archive_name, series_name) tuples to subproject keys
+    """
+    archive_to_subproject: Dict[Tuple[str, str], str] = {}
+    for subproject_key, subproject_ppa in subprojects.items():
+        archive_to_subproject[
+            (subproject_ppa.ppa.archive, subproject_ppa.ubuntu_series)
+        ] = subproject_key
+    return archive_to_subproject

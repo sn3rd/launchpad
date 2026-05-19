@@ -814,6 +814,11 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             owner=self.ppa_owner,
             name="esm-infra-security",
         )
+        self.ppa_apps = self.factory.makeArchive(
+            distribution=self.ubuntu,
+            owner=self.ppa_owner,
+            name="esm-apps-security",
+        )
 
         self.bug_importer = celebrities.bug_importer
         self.ubuntu_supported_series = self.factory.makeDistroSeries(
@@ -847,7 +852,7 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         self.esm_ppa_asps_current = (
             self.factory.makeArchiveSourcePackageSeries(
                 sourcepackagename=self.esm_package.sourcepackagename,
-                archive=self.ppa,
+                archive=self.ppa_apps,
                 distroseries=self.ubuntu_current_series,
             )
         )
@@ -856,8 +861,28 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             sourcepackagename=self.ubuntu_package.sourcepackagename,
             distroseries=self.ubuntu_current_series,
         ).productseries.product
+        self.esm_dsp = self.factory.makeDistributionSourcePackage(
+            sourcepackagename=self.esm_package.sourcepackagename,
+            distribution=self.ubuntu,
+        )
         self.product_2 = self.factory.makePackagingLink(
             sourcepackagename=self.esm_package.sourcepackagename,
+            distroseries=self.ubuntu_current_series,
+        ).productseries.product
+
+        # Create another PPA package for testing
+        self._ppa_asp = self.factory.makeArchiveSourcePackage(archive=self.ppa)
+        self._ppa_asps = self.factory.makeArchiveSourcePackageSeries(
+            sourcepackagename=self._ppa_asp.sourcepackagename,
+            archive=self.ppa,
+            distroseries=self.ubuntu_supported_series,
+        )
+        self._ppa_dsp = self.factory.makeDistributionSourcePackage(
+            sourcepackagename=self._ppa_asp.sourcepackagename,
+            distribution=self.ubuntu,
+        )
+        self.product_3 = self.factory.makePackagingLink(
+            sourcepackagename=self._ppa_asp.sourcepackagename,
             distroseries=self.ubuntu_current_series,
         ).productseries.product
 
@@ -872,14 +897,50 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                     sourcepackagename=self.ubuntu_package.sourcepackagename,
                 ),
             )
+            # Publish esm_package and _ppa_asp so their DSPs are valid
+            self.factory.makeSourcePackagePublishingHistory(
+                distroseries=series,
+                sourcepackagerelease=self.factory.makeSourcePackageRelease(
+                    distroseries=series,
+                    sourcepackagename=self.esm_package.sourcepackagename,
+                ),
+            )
+            self.factory.makeSourcePackagePublishingHistory(
+                distroseries=series,
+                sourcepackagerelease=self.factory.makeSourcePackageRelease(
+                    distroseries=series,
+                    sourcepackagename=self._ppa_asp.sourcepackagename,
+                ),
+            )
 
-        # Create another PPA package for testing
-        _ppa_asp = self.factory.makeArchiveSourcePackage(archive=self.ppa)
-        _ppa_asps = self.factory.makeArchiveSourcePackageSeries(
-            sourcepackagename=_ppa_asp.sourcepackagename,
-            archive=self.ppa,
-            distroseries=self.ubuntu_supported_series,
+        # Set up subprojects for PPA export
+        self.subprojects = {
+            "esm-infra/focal": SubProjectPPAs(
+                ubuntu_series="focal",
+                ppa=PPAReference(
+                    owner=self.ppa_owner.name,
+                    archive=self.ppa.name,
+                    pocket="security",
+                ),
+            ),
+            "esm-apps/jammy": SubProjectPPAs(
+                ubuntu_series="jammy",
+                ppa=PPAReference(
+                    owner=self.ppa_owner.name,
+                    archive=self.ppa_apps.name,
+                    pocket="security",
+                ),
+            ),
+        }
+
+        # Mock get_devel_series to return our specific test development series
+        # This avoids modifying database state and ensures consistent test
+        # behavior without side effects on other tests
+        patcher = patch.object(
+            CVE, "get_devel_series", return_value=self.ubuntu_devel_series
         )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
         assignee = self.factory.makePerson()
         self.lp_cve = self.factory.makeCVE("2022-23222")
@@ -947,6 +1008,13 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                     status=BugTaskStatus.WONTFIX,
                     status_explanation="ignored",
                 ),
+                CVE.UpstreamPackage(
+                    target=self.product_3,
+                    package_name=self._ppa_asp.sourcepackagename,
+                    importance=None,
+                    status=BugTaskStatus.FIXRELEASED,
+                    status_explanation="released",
+                ),
             ],
             importance=BugTaskImportance.MEDIUM,
             status=VulnerabilityStatus.ACTIVE,
@@ -999,8 +1067,8 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             global_tags={"cisa-kev"},
             ppa_packages=[
                 CVE.PPAPackage(
-                    target=_ppa_asp,
-                    package_name=_ppa_asp.sourcepackagename,
+                    target=self._ppa_asp,
+                    package_name=self._ppa_asp.sourcepackagename,
                     importance=BugTaskImportance.LOW,
                     tags=set(),
                 ),
@@ -1013,11 +1081,11 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             ],
             ppa_series_packages=[
                 CVE.PPASeriesPackage(
-                    target=_ppa_asps,
-                    package_name=_ppa_asp.sourcepackagename,
+                    target=self._ppa_asps,
+                    package_name=self._ppa_asp.sourcepackagename,
                     importance=BugTaskImportance.HIGH,
                     status=BugTaskStatus.FIXRELEASED,
-                    status_explanation="fixed in ppa",
+                    status_explanation="1.2.3-4ubuntu5",
                 ),
                 CVE.PPASeriesPackage(
                     target=self.esm_ppa_asps_supported,
@@ -1104,13 +1172,13 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                     name=self.esm_package.sourcepackagename.name,
                     statuses=[
                         UCTRecord.SeriesPackageStatus(
-                            series="precise/esm",
+                            series="esm-infra/focal",
                             status=UCTRecord.PackageStatus.IGNORED,
                             reason="ignored",
                             priority=None,
                         ),
                         UCTRecord.SeriesPackageStatus(
-                            series="trusty/esm",
+                            series="esm-apps/jammy",
                             status=UCTRecord.PackageStatus.NEEDS_TRIAGE,
                             reason="needs triage",
                             priority=None,
@@ -1140,6 +1208,26 @@ class TestUCTImporterExporter(TestCaseWithFactory):
                             ),
                         ),
                     ],
+                ),
+                UCTRecord.Package(
+                    name=self._ppa_asp.sourcepackagename.name,
+                    statuses=[
+                        UCTRecord.SeriesPackageStatus(
+                            series="esm-infra/focal",
+                            status=UCTRecord.PackageStatus.RELEASED,
+                            reason="1.2.3-4ubuntu5",
+                            priority=UCTRecord.Priority.HIGH,
+                        ),
+                        UCTRecord.SeriesPackageStatus(
+                            series="upstream",
+                            status=UCTRecord.PackageStatus.RELEASED,
+                            reason="released",
+                            priority=None,
+                        ),
+                    ],
+                    priority=UCTRecord.Priority.LOW,
+                    tags=set(),
+                    patches=[],
                 ),
             ],
             parent_dir="active",
@@ -1430,7 +1518,32 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         self.assertListEqual(expected.distro_packages, actual.distro_packages)
         self.assertListEqual(expected.series_packages, actual.series_packages)
         self.assertListEqual(
-            expected.upstream_packages, actual.upstream_packages
+            sorted(
+                expected.upstream_packages, key=lambda x: x.package_name.name
+            ),
+            sorted(
+                actual.upstream_packages, key=lambda x: x.package_name.name
+            ),
+        )
+        self.assertListEqual(
+            sorted(expected.ppa_packages, key=lambda x: x.package_name.name),
+            sorted(actual.ppa_packages, key=lambda x: x.package_name.name),
+        )
+        self.assertListEqual(
+            sorted(
+                expected.ppa_series_packages,
+                key=lambda x: (
+                    x.package_name.name,
+                    x.target.distroseries.name,
+                ),
+            ),
+            sorted(
+                actual.ppa_series_packages,
+                key=lambda x: (
+                    x.package_name.name,
+                    x.target.distroseries.name,
+                ),
+            ),
         )
         self.assertEqual(expected.importance, actual.importance)
         self.assertEqual(expected.status, actual.status)
@@ -1972,35 +2085,26 @@ class TestUCTImporterExporter(TestCaseWithFactory):
             self.assertEqual(timezone.utc, date.tzinfo)
 
     def test_make_cve_from_bug(self):
-        # TODO: ilkeremrekoc - 29.04.2026: Re-enable this test after
-        # UCTExporter is updated to support PPA packages export.
-        self.skipTest("Skipping until PPA export is fully implemented")
         self.importer.import_cve(self.cve)
         bug = self.importer._find_existing_bug(self.lp_cve, self.ubuntu)
         cve = self.exporter._make_cve_from_bug(bug)
         self.checkCVE(self.cve, cve)
 
     def test_export_bug_to_uct_file(self):
-        # TODO: ilkeremrekoc - 29.04.2026: Re-enable this test after
-        # UCTExporter is updated to support PPA packages export.
-        self.skipTest(
-            "Skipping until PPA export is implemented in to_uct_record()"
-        )
         self.importer.import_cve(self.cve)
         bug = self.importer._find_existing_bug(self.lp_cve, self.ubuntu)
         output_dir = Path(self.makeTemporaryDirectory())
         cve_path = self.exporter.export_bug_to_uct_file(bug.id, output_dir)
         uct_record = UCTRecord.load(cve_path)
-        cve = CVE.make_from_uct_record(uct_record)
-        self.checkCVE(self.cve, cve)
+        exported_cve = CVE.make_from_uct_record(
+            uct_record,
+            subprojects=self.subprojects,
+        )
+        self.checkCVE(self.cve, exported_cve)
+        self.checkBug(bug, exported_cve)
 
     def test_import_cve_from_file(self):
-        # TODO: ilkeremrekoc - 29.04.2026: Re-enable this test after
-        # UCTExporter is updated to support PPA packages export.
-        self.skipTest(
-            "Skipping until PPA export is implemented in to_uct_record()"
-        )
-        uct_record = self.cve.to_uct_record()
+        uct_record = self.cve.to_uct_record(subprojects=self.subprojects)
 
         cve_path = uct_record.save(Path(self.makeTemporaryDirectory()))
         bug, _, _ = self.importer.import_cve_from_file(cve_path)
@@ -2009,19 +2113,17 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         self.checkVulnerabilities(bug, self.cve)
 
     def test_from_record(self):
-        # TODO: ilkeremrekoc - 29.04.2026: Re-enable this test after
-        # UCTExporter is updated to support PPA packages export.
-        self.skipTest(
-            "Skipping until PPA export is implemented in to_uct_record()"
-        )
-        uct_record = self.cve.to_uct_record()
+        uct_record = self.cve.to_uct_record(subprojects=self.subprojects)
         bug, _, created = self.importer.from_record(
             uct_record, "CVE-2022-23222"
         )
-        cve = CVE.make_from_uct_record(uct_record)
-        self.checkCVE(self.cve, cve)
-        self.checkBug(bug, self.cve)
-        self.checkVulnerabilities(bug, self.cve)
+        imported_cve = CVE.make_from_uct_record(
+            uct_record,
+            subprojects=self.subprojects,
+        )
+        self.checkCVE(self.cve, imported_cve)
+        self.checkBug(bug, imported_cve)
+        self.checkVulnerabilities(bug, imported_cve)
         self.assertTrue(created)
 
     def test_import_non_existing_cve(self):
@@ -2053,11 +2155,6 @@ class TestUCTImporterExporter(TestCaseWithFactory):
 
     def test_exporter_to_record(self):
         """Test to_record returns expected UCTRecord"""
-        # TODO: ilkeremrekoc - 29.04.2026: Re-enable this test after
-        # UCTExporter is updated to support PPA packages export.
-        self.skipTest(
-            "Skipping until PPA export is implemented in to_uct_record()"
-        )
         bug, vulnerability, _ = self.importer.import_cve(self.cve)
 
         uct_record = self.exporter.to_record(bug, vulnerability)
@@ -2083,7 +2180,7 @@ class TestUCTImporterExporter(TestCaseWithFactory):
         ppa_series_task = bug_tasks_by_target[ppa_series_pkg.target]
         self.assertEqual(BugTaskImportance.HIGH, ppa_series_task.importance)
         self.assertEqual(BugTaskStatus.FIXRELEASED, ppa_series_task.status)
-        self.assertEqual("fixed in ppa", ppa_series_task.status_explanation)
+        self.assertEqual("1.2.3-4ubuntu5", ppa_series_task.status_explanation)
 
     def test_import_cve_with_only_ppa_packages_not_aborted(self):
         """import_cve doesn't abort when CVE has only ppa_series_packages."""

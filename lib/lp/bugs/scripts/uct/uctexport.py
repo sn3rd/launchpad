@@ -4,22 +4,28 @@
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Set
 
 from zope.component import getUtility
 from zope.security.proxy import removeSecurityProxy
 
 from lp.bugs.interfaces.bug import IBugSet
 from lp.bugs.interfaces.bugattachment import BugAttachmentType
+from lp.bugs.interfaces.bugtask import BugTaskImportance
 from lp.bugs.model.bug import Bug as BugModel
 from lp.bugs.model.bugtask import BugTask
 from lp.bugs.model.vulnerability import Vulnerability
 from lp.bugs.scripts.svthandler import SVTExporter
 from lp.bugs.scripts.uct.models import CVE, UCTRecord
+from lp.bugs.scripts.uct.subprojects import load_subprojects
 from lp.bugs.scripts.uct.uctimport import UCTImporter
 from lp.registry.interfaces.distribution import IDistributionSet
 from lp.registry.interfaces.role import IPersonRoles
 from lp.registry.interfaces.sourcepackagename import ISourcePackageNameSet
+from lp.registry.model.archivesourcepackage import ArchiveSourcePackage
+from lp.registry.model.archivesourcepackageseries import (
+    ArchiveSourcePackageSeries,
+)
 from lp.registry.model.distributionsourcepackage import (
     DistributionSourcePackage,
 )
@@ -35,6 +41,12 @@ __all__ = [
 TAG_SEPARATOR = UCTImporter.TAG_SEPARATOR
 logger = logging.getLogger(__name__)
 
+_CONTRIB_SUBPROJECTS_JSON = (
+    Path(__file__).parent.parent.parent.parent.parent
+    / "contrib"
+    / "subprojects.json"
+)
+
 
 class UCTExporter(SVTExporter):
     """
@@ -45,6 +57,9 @@ class UCTExporter(SVTExporter):
     class ParsedDescription(NamedTuple):
         description: str
         references: List[str]
+
+    def __init__(self):
+        self.subprojects = load_subprojects(_CONTRIB_SUBPROJECTS_JSON)
 
     def to_record(
         self,
@@ -65,7 +80,7 @@ class UCTExporter(SVTExporter):
             raise ValueError("Vulnerability can't be None")
 
         cve = self._import_cve(bug, vulnerability)
-        return cve.to_uct_record()
+        return cve.to_uct_record(subprojects=self.subprojects)
 
     def checkUserPermissions(self, user):
         """Only users with security admin permissions to Ubuntu can use
@@ -91,7 +106,7 @@ class UCTExporter(SVTExporter):
             logger.error("Could not find a bug with ID: %s", bug_id)
             return
         cve = self._make_cve_from_bug(bug)
-        uct_record = cve.to_uct_record()
+        uct_record = cve.to_uct_record(subprojects=self.subprojects)
         save_to_path = uct_record.save(output_dir)
         logger.info(
             "Bug with ID: %s is exported to: %s", bug_id, str(save_to_path)
@@ -155,15 +170,14 @@ class UCTExporter(SVTExporter):
 
         bug_tasks: List[BugTask] = list(bug.bugtasks)
 
-        cve_importance = vulnerability.importance
+        cve_importance: BugTaskImportance = vulnerability.importance
 
-        tags_by_pkg = defaultdict(set)
-        global_tags = set()
+        tags_by_pkg: Dict[str, Set[str]] = defaultdict(set)
+        global_tags: Set[str] = set()
         for tag in bug.tags:
             if TAG_SEPARATOR in tag:
-                tags_by_pkg[tag.split(TAG_SEPARATOR)[0]].add(
-                    tag.split(TAG_SEPARATOR)[1]
-                )
+                package_name, tag_value = tag.split(TAG_SEPARATOR, 1)
+                tags_by_pkg[package_name].add(tag_value)
             else:
                 global_tags.add(tag)
 
@@ -174,58 +188,129 @@ class UCTExporter(SVTExporter):
         #  the CVE importance
         #  - SeriesPackage: export importance only if it's different from the
         #  DistroPackage importance
-        package_importances = {}
+        package_importances: Dict[SourcePackageName, BugTaskImportance] = {}
 
+        # Map products to source package names for upstream tasks
         package_name_by_product: Dict[Product, SourcePackageName] = {}
-        # We need to process all distribution package tasks before processing
-        # the distro-series tasks to collect importance value for each package.
-        distro_packages = []
+
+        # We need to process distribution package tasks before processing
+        # series tasks to collect importance value for each package.
+        distro_packages: List[CVE.DistroPackage] = []
+        ppa_packages: List[CVE.PPAPackage] = []
         for bug_task in bug_tasks:
             target = removeSecurityProxy(bug_task.target)
-            if not isinstance(target, DistributionSourcePackage):
+
+            # Skip if not a package-level target
+            if not isinstance(
+                target, (DistributionSourcePackage, ArchiveSourcePackage)
+            ):
                 continue
-            # This is the `Product` corresponding to the package of this
-            # name with the highest version across any of this
-            # distribution's series that has a packaging link
-            # (it can make a difference if a package name switches to a
-            # different upstream project between series)
-            product = target.upstream_product
-            if product:
-                package_name_by_product[product] = target.sourcepackagename
-            dp_importance = bug_task.importance
-            package_importances[target.sourcepackagename] = dp_importance
 
-            tags = set()
-            if target.sourcepackagename.name in tags_by_pkg:
-                tags = tags.union(tags_by_pkg[target.sourcepackagename.name])
+            # Handle DistributionSourcePackage
+            if isinstance(target, DistributionSourcePackage):
+                # This is the `Product` corresponding to the package of this
+                # name with the highest version across any of this
+                # distribution's series that has a packaging link
+                # (it can make a difference if a package name switches to a
+                # different upstream project between series)
+                product = target.upstream_product
+                if product:
+                    package_name_by_product[product] = target.sourcepackagename
 
-            distro_packages.append(
-                CVE.DistroPackage(
+                importance = bug_task.importance
+                package_importances[target.sourcepackagename] = importance
+
+                distro_packages.append(
+                    CVE.DistroPackage(
+                        target=target,
+                        package_name=target.sourcepackagename,
+                        importance=(
+                            importance
+                            if importance != cve_importance
+                            else None
+                        ),
+                        tags=(
+                            tags_by_pkg[target.sourcepackagename.name].copy()
+                            if target.sourcepackagename.name in tags_by_pkg
+                            else set()
+                        ),
+                    )
+                )
+                continue
+
+            # Handle ArchiveSourcePackage (PPA packages)
+            # For PPA packages, try to find upstream product through the
+            # corresponding DistributionSourcePackage (if it exists).
+            distro = target.archive.distribution
+            dsp = distro.getSourcePackage(target.sourcepackagename)
+            if dsp and dsp.upstream_product:
+                package_name_by_product[dsp.upstream_product] = (
+                    target.sourcepackagename
+                )
+
+            importance = bug_task.importance
+            package_importances[target.sourcepackagename] = importance
+
+            ppa_packages.append(
+                CVE.PPAPackage(
                     target=target,
                     package_name=target.sourcepackagename,
                     importance=(
-                        dp_importance
-                        if dp_importance != cve_importance
-                        else None
+                        importance if importance != cve_importance else None
                     ),
-                    tags=tags,
+                    tags=(
+                        tags_by_pkg[target.sourcepackagename.name].copy()
+                        if target.sourcepackagename.name in tags_by_pkg
+                        else set()
+                    ),
                 )
             )
 
-        series_packages = []
+        # Collect series-level tasks
+        series_packages: List[CVE.SeriesPackage] = []
+        ppa_series_packages: List[CVE.PPASeriesPackage] = []
         for bug_task in bug_tasks:
             target = removeSecurityProxy(bug_task.target)
-            if not isinstance(target, SourcePackage):
+
+            # Skip if not a series-level target
+            if not isinstance(
+                target, (SourcePackage, ArchiveSourcePackageSeries)
+            ):
                 continue
-            sp_importance = bug_task.importance
-            package_importance = package_importances[target.sourcepackagename]
-            series_packages.append(
-                CVE.SeriesPackage(
+
+            # Handle SourcePackage
+            if isinstance(target, SourcePackage):
+                importance = bug_task.importance
+                package_importance = package_importances.get(
+                    target.sourcepackagename
+                )
+                series_packages.append(
+                    CVE.SeriesPackage(
+                        target=target,
+                        package_name=target.sourcepackagename,
+                        importance=(
+                            importance
+                            if importance != package_importance
+                            else None
+                        ),
+                        status=bug_task.status,
+                        status_explanation=bug_task.status_explanation,
+                    )
+                )
+                continue
+
+            # Handle ArchiveSourcePackageSeries (PPA series packages)
+            importance = bug_task.importance
+            package_importance = package_importances.get(
+                target.sourcepackagename
+            )
+            ppa_series_packages.append(
+                CVE.PPASeriesPackage(
                     target=target,
                     package_name=target.sourcepackagename,
                     importance=(
-                        sp_importance
-                        if sp_importance != package_importance
+                        importance
+                        if importance != package_importance
                         else None
                     ),
                     status=bug_task.status,
@@ -233,7 +318,8 @@ class UCTExporter(SVTExporter):
                 )
             )
 
-        upstream_packages = []
+        # Collect upstream tasks
+        upstream_packages: List[CVE.UpstreamPackage] = []
         for bug_task in bug_tasks:
             target = removeSecurityProxy(bug_task.target)
             if not isinstance(target, Product):
@@ -246,7 +332,7 @@ class UCTExporter(SVTExporter):
                 continue
             package_name = package_name_by_product[target]
             up_importance = bug_task.importance
-            package_importance = package_importances.get(target.name)
+            package_importance = package_importances.get(package_name)
             upstream_packages.append(
                 CVE.UpstreamPackage(
                     target=target,
@@ -326,6 +412,8 @@ class UCTExporter(SVTExporter):
             global_tags=global_tags,
             patch_urls=patch_urls,
             break_fix_data=break_fix_data,
+            ppa_packages=ppa_packages,
+            ppa_series_packages=ppa_series_packages,
         )
 
     def _parse_bug_description(
