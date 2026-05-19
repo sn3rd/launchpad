@@ -1270,6 +1270,10 @@ class TestSimilarBugs(TestCaseWithFactory):
         # Create a PPA and a source package within it
         ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
         spn = self.factory.makeSourcePackageName(name="firefox-pkg")
+        # Create publishing history so the package is actually in the PPA
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=ppa, sourcepackagename=spn
+        )
         asp = ArchiveSourcePackage(ppa, spn)
 
         # Create bugs on the archive source package
@@ -4057,6 +4061,10 @@ class TestValidateTarget(TestCaseWithFactory, ValidateTargetMixin):
 
         ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
         spn = self.factory.makeSourcePackageName()
+        # Create publishing history so the package is actually in the PPA
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=ppa, sourcepackagename=spn
+        )
         asp = ArchiveSourcePackage(ppa, spn)
         bug = self.factory.makeBug()
         validate_target(bug, asp)

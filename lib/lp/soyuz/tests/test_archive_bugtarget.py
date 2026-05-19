@@ -165,6 +165,10 @@ class TestBugTaskArchiveTarget(TestCaseWithFactory):
         # Can create a bugtask on an archive source package
         ppa = self.factory.makeArchive(purpose=ArchivePurpose.PPA)
         spn = self.factory.makeSourcePackageName()
+        # Create publishing history so the package is actually in the PPA
+        self.factory.makeSourcePackagePublishingHistory(
+            archive=ppa, sourcepackagename=spn
+        )
         asp = ArchiveSourcePackage(ppa, spn)
         bug = self.factory.makeBug()
         owner = ppa.owner
