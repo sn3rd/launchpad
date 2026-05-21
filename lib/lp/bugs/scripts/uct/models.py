@@ -56,6 +56,7 @@ from lp.registry.model.product import Product
 from lp.registry.model.sourcepackage import SourcePackage
 from lp.registry.model.sourcepackagename import SourcePackageName
 from lp.services.propertycache import cachedproperty
+from lp.soyuz.model.archive import Archive
 
 __all__ = [
     "CVE",
@@ -742,7 +743,9 @@ class CVE:
         distro_packages = []
         series_packages = []
         ppa_packages = []
-        ppa_packages_by_name: Dict[SourcePackageName, cls.PPAPackage] = {}
+        ppa_packages_by_name: Dict[
+            Tuple[SourcePackageName, Archive], cls.PPAPackage
+        ] = {}
         ppa_series_packages = []
         patch_urls = []
         break_fix_data = []
@@ -833,9 +836,10 @@ class CVE:
                         continue
 
                     # Check if we already have a PPAPackage for this
-                    # package_name. Only create one PPAPackage per package
-                    # regardless of how many series it appears in.
-                    if source_package_name not in ppa_packages_by_name:
+                    # (package_name, archive) combination. Create one
+                    # PPAPackage per package per archive.
+                    ppa_package_key = (source_package_name, archive)
+                    if ppa_package_key not in ppa_packages_by_name:
                         ppa_package = cls.PPAPackage(
                             target=archive_source_package,
                             package_name=source_package_name,
@@ -843,7 +847,7 @@ class CVE:
                             tags=uct_package.tags,
                         )
                         ppa_packages.append(ppa_package)
-                        ppa_packages_by_name[source_package_name] = ppa_package
+                        ppa_packages_by_name[ppa_package_key] = ppa_package
 
                     # Create series-level task
                     ppa_series_packages.append(
@@ -1065,8 +1069,6 @@ class CVE:
             )
             ppa_series_packages_by_key[key].append(ppa_series_package)
 
-        processed_ppa_series: Set[CVE.PPASeriesPackage] = set()
-
         packages_by_name: Dict[str, UCTRecord.Package] = OrderedDict()
         processed_packages: Set[SourcePackageName] = set()
         for distro_package in self.distro_packages:
@@ -1150,7 +1152,6 @@ class CVE:
                         ),
                     )
                 )
-                processed_ppa_series.add(ppa_series_package)
 
             if spn.name in packages_by_name:
                 existing = packages_by_name[spn.name]
@@ -1185,63 +1186,6 @@ class CVE:
                     tags=ppa_package.tags,
                     patches=[],
                 )
-
-        # Second pass: Handle orphaned PPA series packages that don't have a
-        # corresponding PPAPackage parent. This can occur when:
-        # 1. A CVE was imported without proper package-level tasks
-        # 2. Data was manually created with only series-level tasks
-        # 3. Migration scenarios from old data formats
-        for ppa_series_package in self.ppa_series_packages:
-            # Skip if already processed via ppa_packages loop
-            if ppa_series_package in processed_ppa_series:
-                continue
-            package_name = ppa_series_package.package_name.name
-            series = ppa_series_package.target.distroseries
-            if series.status == SeriesStatus.DEVELOPMENT:
-                series_name = "devel"
-            else:
-                series_name = series.name
-            archive_name = ppa_series_package.target.archive.name
-            status = self.BUG_TASK_STATUS_MAP_REVERSE[
-                ppa_series_package.status
-            ]
-            # Use subproject key if available, otherwise use fallback
-            uct_series = self._get_subproject_key(
-                archive_name, series_name, archive_to_subproject
-            )
-            new_status = UCTRecord.SeriesPackageStatus(
-                series=uct_series,
-                status=status,
-                reason=ppa_series_package.status_explanation,
-                priority=(
-                    self.PRIORITY_MAP_REVERSE[ppa_series_package.importance]
-                    if ppa_series_package.importance
-                    else None
-                ),
-            )
-
-            if package_name in packages_by_name:
-                # Check if this status is already in the package
-                existing = packages_by_name[package_name]
-                if new_status not in existing.statuses:
-                    # Create new Package with the additional status (immutable
-                    # pattern for consistency)
-                    packages_by_name[package_name] = UCTRecord.Package(
-                        name=existing.name,
-                        statuses=existing.statuses + [new_status],
-                        priority=existing.priority,
-                        tags=existing.tags,
-                        patches=existing.patches,
-                    )
-                continue
-
-            packages_by_name[package_name] = UCTRecord.Package(
-                name=package_name,
-                statuses=[new_status],
-                priority=None,
-                tags=set(),
-                patches=[],
-            )
 
         for upstream_package in self.upstream_packages:
             status = UCTRecord.SeriesPackageStatus(
