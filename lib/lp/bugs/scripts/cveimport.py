@@ -43,6 +43,15 @@ T = TypeVar("T")
 
 CVEDB_NS = "{http://cve.mitre.org/cve/downloads/1.0}"
 
+
+class HTTPScriptFailure(LaunchpadScriptFailure):
+    """Raised when an HTTP request fails with a known status code."""
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
 CVE_STATE_TO_STATUS = {
     "PUBLISHED": CveStatus.ENTRY,
     "REJECTED": CveStatus.REJECTED,
@@ -182,13 +191,15 @@ def retry_on_failure(
     :param max_retries: Maximum number of retries.
     :param delay: The fixed delay (in seconds) between retries.
     :param logger: LaunchpadLogger used to print retry messages.
-    :return: The result of the function if successful.
+    :return: The result of the function if successful, or None if all retries
+        fail with HTTP 404.
+    :raises HTTPScriptFailure: if all retries fail with a non-404 HTTP error.
     """
     attempt = 0
     while attempt < max_retries:
         try:
             return func()
-        except LaunchpadScriptFailure as e:
+        except HTTPScriptFailure as e:
             attempt += 1
             if attempt < max_retries:
                 logger.info(
@@ -197,7 +208,8 @@ def retry_on_failure(
                 )
                 time.sleep(delay)
             else:
-                raise e
+                if e.status_code != 404:
+                    raise e
 
 
 @implementer(ITunableLoop)
@@ -579,15 +591,20 @@ class CVEUpdater(LaunchpadCronScript):
 
         :param urls: List of candidate URLs to try, in order of preference.
         :return: The raw response content of the first successful fetch.
-        :raises LaunchpadScriptFailure: if all URLs fail.
+        :raises HTTPScriptFailure: immediately if any URL fails with a
+            non-404 HTTP error, or after all URLs are exhausted if they
+            all returned 404.
         """
         for url in urls:
             try:
                 return self.fetchCVEURL(url)
-            except LaunchpadScriptFailure as e:
-                self.logger.warning(str(e))
-        raise LaunchpadScriptFailure(
-            "All candidate URLs failed for delta CVE data: " + " ".join(urls)
+            except HTTPScriptFailure as e:
+                self.logger.info(str(e))
+                if e.status_code != 404:
+                    raise
+        raise HTTPScriptFailure(
+            f"All candidate URLs failed: {urls}",
+            status_code=404,
         )
 
     def _handle_github_delta(self) -> Tuple[int, int]:
@@ -605,6 +622,12 @@ class CVEUpdater(LaunchpadCronScript):
                 delay=10 * 60,
                 logger=self.logger,
             )
+            if response is None:
+                self.logger.info(
+                    "No delta release found for this hour "
+                    "(release may have been skipped by upstream)"
+                )
+                return 0, 0
             temp_dir = self.extract_github_zip(response, delta=True)
             try:
                 total_processed, total_errors = self.process_delta_directory(
@@ -688,7 +711,10 @@ class CVEUpdater(LaunchpadCronScript):
                 response = urlfetch(url, use_proxy=True, allow_file=True)
 
         except requests.HTTPError as e:
-            raise LaunchpadScriptFailure(f"{e.response} at '{url}'")
+            raise HTTPScriptFailure(
+                f"HTTP {e.response.status_code} at '{url}'",
+                status_code=e.response.status_code,
+            )
         except requests.RequestException:
             raise LaunchpadScriptFailure(
                 f"Unable to connect for CVE database {url}"
