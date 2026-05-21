@@ -84,7 +84,7 @@
     "stamp": 1556593200
   },
   "esm-infra/xenial": {
-    "eol": false,
+    "eol": true,
     "data_formats": {
       "pkg-json": true,
       "oval": true,
@@ -203,8 +203,35 @@
     "description": "Available with Ubuntu Pro with Legacy support add-on: https://ubuntu.com/pro",
     "stamp": 1732637340
   },
-  "esm-apps/xenial": {
+  "esm-infra-legacy/xenial": {
     "eol": false,
+    "data_formats": {
+      "pkg-json": true,
+      "oval": true,
+      "osv": true,
+      "vex": true
+    },
+    "packages": [
+      "esm-infra-legacy-xenial-supported.txt"
+    ],
+    "name": "Ubuntu 16.04 LTS",
+    "codename": "Xenial Xerus",
+    "ppas": [
+      {
+        "ppa": "ubuntu-esm/esm-infra-legacy-security",
+        "pocket": "security"
+      },
+      {
+        "ppa": "ubuntu-esm/esm-infra-legacy-updates",
+        "pocket": "updates"
+      }
+    ],
+    "parent": "esm-apps/xenial",
+    "description": "Available with Ubuntu Pro with Legacy support add-on: https://ubuntu.com/pro",
+    "stamp": 1779181410
+  },
+  "esm-apps/xenial": {
+    "eol": true,
     "data_formats": {
       "pkg-json": true,
       "oval": true,
@@ -357,6 +384,59 @@
     "parent": "ubuntu/noble",
     "description": "Available with Ubuntu Pro: https://ubuntu.com/pro",
     "stamp": 1714060800
+  },
+  "esm-apps/resolute": {
+    "eol": false,
+    "data_formats": {
+      "pkg-json": true,
+      "oval": true,
+      "osv": true,
+      "vex": true
+    },
+    "components": ["universe", "multiverse"],
+    "packages": ["esm-apps-resolute-supported.txt"],
+    "name": "Ubuntu 26.04 LTS",
+    "codename": "Resolute Raccoon",
+    "ppas": [
+      {
+        "ppa": "ubuntu-esm/esm-apps-security",
+        "pocket": "security"
+      },
+      {
+        "ppa": "ubuntu-esm/esm-apps-updates",
+        "pocket": "updates"
+      }
+    ],
+    "parent": "ubuntu/resolute",
+    "description": "Available with Ubuntu Pro: https://ubuntu.com/pro",
+    "stamp": 1776963600
+  },
+  "esm-apps-legacy/xenial": {
+    "eol": false,
+    "data_formats": {
+      "pkg-json": true,
+      "oval": true,
+      "osv": true,
+      "vex": true
+    },
+    "packages": [
+      "esm-apps-legacy-xenial-supported.txt"
+    ],
+    "name": "Ubuntu 16.04 LTS",
+    "codename": "Xenial Xerus",
+    "ppas": [
+      {
+        "ppa": "ubuntu-esm/esm-apps-legacy-security",
+        "pocket": "security"
+      },
+      {
+        "ppa": "ubuntu-esm/esm-apps-legacy-updates",
+        "pocket": "updates"
+      }
+    ],
+    "parent": "esm-infra-legacy/xenial",
+    "description": "Available with Ubuntu Pro with Legacy support add-on: https://ubuntu.com/pro",
+    "stamp": 1779181410
   },
   "fips/xenial": {
     "eol": false,
@@ -1453,12 +1533,34 @@
       "universe",
       "multiverse"
     ],
-    "name": "Ubuntu 26.04",
+    "name": "Ubuntu 26.04 LTS",
     "version": 26.04,
     "codename": "Resolute Raccoon",
     "alias": "resolute",
+    "devel": false,
+    "description": "Long Term Release",
+    "stamp": 1776963600
+  },
+  "ubuntu/stonking": {
+    "eol": false,
+    "data_formats": {
+      "pkg-json": true,
+      "oval": true,
+      "osv": true,
+      "vex": true
+    },
+    "components": [
+      "main",
+      "restricted",
+      "universe",
+      "multiverse"
+    ],
+    "name": "Ubuntu 26.10",
+    "version": 26.1,
+    "codename": "Stonking Stingray",
+    "alias": "stonking",
     "devel": true,
-    "description": "Long Term Release"
+    "description": "Interim Release"
   },
   "snap": {
     "eol": false,
