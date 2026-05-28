@@ -163,10 +163,10 @@ class DbSchema(dict):
                     WHEN 'S' THEN 'sequence'
                     WHEN 's' THEN 'special'
                 END as "Type",
-                u.usename as "Owner",
+                u.rolname as "Owner",
                 c.relacl::text[] as "ACL"
             FROM pg_catalog.pg_class c
-                LEFT JOIN pg_catalog.pg_user u ON u.usesysid = c.relowner
+                LEFT JOIN pg_catalog.pg_roles u ON u.oid = c.relowner
                 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             WHERE c.relkind IN ('r','v','S','')
                 AND n.nspname NOT IN (
@@ -189,13 +189,13 @@ class DbSchema(dict):
                 n.nspname as "schema",
                 p.proname as "name",
                 pg_catalog.oidvectortypes(p.proargtypes) as "Argument types",
-                u.usename as "owner",
+                u.rolname as "owner",
                 p.proacl::text[] as "acl",
                 l.lanname as "language"
             FROM pg_catalog.pg_proc p
                 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
                 LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
-                LEFT JOIN pg_catalog.pg_user u ON u.usesysid = p.proowner
+                LEFT JOIN pg_catalog.pg_roles u ON u.oid = p.proowner
                 LEFT JOIN pg_catalog.pg_type r ON r.oid = p.prorettype
             WHERE
                 r.typname NOT IN ('trigger', 'language_handler')
